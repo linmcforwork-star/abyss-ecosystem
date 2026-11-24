@@ -340,6 +340,7 @@ Wd.glints = Wd.volD = Wd.gm = T.vb = T.ib = T.wp = T.wn = 0;
 // The scene is drawn at `pix` pixels and scaled up to the window. frame() tunes it and the draw distance scale `det`
 // for 60 fps; both start where the last visit left them.
 const PIXMAX = 2560 * 1440, PIXMIN = mob ? 25e4 : 5e5, DETMIN = 0.4;
+let lamp = true; // the diver's lamp (L)
 let W = 0, H = 0, DW = 0, DH = 0, pix = +SV[1] || (LV > 1 ? 41e4 : mob ? 1280 * 720 : PIXMAX), det = +SV[2] || 1, dynN = 0, dynT = 0, dynG = 0, dynGN = 0, dynBad = 0, dynOk = 0, dynWait = 3;
 let passScene, passRays, passBlur, bgBlur, passPost, bgRays, bgPost, bloomPass = [], bloomBG = [], targets = [];
 const NB = 6;
@@ -443,11 +444,11 @@ function render() {
   m[2] = 0; m[6] = 0; m[10] = 0; m[14] = NEAR;
   m[3] = fx; m[7] = fy; m[11] = fz; m[15] = -(fx * cx + fy * cy + fz * cz);
   m[32] = cx; m[33] = cy; m[34] = cz; m[35] = F[TIME];
-  m[36] = rx; m[37] = 0; m[38] = rz; m[39] = TANH * asp;
+  m[36] = rx; m[37] = lamp ? 1.6 : 0; m[38] = rz; m[39] = TANH * asp;
   m[40] = ux; m[41] = uy; m[42] = uz; m[43] = TANH;
   m[44] = fx; m[45] = fy; m[46] = fz; m[47] = NEAR;
   const zx = cx - PURPLE[0], zz = cz - PURPLE[1]; let zt = (44 - sqrt(zx * zx + zz * zz)) / 18; zt = zt < 0 ? 0 : zt > 1 ? 1 : zt;
-  m[51] = 0 * zt; // no purple zone on the reef
+  m[51] = zt * zt * (3 - 2 * zt);
   let ek = (-cy - 8) / 26; ek = ek < 0 ? 0 : ek > 1 ? 1 : ek;
   m[56] = EXPO * (0.6 + 0.4 * ek) * (2.6 - 1.6 * DAY); m[57] = RAYS * DAY; m[58] = det; m[59] = DAY;
   Q.writeBuffer(ubo, 0, UB);
@@ -605,6 +606,7 @@ const key = (e, v) => {
     default: if (v && !e.repeat) {
       if (e.code === 'KeyH') { hud = !hud; hTot = 0; hPer = 1e9; info.textContent = ''; }
       else if (e.code === 'KeyV') mute();
+      else if (e.code === 'KeyL') lamp = !lamp;
       else if (e.code === 'Escape') ui(true);
       else if (e.code >= 'Digit1' && e.code <= 'Digit6') lookAt(...POSES[e.code.charCodeAt(5) - 49]);
     }

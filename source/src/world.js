@@ -34,9 +34,9 @@ const CLEARS = [
   [-60, -36, -60, 36, 13, 8], [-60, 42, -18, 46, 12, 8], [4, 58, 8, 100, 24, 10], [-34, -74, -56, -46, 11, 8],
 ];
 const PURPLE = [6, 84];
-const zoneP = () => 0; // the original's purple grotto: not part of a reef
-const MAGENTA = []; const MAGENTA0 = [[14, 6, 13], [-4, 20, 9], [6, 84, 30], [-58, 8, 10], [50, 30, 12], [8, -70, 10], [-12, -98, 9], [-36, 44, 9], [-46, -60, 9], [24, 42, 8], [-56, 26, 9], [-44, 38, 8], [-10, 44, 8], [12, 24, 8], [-50, -45, 8]];
-const magAt = () => 0, magAt0 = (x, z) => {
+const zoneP = (x, z) => sstep(44, 26, hypot(x - PURPLE[0], z - PURPLE[1])); // the original's purple grotto (an artistic touch, kept for its dreamy look)
+const MAGENTA = [[14, 6, 13], [-4, 20, 9], [6, 84, 30], [-58, 8, 10], [50, 30, 12], [8, -70, 10], [-12, -98, 9], [-36, 44, 9], [-46, -60, 9], [24, 42, 8], [-56, 26, 9], [-44, 38, 8], [-10, 44, 8], [12, 24, 8], [-50, -45, 8]];
+const magAt = (x, z) => { // the original's magenta patches (also artistic)
   let m = sstep(0.54, 0.66, fbm(x * 0.03, 7, z * 0.03, 3)) * 0.9;
   for (const p of MAGENTA) m = max(m, sstep(p[2], p[2] * 0.45, hypot(x - p[0], z - p[1])));
   return m * sstep(0.3, 0.55, fbm(x * 0.17, 1, z * 0.17, 2) + m * 0.25);
@@ -221,7 +221,7 @@ function makeWorld(D, T, flyPts, POSES) {
   rseed(4);
   for (const p of MAGENTA) for (let i = p[2] * p[2] * PI * 45; i > 0; i--) {
     const a = rnd() * TAU, r = sqrt(rnd()) * p[2], x = p[0] + cos(a) * r, z = p[1] + sin(a) * r;
-    if (rnd() > magAt(x, z) + 0.12 || nearPose(x, z)) continue;
+    if (rnd() > magAt(x, z) + 0.12 || nearPose(x, z) || inZone(x, z, 1)) continue;
     const f = floorsAt(x, z); if (!f.length) continue;
     const y = f[f.length - 2]; if (grad(x, y, z)[1] < 0.7) continue;
     const nl = 2 + (rnd() * 3 | 0), yw = rnd() * TAU;

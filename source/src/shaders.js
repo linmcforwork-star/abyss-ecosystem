@@ -203,6 +203,13 @@ fn sat(x: f32) -> f32 { return clamp(x, 0., 1.); }
 fn ss(a: f32, b: f32, x: f32) -> f32 { let t = clamp((x - a) / (b - a), 0., 1.); return t * t * (3. - 2. * t); }
 fn ign(p: vec2f) -> f32 { return fract(52.9829189 * fract(dot(p, vec2f(.06711056, .00583715)))); }
 fn hs(x: f32) -> f32 { return fract(sin(x * 127.1) * 43758.5453); }
+// the diver's lamp (L key): a soft white light from the camera, so whatever is within a few metres shows its true colours,
+// like the lights in underwater films; strength in g.right.y
+fn torch(p: vec3f, n: vec3f) -> vec3f {
+  let v = g.cam.xyz - p; let d = length(v); let l = v / max(d, 1e-3);
+  let cone = .3 + .7 * ss(.55, .93, -dot(l, g.fwd.xyz));
+  return vec3f(1., .94, .85) * g.right.y * cone * (.3 + .7 * sat(dot(n, l))) * exp(-SIG * d) / (1. + .06 * d * d);
+}
 fn kd(z: f32) -> vec3f { return mix(KD, KDZ, z); }
 fn sg(z: f32) -> vec3f { return mix(SIG, vec3f(.034, .026, .022), z); }
 fn fin(c: vec3f) -> vec4f { return vec4f(min(max(c, vec3f(0.)), vec3f(40.)), 1.); }
@@ -396,6 +403,7 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
   let am = (amb(i.wp, N, v1.g, z) + side(i.wp, N, sat((v2.r - .5) * 2.7), z)) * ao;
   let dl = E * ndl * (.10 + mix(vec3f(.33), ca, ss(.1, .45, dot(n0, L))) * 2.5);
   var c = alb * (dl + am) + emi + alb * flu * dot(dl + am, vec3f(.1, .5, .5));
+  c += alb * torch(i.wp, N);
   let H = normalize(V + L);
   c += E * (.25 + ca) * pow(sat(dot(N, H)), mix(10., 70., gloss)) * gloss * ndl * 1.8;
   c += (amb(i.wp, reflect(-V, N), v1.g, z) + side(i.wp, reflect(-V, N), sat((v2.r - .5) * 2.7), z)) * ao * (.08 + gloss) * .6 * pow(1. - sat(dot(N, V)), 2.5);
@@ -509,6 +517,7 @@ struct GO { @builtin(position) cp: vec4f, @location(0) uv: vec2f, @location(1) @
   let aov = sat((vv.r - .5) * 6.) * mix(.4, 1., i.uv.y);
   let am = (amb(i.wp, n, vv.g, z) + amb(i.wp, -n, vv.g, z) * i.pr.y * .55 * vec3f(1.1, 1.15, .7) + side(i.wp, n, sat((vv.r - .5) * 4.), z) * .6) * (.3 + .7 * aov);
   var c = E * (.06 + ca * 1.5) * (alb * max(ndl, 0.) + trc * tr) + alb * am;
+  c += alb * torch(i.wp, n);
   let H = normalize(V + L);
   c += E * (pow(sat(dot(n, H)), 40.) * (.45 + ir * i.pr.z * 2.) + pow(sat(dot(n, H)), 9.) * .07) + am * ir * i.pr.z * pow(1. - ndv, 3.) * 1.5;
   c += E * trc * i.pr.y * pow(sat(dot(-V, L)), 3.) * 1.2;
@@ -550,6 +559,7 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
   alb = mix(alb, vec3f(.95, .8, .3), step(.86, fract(i.sd * 7.7)) * .6);
   let E = sunE(i.wp.y, z) * i.lt;
   var c = alb * (E * (.25 + .75 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * 1.3);
+  c += alb * torch(i.wp, n);
   c += E * pow(sat(dot(n, normalize(V + L))), 24.) * 1.6 + vec3f(.3, .6, .7) * pow(1. - sat(dot(n, V)), 3.) * .25 * vv.g;
   return fin(fog(c, i.wp, z));
 }
@@ -595,6 +605,7 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
   let ir = .5 + .5 * cos(TAU * (vec3f(0., .33, .67) + ndv * 1.1 + tx.a * 1.5 + .55));
   let fillN = vec3f(n.x, abs(n.y) * .55 + .25, n.z);
   var c = alb * (E * sat(dot(n, L)) * (.3 + ca) + amb(i.wp, fillN, vv.g, z) * 1.1 + side(i.wp, n, 1., z) * .8);
+  c += alb * torch(i.wp, n);
   c += ir * vec3f(.35, .16, .6) * (.07 + .22 * tx.b) * (.4 + E.g * .2 * ca.g) * (1. - top * .3);
   c += E * pow(sat(dot(n, normalize(V + L))), 30.) * .5 * (.3 + ca);
   let sky = amb(i.wp, vec3f(0., 1., 0.), vv.g, z);
@@ -743,6 +754,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let ndv = sat(dot(n, V));
   let ndl = dot(n, L);
   var c = alb * (E * (.22 + .78 * sat(ndl)) + amb(i.wp, n, vv.g, z) * 1.25);
+  c += alb * torch(i.wp, n) * 1.3;
   if (isF) { c += alb * E * sat(-ndl) * .5; }                                   // light through the fins
   c += E * pow(sat(dot(n, normalize(V + L))), 30.) * spec * .9;
   c += (.5 + .5 * cos(TAU * (vec3f(0., .33, .67) + ndv * 1.3 + .45))) * iri * .25 * E * pow(1. - ndv, 2.);
@@ -775,15 +787,16 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   // six colour forms (real ones vary): pale tentacles with brighter, slightly fluorescent tips, a coloured column/disc
   let k = u32(i.sp.x * 6.) % 6u;
   var PD = array<vec3f, 6>(vec3f(.85, .2, .5), vec3f(.9, .25, .2), vec3f(.55, .3, .9), vec3f(.95, .55, .2), vec3f(.3, .45, .95), vec3f(.9, .3, .7));
-  var PT = array<vec3f, 6>(vec3f(.9, .85, .7), vec3f(1., .8, .75), vec3f(.85, .8, .95), vec3f(1., .9, .7), vec3f(.8, .95, .9), vec3f(.95, .85, .9));
-  var PX = array<vec3f, 6>(vec3f(.55, 1., .45), vec3f(1., .55, .8), vec3f(.55, .75, 1.), vec3f(1., .95, .4), vec3f(.4, 1., .9), vec3f(.85, .6, 1.));
+  var PT = array<vec3f, 6>(vec3f(.95, .68, .5), vec3f(.95, .55, .6), vec3f(.7, .6, .9), vec3f(.95, .75, .4), vec3f(.55, .85, .7), vec3f(.9, .6, .75));
+  var PX = array<vec3f, 6>(vec3f(.55, .6, 1.), vec3f(.7, 1., .35), vec3f(1., .5, .85), vec3f(.45, 1., .5), vec3f(.4, .95, 1.), vec3f(1., .95, .4));
   let tip = ss(.7, .95, i.aux);
-  var alb = mix(mix(PD[k] * .7, PT[k] * mix(vec3f(1.), PX[k], .35), ss(0., .6, i.aux)) * (.75 + .25 * i.aux), PX[k], tip);
+  var alb = mix(mix(PD[k] * .7, PT[k], ss(0., .6, i.aux)) * (.7 + .3 * i.aux), PX[k], tip * .8);
   if (i.aux < 0.) { alb = PD[k]; }
   let E = sunE(i.wp.y, z) * i.lt;
   var c = alb * (E * (.45 + .7 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * 1.6) + alb * E * .2;
+  c += alb * torch(i.wp, n) * 1.2;
   c += E * pow(sat(dot(n, normalize(V + L))), 20.) * .3;
-  c += (PX[k] * tip * .4 + alb * .06) * (.4 + .6 * g.mis.w) * select(1., 0., i.aux < 0.) + PX[k] * tip * .15 * (1. - g.mis.w); // a soft glow at the tips, stronger at night
+  c += (PX[k] * tip * .6 + alb * E * .25) * (.4 + .6 * g.mis.w) * select(1., 0., i.aux < 0.) + PX[k] * tip * .15 * (1. - g.mis.w); // a soft glow at the tips, stronger at night
   return fin(fog(c, i.wp, z));
 }
 `;
