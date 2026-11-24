@@ -522,6 +522,7 @@ $('bn').onclick = () => { HOUR = (HOUR + 3) % 24; };
 
 // ---------------------------------------------------------------- mini map (M): the whole reef from above
 // grid A-H (west to east) x 1-8 (north to south), 48 m squares; north (-z) is up
+const ZON = Wd.zones;
 const mapEl = $('mp'), mc = $('mc'), mx = mc.getContext('2d'), MS = 440, MW = 384, mk = MS / MW;
 const mapBg = document.createElement('canvas'); mapBg.width = mapBg.height = MS;
 {
@@ -542,6 +543,11 @@ const mapBg = document.createElement('canvas'); mapBg.width = mapBg.height = MS;
   for (let k = 0; k < 8; k++) { const c = (k + 0.5) * 48 * mk; g.fillText('ABCDEFGH'[k], c, 11); g.fillText(String(k + 1), 10, c); }
   // what lives where
   const dot = (x, z, col, r) => { g.beginPath(); g.arc((x + 192) * mk, (z + 192) * mk, r, 0, TAU); g.fillStyle = col; g.fill(); g.strokeStyle = '#0008'; g.stroke(); };
+  for (const z of ZON) { // the exhibits: a ring and the name
+    const x = (z.x + 192) * mk, y = (z.z + 192) * mk, r = (z.r + 4) * mk;
+    g.beginPath(); g.arc(x, y, r, 0, TAU); g.fillStyle = '#ffd36b33'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#ffd36b'; g.stroke(); g.lineWidth = 1;
+    g.font = 'bold 15px system-ui,sans-serif'; g.lineWidth = 4; g.strokeStyle = '#03131c'; g.strokeText(z.zh, x, y + r + 12); g.fillStyle = '#ffd36b'; g.fillText(z.zh, x, y + r + 12); g.lineWidth = 1;
+  }
   for (const a of ANE) dot(a[0], a[2], '#ff8a3d', 4.5);
   for (const s of STA) dot(s[0], s[2], '#7dffb0', 4.5);
   for (const h of HOL.slice(0, 10)) dot(h[0], h[2], '#d9b26a', 4);
@@ -567,3 +573,59 @@ function mapStep() {
   mx.fillText(`你在 ${gridOf(F[CX], F[CZ])} · 水深 ${(-F[CY]).toFixed(0)} 米`, MS - 101, MS - 19);
 }
 addEventListener('keydown', (e) => { if (!menu && !e.repeat && e.code === 'KeyM') mapToggle(); });
+
+// ---------------------------------------------------------------- name tags and the exhibit banner
+// Up close (within ~5 m) the nearest animal of each kind gets a ring and its everyday name, so you know what you are looking at.
+const TAGNAME = ['小丑鱼', '蓝绿光鳃鱼', '清洁鱼', '鹦嘴鱼', '镰鱼', '东星斑', '蓝倒吊', '黑鳍礁鲨', '巨海鳝', '蝠鲼', '海葵'];
+const TAGR = 5.5, tagEl = $('tg'), TAGN = 10, tags = [];
+for (let k = 0; k < TAGN; k++) {
+  const d = document.createElement('div'); d.className = 'tag'; d.innerHTML = '<i></i><b></b>'; tagEl.appendChild(d);
+  tags.push({ d, ring: d.firstChild, name: d.lastChild, txt: '', on: false, rr: -1 });
+}
+const tBest = new Float64Array(11), tagId = new Int32Array(11);
+function tagCand(id, sp, x, y, z) {
+  const d = hypot(x - F[CX], y - F[CY], z - F[CZ]);
+  if (d < TAGR && d < tBest[sp]) { tBest[sp] = d; tagId[sp] = id; }
+}
+// visible: in front, on screen, and not behind rock
+function tagPos(x, y, z, out) {
+  const dx = x - F[CX], dy = y - F[CY], dz = z - F[CZ], zc = dx * F[FX] + dy * F[FY] + dz * F[FZ];
+  if (zc < 0.3) return false;
+  const xc = (dx * F[RX] + dz * F[RZ]) / (zc * TANH * W / H), yc = (dx * F[UX] + dy * F[UY] + dz * F[UZ]) / (zc * TANH);
+  if (abs(xc) > 0.95 || abs(yc) > 0.95) return false;
+  for (const t of [0.35, 0.6, 0.85]) if (rockAt(F[CX] + dx * t, F[CY] + dy * t, F[CZ] + dz * t) > 0.15) return false;
+  out[0] = (xc + 1) * 0.5 * canvas.clientWidth; out[1] = (1 - yc) * 0.5 * canvas.clientHeight; out[2] = zc; out[3] = sqrt(dx * dx + dy * dy + dz * dz);
+  return true;
+}
+const TP = new Float64Array(4);
+function tagStep() {
+  if (frameN % 2) return;
+  let n = 0;
+  if (!menu && !jumpT_on()) {
+    tBest.fill(1e9); tagId.fill(-1);
+    for (let i = 0; i < nA; i++) if (ST[i] !== S_GONE) { const o = i * 3, h = SP[i] === 8 ? LEN[i] * 0.4 : 0; tagCand(i, SP[i], P[o] + Hd[o] * h, P[o + 1] + Hd[o + 1] * h, P[o + 2] + Hd[o + 2] * h); }
+    for (let k = 0; k < nAnem; k++) tagCand(ANEB + k, 10, AN[k * 8], AN[k * 8 + 1] + 0.2, AN[k * 8 + 2]);
+    for (let sp = 0; sp < 11 && n < TAGN; sp++) {
+      const id = tagId[sp]; if (id < 0) continue;
+      const an = id >= ANEB, o = id * 3, h = sp === 8 ? LEN[id] * 0.4 : 0, L = an ? 0.55 * AN[(id - ANEB) * 8 + 3] : sp === 8 ? 0.18 : LEN[id] * 0.55 + 0.04;
+      const x = an ? AN[(id - ANEB) * 8] : P[o] + Hd[o] * h, y = an ? AN[(id - ANEB) * 8 + 1] + 0.2 : P[o + 1] + Hd[o + 1] * h, z = an ? AN[(id - ANEB) * 8 + 2] : P[o + 2] + Hd[o + 2] * h;
+      if (!tagPos(x, y, z, TP)) continue;
+      const t = tags[n++], r = max(14, L / (TP[2] * TANH) * canvas.clientHeight * 0.5) | 0, a = min(1, (TAGR - TP[3]) / 1.2);
+      if (t.txt !== TAGNAME[sp]) { t.txt = TAGNAME[sp]; t.name.textContent = t.txt; }
+      if (t.rr !== r) { t.rr = r; t.ring.style.cssText = `width:${2 * r}px;height:${2 * r}px;transform:translate(${-r}px,${-r}px)`; t.name.style.top = `${r + 4}px`; }
+      t.d.style.transform = `translate(${TP[0].toFixed(1)}px,${TP[1].toFixed(1)}px)`; t.d.style.opacity = a.toFixed(2);
+      if (!t.on) { t.on = true; t.d.style.display = 'block'; }
+    }
+  }
+  for (let k = n; k < TAGN; k++) if (tags[k].on) { tags[k].on = false; tags[k].d.style.display = 'none'; }
+}
+function jumpT_on() { return jumpT >= 0; }
+// arriving at an exhibit shows its name for a few seconds
+const znEl = $('zn'), znN = $('znn'), znS = $('zns');
+let zIn = -1, znT = 0;
+function zoneStep(dt) {
+  if (menu) return;
+  let k = -1; ZON.forEach((z, j) => { if (hypot(F[CX] - z.x, F[CZ] - z.z) < z.r + 4) k = j; });
+  if (k !== zIn) { zIn = k; if (k >= 0) { znN.textContent = ZON[k].zh; znS.textContent = ZON[k].sub; znEl.className = 'on'; znT = 4.5; } }
+  if (znT > 0 && (znT -= dt) <= 0) znEl.className = '';
+}

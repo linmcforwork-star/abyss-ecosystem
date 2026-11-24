@@ -139,6 +139,16 @@ svg { width: 1.5em; height: 1.5em; fill: currentColor; }
 .g #mp.on { display: block; }
 #mc { position: static; display: block; width: 100%; height: auto; border-radius: .4em; filter: none; transform: none; opacity: 1; cursor: default; }
 #ml { margin-top: .3em; font-size: .62em; font-weight: 500; text-align: center; line-height: 1.6; }
+/* name tags on the animals up close, the exhibit name when you arrive */
+#tg { position: absolute; inset: 0; pointer-events: none; overflow: hidden; display: none; }
+.g #tg { display: block; }
+.tag { position: absolute; left: 0; top: 0; display: none; will-change: transform, opacity; }
+.tag i { position: absolute; left: 0; top: 0; border-radius: 50%; border: 2px solid #ffe08a; box-shadow: 0 0 .5em #ffe08a99, inset 0 0 .4em #ffe08a66; }
+.tag b { position: absolute; left: 0; top: 0; transform: translate(-50%, 0); white-space: nowrap; padding: .15em .6em; border-radius: 1em; background: #03131cc0; color: #fff; font-size: .95em; font-weight: 700; letter-spacing: .05em; text-shadow: 0 1px 3px #000; }
+#zn { position: absolute; left: 50%; top: 18%; transform: translate(-50%, -.4em); text-align: center; pointer-events: none; opacity: 0; transition: opacity 1.2s, transform 1.2s; text-shadow: 0 2px 12px #000c; }
+.g #zn.on { opacity: 1; transform: translate(-50%, 0); }
+#znn { display: block; font-size: 2.6em; font-weight: 800; letter-spacing: .3em; color: #fff; }
+#zns { display: block; margin-top: .2em; font-size: 1.05em; letter-spacing: .2em; color: #ffe08a; }
 #fd { position: absolute; inset: 0; background: #021018; opacity: 0; pointer-events: none; transition: opacity .45s; }
 #fd.on { opacity: 1; }
 </style>
@@ -177,9 +187,11 @@ svg { width: 1.5em; height: 1.5em; fill: currentColor; }
     <a href=https://ko-fi.com/noniv target=_blank><svg viewBox="0 0 24 24"><path fill-rule=evenodd d="M2 5h16.5a4.5 4.5 0 0 1 0 9H17a6 6 0 0 1-6 5H8a6 6 0 0 1-6-6zM17 8v3h1.5a1.5 1.5 0 0 0 0-3zM9.5 15.5 5.9 12a2.2 2.2 0 0 1 3.6-2.5 2.2 2.2 0 0 1 3.6 2.5z"/></svg>支持原作者</a>
   </p>
 </div>
+<div id=tg></div>
+<div id=zn><b id=znn></b><span id=zns></span></div>
 <div id=fd></div>
 <div id=hud><span id=ck></span><button id=bt>导览</button><button id=bn>时间 +3 小时</button></div>
-<div id=mp><canvas id=mc width=440 height=440></canvas><p id=ml><b style=color:#ff8a3d>●</b> 海葵 <b style=color:#7dffb0>●</b> 清洁站 <b style=color:#d9b26a>●</b> 海鳝洞 <b style=color:#fff>①</b> 观景点</p></div>
+<div id=mp><canvas id=mc width=440 height=440></canvas><p id=ml><b style=color:#ffd36b>◯</b> 展区 <b style=color:#ff8a3d>●</b> 海葵 <b style=color:#7dffb0>●</b> 清洁站 <b style=color:#d9b26a>●</b> 海鳝洞 <b style=color:#fff>①</b> 观景点</p></div>
 <div id=cd><b id=cn></b><i id=cl></i><p id=cg></p><p id=cf></p></div>
 
 <pre id=i></pre>
