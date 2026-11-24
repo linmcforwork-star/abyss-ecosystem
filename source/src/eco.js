@@ -201,6 +201,7 @@ function ecoFrame(dtIn) {
   for (let i = 0; i < nA; i++) if (SP[i] === 8) put(i);
   nEcoE = n - nEcoF - nEcoS;
   cardStep(dtIn);
+  mapStep();
 }
 
 function clown(i, dt) {
@@ -416,7 +417,7 @@ function showCard(id) {
 let lastDo = '';
 function cardStep(dt) {
   // clock
-  if (frameN % 20 === 0) { // (a string every 20 frames, not every frame)
+  if (frameN % 20 === 1) { // (a string every 20 frames, not every frame)
     const hh = HOUR | 0, mm = (HOUR - hh) * 60 | 0, ph = DAY > 0.8 ? '白天' : night() ? '夜晚' : HOUR < 12 ? '黎明' : '黄昏';
     const ct = `${ph} ${hh < 10 ? '0' : ''}${hh}:${mm < 10 ? '0' : ''}${mm}${ffwd ? ' ⏩' : ''}${tour ? ' · 导览中' : fol >= 0 ? ' · 跟随中' : ''}`;
     if (clock.textContent !== ct) clock.textContent = ct;
@@ -518,3 +519,51 @@ addEventListener('keydown', (e) => {
 addEventListener('keyup', (e) => { if (e.code === 'KeyN') ffwd = 0; });
 $('bt').onclick = () => { if (tour) unfollow(); else { tour = true; tourT = 0; } };
 $('bn').onclick = () => { HOUR = (HOUR + 3) % 24; };
+
+// ---------------------------------------------------------------- mini map (M): the whole reef from above
+// grid A-H (west to east) x 1-8 (north to south), 48 m squares; north (-z) is up
+const mapEl = $('mp'), mc = $('mc'), mx = mc.getContext('2d'), MS = 440, MW = 384, mk = MS / MW;
+const mapBg = document.createElement('canvas'); mapBg.width = mapBg.height = MS;
+{
+  const g = mapBg.getContext('2d'), img = g.createImageData(MW, MW), d = img.data;
+  for (let j = 0; j < MW; j++) for (let i = 0; i < MW; i++) {
+    const h = floorH[i + MW * j], o = (i + MW * j) * 4;
+    // light from the north-west on the seabed height, coloured by depth: sand-turquoise shallow, deep blue below
+    const hx = floorH[min(i + 1, MW - 1) + MW * j] - floorH[max(i - 1, 0) + MW * j], hz = floorH[i + MW * min(j + 1, MW - 1)] - floorH[i + MW * max(j - 1, 0)];
+    const sh = clamp(0.75 - (hx + hz) * 0.18, 0.35, 1.25), t = clamp((h + 46) / 40, 0, 1);
+    const out = hypot(i - 191.5, j - 191.5) > 172;
+    d[o] = (20 + 60 * t) * sh; d[o + 1] = (60 + 130 * t) * sh; d[o + 2] = (95 + 120 * t) * sh; d[o + 3] = out ? 90 : 255;
+  }
+  const t = document.createElement('canvas'); t.width = t.height = MW; t.getContext('2d').putImageData(img, 0, 0);
+  g.imageSmoothingEnabled = true; g.drawImage(t, 0, 0, MS, MS);
+  // grid and its labels
+  g.strokeStyle = '#ffffff40'; g.lineWidth = 1; g.fillStyle = '#ffffffc0'; g.font = 'bold 15px system-ui,sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+  for (let k = 1; k < 8; k++) { const p = k * 48 * mk; g.beginPath(); g.moveTo(p, 0); g.lineTo(p, MS); g.moveTo(0, p); g.lineTo(MS, p); g.stroke(); }
+  for (let k = 0; k < 8; k++) { const c = (k + 0.5) * 48 * mk; g.fillText('ABCDEFGH'[k], c, 11); g.fillText(String(k + 1), 10, c); }
+  // what lives where
+  const dot = (x, z, col, r) => { g.beginPath(); g.arc((x + 192) * mk, (z + 192) * mk, r, 0, TAU); g.fillStyle = col; g.fill(); g.strokeStyle = '#0008'; g.stroke(); };
+  for (const a of ANE) dot(a[0], a[2], '#ff8a3d', 4.5);
+  for (const s of STA) dot(s[0], s[2], '#7dffb0', 4.5);
+  for (const h of HOL.slice(0, 10)) dot(h[0], h[2], '#d9b26a', 4);
+  g.font = 'bold 13px system-ui,sans-serif';
+  POSES.forEach((p, k) => { const x = (p[0] + 192) * mk, y = (p[2] + 192) * mk; g.beginPath(); g.arc(x, y, 8, 0, TAU); g.fillStyle = '#fff'; g.fill(); g.fillStyle = '#03222d'; g.fillText(String(k + 1), x, y + 1); });
+}
+let mapOn = true; mapEl.className = 'on'; // open from the start; M closes it
+const mapToggle = () => { mapOn = !mapOn; mapEl.className = mapOn ? 'on' : ''; };
+// where you are, as a grid square, for telling each other places ("C5")
+const gridOf = (x, z) => 'ABCDEFGH'[clamp(floor((x + 192) / 48), 0, 7)] + (clamp(floor((z + 192) / 48), 0, 7) + 1);
+function mapStep() {
+  if (!mapOn || frameN % 3) return;
+  mx.drawImage(mapBg, 0, 0);
+  const x = (F[CX] + 192) * mk, y = (F[CZ] + 192) * mk;
+  // the animal being followed
+  if (fol >= 0 && fol < ANEB) { mx.beginPath(); mx.arc((P[fol * 3] + 192) * mk, (P[fol * 3 + 2] + 192) * mk, 6, 0, TAU); mx.strokeStyle = '#ffe08a'; mx.lineWidth = 2.5; mx.stroke(); }
+  // you: an arrow pointing where you look
+  mx.save(); mx.translate(x, y); mx.rotate(F[YAW]);
+  mx.beginPath(); mx.moveTo(0, -13); mx.lineTo(8, 9); mx.lineTo(0, 4); mx.lineTo(-8, 9); mx.closePath();
+  mx.fillStyle = '#ff3b5c'; mx.fill(); mx.strokeStyle = '#fff'; mx.lineWidth = 2; mx.stroke(); mx.restore();
+  mx.fillStyle = '#03131ccc'; mx.fillRect(MS - 196, MS - 32, 190, 26);
+  mx.fillStyle = '#fff'; mx.font = 'bold 15px system-ui,sans-serif'; mx.textAlign = 'center'; mx.textBaseline = 'middle';
+  mx.fillText(`你在 ${gridOf(F[CX], F[CZ])} · 水深 ${(-F[CY]).toFixed(0)} 米`, MS - 101, MS - 19);
+}
+addEventListener('keydown', (e) => { if (!menu && !e.repeat && e.code === 'KeyM') mapToggle(); });
