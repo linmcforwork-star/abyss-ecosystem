@@ -548,7 +548,7 @@ const mapBg = document.createElement('canvas'); mapBg.width = mapBg.height = MS;
   g.font = 'bold 13px system-ui,sans-serif';
   POSES.forEach((p, k) => { const x = (p[0] + 192) * mk, y = (p[2] + 192) * mk; g.beginPath(); g.arc(x, y, 8, 0, TAU); g.fillStyle = '#fff'; g.fill(); g.fillStyle = '#03222d'; g.fillText(String(k + 1), x, y + 1); });
 }
-let mapOn = false;
+let mapOn = true; mapEl.className = 'on'; // open from the start; M closes it
 const mapToggle = () => { mapOn = !mapOn; mapEl.className = mapOn ? 'on' : ''; };
 // where you are, as a grid square, for telling each other places ("C5")
 const gridOf = (x, z) => 'ABCDEFGH'[clamp(floor((x + 192) / 48), 0, 7)] + (clamp(floor((z + 192) / 48), 0, 7) + 1);
@@ -567,4 +567,3 @@ function mapStep() {
   mx.fillText(`你在 ${gridOf(F[CX], F[CZ])} · 水深 ${(-F[CY]).toFixed(0)} 米`, MS - 101, MS - 19);
 }
 addEventListener('keydown', (e) => { if (!menu && !e.repeat && e.code === 'KeyM') mapToggle(); });
-$('bm').onclick = mapToggle;
