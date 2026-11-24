@@ -131,7 +131,7 @@ function makeWorld(D, T, flyPts, POSES) {
   const tangent = (n) => { let t = abs(n[1]) < 0.9 ? [n[2], 0, -n[0]] : [1, 0, 0]; const l = hypot(...t); t = t.map((v) => v / l); return [t, [n[1] * t[2] - n[2] * t[1], n[2] * t[0] - n[0] * t[2], n[0] * t[1] - n[1] * t[0]]]; };
   const nearFly = (x, y, z, r) => { for (const p of flyPts) if (hypot(x - p[0], z - p[2]) < r && y < p[1] + 3 && y > p[1] - 13) return true; return false; };
   // the exhibits: small themed areas on open sand, kept clear of the generic scatter and dressed by hand below
-  const ZONES = [{ zh: '海葵花园', sub: '小丑鱼和它们的海葵', x: 4, z: 2, r: 6.5 }];
+  const ZONES = [{ zh: '海葵花园', sub: '小丑鱼和它们的海葵', x: 4, z: 2, r: 7.5 }];
   const inZone = (x, z, pad = 0) => { for (const g of ZONES) if (hypot(x - g.x, z - g.z) < g.r + pad) return true; return false; };
   const nearPose = (x, z, r = 3) => { for (const p of POSES) if (hypot(x - p[0], z - p[2]) < r) return true; return false; };
   // --- kelp columns
@@ -303,13 +303,13 @@ function makeWorld(D, T, flyPts, POSES) {
     const g = ZONES[0], top = (x, z) => { const f = floorsAt(x, z); return f.length ? f[0] : -45; };
     let bx = POSES[0][0] - g.x, bz = POSES[0][2] - g.z; const bl = hypot(bx, bz); bx /= bl; bz /= bl; // toward the start view
     const at = (f, r) => [g.x + bx * f - bz * r, g.z + bz * f + bx * r]; // f: toward the viewer, r: to the side
-    for (const [f, r] of [[0.6, 0], [1.8, -2.2], [1.4, 2.4], [-1.6, -1.2], [-1.2, 1.8], [-0.4, 4]]) {
+    [[0.8, 0], [2.4, -3], [2, 3.2], [-2.2, -1.7], [-1.6, 2.4], [-0.6, 5.4]].forEach(([f, r], k) => {
       let [x, z] = at(f + rr(-0.3, 0.3), r + rr(-0.3, 0.3)), y = top(x, z);
       for (let t = 0; t < 8 && (Dw(x, y + 0.7, z) > -0.5 || Dw(x, y + 1.5, z) > -0.8); t++) { x += (g.x - x) * 0.25; z += (g.z - z) * 0.25; y = top(x, z); }
-      anemones.push([x, y - 0.05, z, rr(0.85, 1.15), rnd()]);
-    }
+      anemones.push([x, y - 0.05, z, rr(1.3, 1.65), (k + 0.5) / 6]); // the last value picks the colours (six different ones)
+    });
     const q = (x, y, z, n = 0.2) => qMul(qFromY(rr(-n, n), 1, rr(-n, n)), qAxis(0, 1, 0, rnd() * TAU));
-    const put = (kind, f, r, sc, mat, sink = 0.15) => { const [x, z] = at(f, r), y = top(x, z); solid(kind, x, y - sink * sc, z, sc, q(x, y, z), mat, rnd(), 1, 0); return [x, y, z]; };
+    const put = (kind, f, r, sc, mat, sink = 0.15) => { const [x, z] = at(f - 1, r * 1.2), y = top(x, z); solid(kind, x, y - sink * sc, z, sc, q(x, y, z), mat, rnd(), 1, 0); return [x, y, z]; };
     put(26, -4.2, -2.5, 1.5, 6, 0.25); put(26, -3.6, 3.2, 1.1, 6, 0.25); put(26, -2.6, 5.6, 0.7, 6, 0.25);  // brain corals
     put(27, -5, 0.6, 1.4, 7, 0.1);                                                                       // a table coral
     for (const [f, r, s] of [[-3.4, 0.4, 1.2], [-4.4, -4.6, 1], [-2.8, -4.4, 0.8], [-5.4, 3.6, 1.1]]) {   // branching coral heads

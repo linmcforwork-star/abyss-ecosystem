@@ -196,7 +196,7 @@ const T = buildTerrain(D);
 
 // preset viewpoints (position, look-at), keys 1-6; the world generator dresses the scene around them
 const POSES = [
-  [10, 1.3, 7, -9, -31, -10],
+  [7.4, 1.9, 4.9, 4, 0, 2], // looking at the anemone garden (look-at height set from the floor below)
   [50, 1.3, 34, 58, -23, 8],
   [-26, 2.2, -100, 0, -9, -108],
   [-55, 1.5, -18, -60, -30, 8],
@@ -270,6 +270,7 @@ for (const p of POSES) flyPts.push([p[0], -40, p[2]]);
 await say('正在种珊瑚…', 0.73, 2500);
 const Wd = makeWorld(D, T, flyPts, POSES);
 for (const p of POSES) p[1] += Wd.gy(p[0], p[2]);
+POSES[0][4] = Wd.gy(POSES[0][3], POSES[0][5]) + 0.5;
 D = Wd.gy = T.smp = null; // with gy goes the generator's working memory (about 200 MB)
 
 await say('正在放鱼…', 0.94, 1200);

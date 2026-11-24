@@ -101,7 +101,7 @@ let nG = 0;
   for (const h of all) if (HEADS.length < 16 && !HEADS.some((q) => hypot(q[0] - h[0], q[2] - h[2]) < 9)) HEADS.push(h);
   if (!HEADS.length) HEADS.push([0, floorAt(0, 0) + 1, 0, 1]);
   // clownfish: a big female, a smaller male, sometimes a juvenile, in every anemone
-  ANE.forEach((a, k) => { const n = 2 + (rnd() < 0.5); for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) LEN[i] = [0.105, 0.08, 0.055][j]; } });
+  ANE.forEach((a, k) => { const n = 2 + (rnd() < 0.5); for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) LEN[i] = [0.26, 0.2, 0.15][j]; } }); // ~2.5x life size, so you can see them
   // chromis: a cloud over each coral head
   HEADS.forEach((h, k) => { const n = 10 + (rnd() * 10 | 0); for (let j = 0; j < n; j++) add(1, h[0] + rr(-0.5, 0.5), h[1] + rr(0.2, 0.9), h[2] + rr(-0.5, 0.5), k); });
   // cleaner wrasse at every station
@@ -206,18 +206,18 @@ function ecoFrame(dtIn) {
 
 function clown(i, dt) {
   const a = ANE[HM[i]], ax = a[0], ay = a[1] + 0.1 * a[3], az = a[2], camD = hypot(F[CX] - ax, F[CY] - ay, F[CZ] - az);
-  const big = LEN[i] > 0.1, thr = threat(i, 0);
+  const big = LEN[i] > 0.25, thr = threat(i, 0);
   if (night()) ST[i] = S_SLEEP;
   else if (thr < 4) ST[i] = S_HIDE;
-  else if (big && camD < 1.7 && camD > 0.6) ST[i] = S_GUARD;
+  else if (big && camD < 2.2 && camD > 0.9) ST[i] = S_GUARD;
   else ST[i] = S_HOVER;
   if ((TM[i] -= dt) < 0 || ST[i] === S_GUARD) {
     TM[i] = rr(0.6, 2);
-    if (ST[i] === S_HOVER) { const r = rr(0, 0.45) * a[3], t = rnd() * TAU; setT(i, ax + cos(t) * r, ay + rr(0.12, 0.5), az + sin(t) * r); }
-    else if (ST[i] === S_GUARD) { const k = 0.55 / camD; setT(i, ax + (F[CX] - ax) * k, ay + (F[CY] - ay) * k, az + (F[CZ] - az) * k); }
+    if (ST[i] === S_HOVER) { const r = rr(0, 0.45) * a[3], t = rnd() * TAU; setT(i, ax + cos(t) * r, ay + rr(0.15, 0.6) * a[3], az + sin(t) * r); }
+    else if (ST[i] === S_GUARD) { const k = 0.8 / camD; setT(i, ax + (F[CX] - ax) * k, ay + (F[CY] - ay) * k, az + (F[CZ] - az) * k); }
     else { const r = rr(0, 0.2) * a[3], t = rnd() * TAU; setT(i, ax + cos(t) * r, ay + rr(0.02, 0.1), az + sin(t) * r); }
   }
-  steer(i, ST[i] === S_GUARD ? 0.9 : ST[i] === S_HIDE ? 0.6 : 0.22, dt, 3, 0, false);
+  steer(i, ST[i] === S_GUARD ? 1.2 : ST[i] === S_HIDE ? 0.8 : 0.35, dt, 3, 0, false);
   face(i, dt, ST[i] === S_GUARD ? F[CX] - P[i * 3] : 0, ST[i] === S_GUARD ? F[CY] - P[i * 3 + 1] : 0, ST[i] === S_GUARD ? F[CZ] - P[i * 3 + 2] : 0);
 }
 function chromis(i, dt) {
