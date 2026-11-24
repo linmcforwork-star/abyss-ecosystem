@@ -794,9 +794,9 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   if (i.aux < 0.) { alb = PD[k]; }
   let E = sunE(i.wp.y, z) * i.lt;
   var c = alb * (E * (.45 + .7 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * 1.6) + alb * E * .2;
-  c += alb * torch(i.wp, n) * 1.2;
+  c += alb * torch(i.wp, n) * .8;
   c += E * pow(sat(dot(n, normalize(V + L))), 20.) * .3;
-  c += (PX[k] * tip * .6 + alb * E * .25) * (.4 + .6 * g.mis.w) * select(1., 0., i.aux < 0.) + PX[k] * tip * .15 * (1. - g.mis.w); // a soft glow at the tips, stronger at night
+  c += (PX[k] * tip * .35 + alb * E * .2) * (.4 + .6 * g.mis.w) * select(1., 0., i.aux < 0.) + PX[k] * tip * .15 * (1. - g.mis.w); // a soft glow at the tips, stronger at night
   return fin(fog(c, i.wp, z));
 }
 `;
