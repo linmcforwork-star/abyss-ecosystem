@@ -37,3 +37,5 @@
     } else if (/Digit[1-6]/.test(e.code)) stop();
   });
 }
+// test hook: lets automated screenshot scripts move the camera, set the time and frame an animal (dev.html only)
+window.__dev = { lookAt, F, POSES, get menu() { return menu; }, go: () => ui(false), setHour: (h) => { HOUR = h; }, P, SP, ST, LEN, Hd, get nA() { return nA; }, follow, camTo, unfollow, get fol() { return fol; }, ANE, HEADS, STA, HOL, AN, get counts() { return [nEcoF, nEcoS, nEcoE, nAnem, nA]; } };

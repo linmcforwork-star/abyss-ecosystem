@@ -1,0 +1,97 @@
+// ============================================================================
+// reef meshes: massive and table corals, sea anemone, reef fish, reef shark, moray eel
+// ============================================================================
+
+// brain coral: a low lumpy dome; the meandering grooves are drawn by the shader (material 6)
+function meshBrain() {
+  rseed(230);
+  return meshLathe([[0, 0, 0.3], [0.5, 0, 0.45], [0.72, 0.1, 0.75], [0.8, 0.28, 1], [0.74, 0.46, 1], [0.58, 0.62, 1], [0.34, 0.73, 1], [0.12, 0.77, 1], [0, 0.775, 1]], 26, 0.22);
+}
+// table coral (Acropora): a short stalk under a wide, thin, slightly dished plate (material 7)
+function meshTable() {
+  rseed(231);
+  return meshLathe([[0, 0, 0.25], [0.11, 0, 0.35], [0.09, 0.22, 0.5], [0.13, 0.36, 0.7], [0.45, 0.43, 0.85], [0.85, 0.5, 1], [1.05, 0.56, 1], [1.08, 0.6, 1], [1.02, 0.63, 1], [0.7, 0.58, 1], [0.3, 0.55, 0.9], [0, 0.56, 0.9]], 32, 0.3);
+}
+// sea anemone: an oral disc with ~70 tentacles; aux = position along the tentacle (0 base, 1 tip), -0.5 the disc
+function meshAnemone() {
+  rseed(232);
+  const m = new Mesh();
+  const disc = []; for (let s = 0; s < 16; s++) { const a = s / 16 * TAU; disc.push(m.v(cos(a) * 0.42, 0.06, sin(a) * 0.42, -0.5)); }
+  const c = m.v(0, 0.09, 0, -0.5); for (let s = 0; s < 16; s++) m.tri(disc[(s + 1) % 16], disc[s], c);
+  for (let i = 0; i < 150; i++) {
+    const a = i * 2.39996 + rr(-0.1, 0.1), r = 0.05 + 0.4 * sqrt((i + 0.5) / 150), L = rr(0.2, 0.32), out = 0.4 + r;
+    const pts = []; for (let k = 0; k <= 3; k++) { const t = k / 3; pts.push([cos(a) * (r + out * L * t * 0.8), 0.06 + L * t * (1 - 0.3 * t), sin(a) * (r + out * L * t * 0.8)]); }
+    m.tube(pts, (k) => 0.016 * (1 - 0.3 * k / 3), 4, true, (k) => k / 3);
+  }
+  return m;
+}
+
+// reef fish, unit length along x (nose +x), side view in xy. aux: 1 body, .6 dorsal fin, .55 anal fin, .3 tail, .8 pectoral
+function meshReefFish() {
+  const m = new Mesh();
+  const X = [0.5, 0.47, 0.42, 0.34, 0.24, 0.12, 0, -0.12, -0.22, -0.3, -0.35];
+  const H = [0.006, 0.05, 0.095, 0.14, 0.175, 0.19, 0.185, 0.155, 0.105, 0.06, 0.042];
+  const S = 12, rings = [];
+  for (let i = 0; i < X.length; i++) {
+    const r = []; for (let k = 0; k < S; k++) { const a = k / S * TAU, w = H[i] * 0.42 * (i ? 1 : 1); r.push(m.v(X[i], sin(a) * H[i] * (sin(a) < 0 ? 0.92 : 1), cos(a) * w * (0.75 + 0.25 * abs(cos(a))), 1)); }
+    rings.push(r);
+  }
+  for (let i = 0; i < X.length - 1; i++) for (let k = 0; k < S; k++) { const k2 = (k + 1) % S; m.quad(rings[i][k], rings[i + 1][k], rings[i + 1][k2], rings[i][k2]); }
+  const hAt = (x) => { for (let i = 0; i < X.length - 1; i++) if (x <= X[i] && x >= X[i + 1]) return mix(H[i], H[i + 1], (X[i] - x) / (X[i] - X[i + 1])); return 0.04; };
+  // a flat fin as a strip between a base line and an outer edge (both sides share it, the shader lights both faces)
+  const fin = (xs, base, edge, aux) => {
+    let p = null;
+    for (const x of xs) { const q = [m.v(x, base(x), 0, aux), m.v(x + edge(x)[0], edge(x)[1], 0, aux)]; if (p) m.quad(p[0], q[0], q[1], p[1]); p = q; }
+  };
+  const dx = [0.2, 0.12, 0.04, -0.04, -0.12, -0.2, -0.27, -0.31];
+  fin(dx, (x) => hAt(x) * 0.92, (x) => [-0.04, hAt(x) + 0.09 * sin(PI * (0.2 - x) / 0.52) + 0.015], 0.6);
+  const ax = [-0.02, -0.1, -0.18, -0.25, -0.31];
+  fin(ax, (x) => -hAt(x) * 0.85, (x) => [-0.04, -hAt(x) - 0.075 * sin(PI * (0.0 - x) / 0.32) - 0.01], 0.55);
+  // tail: a fan with a shallow fork
+  const T0 = -0.34, tl = [[-0.5, 0.17], [-0.45, 0.06], [-0.43, 0], [-0.45, -0.06], [-0.5, -0.17]];
+  const tb = [m.v(T0, 0.04, 0, 0.3), m.v(T0, 0, 0, 0.3), m.v(T0, -0.04, 0, 0.3)], te = tl.map((p) => m.v(p[0], p[1], 0, 0.3));
+  m.quad(tb[0], te[0], te[1], tb[1]); m.tri(tb[1], te[1], te[2]); m.tri(tb[1], te[2], te[3]); m.quad(tb[1], te[3], te[4], tb[2]);
+  // pectoral fins
+  for (const sz of [-1, 1]) {
+    const a = m.v(0.22, -0.03, sz * 0.07, 0.8), b = m.v(0.22, 0.03, sz * 0.07, 0.8), c = m.v(0.08, 0.0, sz * 0.13, 0.8), d = m.v(0.1, -0.06, sz * 0.11, 0.8);
+    m.quad(a, b, c, d);
+  }
+  return m;
+}
+// reef shark: round torpedo, tall first dorsal, broad pectorals, upper tail lobe longer (heterocercal)
+function meshShark() {
+  const m = new Mesh();
+  const X = [0.5, 0.47, 0.42, 0.34, 0.24, 0.12, 0, -0.12, -0.22, -0.3, -0.36];
+  const H = [0.004, 0.03, 0.055, 0.075, 0.088, 0.09, 0.083, 0.066, 0.046, 0.03, 0.022];
+  const S = 14, rings = [];
+  for (let i = 0; i < X.length; i++) {
+    const r = []; for (let k = 0; k < S; k++) { const a = k / S * TAU, y = sin(a) * H[i]; r.push(m.v(X[i], y * (y < 0 ? 0.8 : 1) + (i < 3 ? -0.01 : 0), cos(a) * H[i] * 1.1, 1)); }
+    rings.push(r);
+  }
+  for (let i = 0; i < X.length - 1; i++) for (let k = 0; k < S; k++) { const k2 = (k + 1) % S; m.quad(rings[i][k], rings[i + 1][k], rings[i + 1][k2], rings[i][k2]); }
+  const tri = (a, b, c, aux) => m.tri(m.v(...a, aux), m.v(...b, aux), m.v(...c, aux));
+  tri([0.12, 0.08, 0], [-0.02, 0.075, 0], [-0.02, 0.2, 0], 0.6);            // first dorsal (black tip in the shader)
+  tri([-0.02, 0.2, 0], [-0.02, 0.075, 0], [-0.06, 0.07, 0], 0.6);
+  tri([-0.2, 0.045, 0], [-0.25, 0.04, 0], [-0.26, 0.085, 0], 0.6);          // second dorsal
+  tri([-0.2, -0.04, 0], [-0.25, -0.035, 0], [-0.27, -0.07, 0], 0.55);       // anal
+  tri([-0.34, 0.025, 0], [-0.36, -0.02, 0], [-0.56, 0.2, 0], 0.3);          // upper tail lobe
+  tri([-0.36, -0.02, 0], [-0.52, 0.16, 0], [-0.46, 0.05, 0], 0.3);
+  tri([-0.35, -0.015, 0], [-0.38, 0.0, 0], [-0.47, -0.12, 0], 0.3);         // lower lobe
+  for (const sz of [-1, 1]) { tri([0.2, -0.05, sz * 0.07], [0.12, -0.06, sz * 0.08], [0.02, -0.11, sz * 0.27], 0.8); tri([-0.12, -0.05, sz * 0.05], [-0.16, -0.05, sz * 0.05], [-0.18, -0.08, sz * 0.12], 0.8); }
+  return m;
+}
+// moray eel: a long compressed tube with a low continuous fin; aux = 1 body, .6 fin; x from +0.5 (snout) back
+function meshEel() {
+  const m = new Mesh(), N = 30, S = 10, rings = [];
+  for (let i = 0; i <= N; i++) {
+    const t = i / N, x = 0.5 - t, h = t < 0.06 ? 0.012 + 0.3 * t : 0.03 * (1 - 0.75 * pow(t, 2.2)) + 0.002, r = [];
+    for (let k = 0; k < S; k++) { const a = k / S * TAU; r.push(m.v(x, sin(a) * h, cos(a) * h * 0.8, 1)); }
+    rings.push(r);
+  }
+  for (let i = 0; i < N; i++) for (let k = 0; k < S; k++) { const k2 = (k + 1) % S; m.quad(rings[i][k], rings[i + 1][k], rings[i + 1][k2], rings[i][k2]); }
+  let p = null;
+  for (let i = 3; i <= N; i++) { const t = i / N, x = 0.5 - t, h = 0.03 * (1 - 0.75 * pow(t, 2.2)), q = [m.v(x, h * 0.8, 0, 0.6), m.v(x, h + 0.014, 0, 0.6)]; if (p) m.quad(p[0], q[0], q[1], p[1]); p = q; }
+  p = null;
+  for (let i = 14; i <= N; i++) { const t = i / N, x = 0.5 - t, h = 0.03 * (1 - 0.75 * pow(t, 2.2)), q = [m.v(x, -h * 0.8, 0, 0.55), m.v(x, -h - 0.01, 0, 0.55)]; if (p) m.quad(p[0], q[0], q[1], p[1]); p = q; }
+  return m;
+}

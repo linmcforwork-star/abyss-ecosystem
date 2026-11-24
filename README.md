@@ -1,106 +1,74 @@
-# Abyssal Garden
+# 珊瑚之窗 Coral Window
 
-**A dreamy underwater world you can swim through, right in your browser.**
+**在浏览器里潜进一片印度-太平洋珊瑚礁，看鱼儿们过自己的日子。**
 
-Towering kelp forests, sunbeams pouring through a rippling surface, a sunken ship, manta rays gliding overhead.
-And all of it is made by code: no images, no 3D models, no sound files. The whole world fits in **one 96 KB HTML file**.
+不是游戏，没有分数。你可以自由游动，也可以跟着一条鱼看它在做什么：小丑鱼守着自己的海葵，光鳃鱼在珊瑚上方啄食浮游生物，
+鹦嘴鱼啃礁石上的藻类，清洁鱼在"清洁站"给别的鱼清理寄生虫，东星斑躲在珊瑚旁伺机伏击，天黑以后海鳝出洞、鹦嘴鱼吐出黏液"睡袋"。
 
-![Kelp forest with a stone whale tail and a manta ray](.github/screenshots/whale-fluke.jpg)
-
-## Try it
-
-1. Download [`index.html`](index.html).
-2. Open it in **Chrome** or **Edge** on a desktop computer.
-3. Wait a few seconds while the world is built, then press **Dive in** and start swimming.
-
-Nothing to install, and it works offline. It needs a browser with **WebGPU**. If you see *"This scene needs WebGPU"*, update your browser or switch to Chrome / Edge.
-
-## What's down there
-
-- **Kelp forests** that sway in the current and sparkle with tiny gold and green specks
-- **Light rays** streaming down from a wavy surface, with shimmering caustics on the sea floor
-- **A sunken wooden ship**, a **giant stone whale tail**, rock arches, canyons and floating boulders
-- **Manta rays**, schools of fish, rising bubbles and drifting particles
-- **A purple grotto** with glowing magenta ground cover, coral and barrel sponges
-- **A soundscape** made up as you listen: a deep rumble, distant whale calls, soft chimes and bubbles
+![小丑鱼和它的海葵](.github/screenshots/reef-clownfish.jpg)
 
 | | |
 |---|---|
-| ![Shipwreck](.github/screenshots/shipwreck.jpg) | ![Looking up through the kelp](.github/screenshots/kelp-forest.jpg) |
-| ![Barrel sponges](.github/screenshots/sponge-garden.jpg) | ![Light rays over the kelp basin](.github/screenshots/light-rays.jpg) |
+| ![物种卡片](.github/screenshots/reef-card.jpg) | ![夜晚的礁区](.github/screenshots/reef-night.jpg) |
+| ![一对镰鱼](.github/screenshots/reef-idols.jpg) | ![礁壁和蝠鲼](.github/screenshots/reef-wall.jpg) |
 
-![The purple grotto](.github/screenshots/purple-grotto.jpg)
+## 怎么打开
 
-## Controls
+1. 下载 [`index.html`](index.html)（或者打开 GitHub Pages 上的网页版）。
+2. 用电脑上的 **Chrome** 或 **Edge** 打开（需要 WebGPU）。
+3. 等几秒钟生成珊瑚礁，点 **潜入水中**。
 
-| | Keyboard & mouse |
-|---|---|
-| Look around | Move the mouse |
-| Swim | `W` `A` `S` `D` |
-| Up / down | `E` / `Q` |
-| Swim faster | Hold `Shift` |
-| Jump to a viewpoint | `1` to `6` (the spots in the screenshots) |
-| Menu | `Esc` releases the mouse and opens the menu with the list of controls; **Resume** takes you back |
-| Sound on / off | `M` (sound starts when you dive in) |
-| Performance stats | `H` |
-| Detail level | **Low**, **Medium** or **High** in the menu (reloads the page) |
+## 操作
 
-The seabed, cliffs and arches are solid: you glide along the rock instead of swimming into it, and you still fit through every tunnel and arch. Kelp, plants, corals, sponges, loose rocks, the floating boulders, the ship and the whale tail you can swim through.
-
-**On a touchscreen:** hold one finger down to swim forward and slide it to steer. Put a second finger down to go faster. The `≡` button in the corner opens the menu. Phones always show the scene in landscape and start on Low or Medium detail. (Touch support is experimental.)
-
-## Detail levels
-
-The **Low**, **Medium** and **High** buttons in the menu pick the detail level; the current one is lit. Each level is the same world, built with less in it:
-
-| Level | What it is | Picked on a first visit for |
+| | 键盘和鼠标 | 手机 |
 |---|---|---|
-| **High** | The full scene | Computers |
-| **Medium** | Half of the leaves, sparkles and pebbles; small rocks, sponges and corals cast no shadows | Phones with 8 GB of memory |
-| **Low** | A quarter of the leaves, no anti-aliasing, coarser rocks and corals, simpler lighting, 480p to start with | Other phones, and computers with 4 GB of memory or less |
+| 看四周 | 移动鼠标 | 滑动 |
+| 游动 | `W` `A` `S` `D`，`Q` / `E` 下 / 上，按住 `Shift` 加速 | 按住屏幕向前游，两根手指加速 |
+| 看一条鱼的介绍 | 把它放在屏幕正中，卡片自动出现 | 点一下那条鱼 |
+| 跟随它 | `G` | 点一下卡片 |
+| 自动导览（像看纪录片） | `T` | 顶部的 **导览** 按钮 |
+| 快进时间 | 按住 `N` | 顶部的 **时间 +3 小时** |
+| 菜单 / 静音 / 观景点 | `Esc` / `M` / `1`–`6` | 右上角 `≡` |
 
-If loading crashes the tab, or the graphics driver gives up, the page starts again one level lower. Your browser remembers the level, and the resolution and draw distance the scene settled on, for the next visit.
+## 礁区里有什么
 
-## How it works
+一天在大约 12 分钟里过完（夜里过得更快）。每种生物的行为跟着时间变化：
 
-- The seabed is sculpted on your graphics card every time the page opens, then decorated with about two million kelp leaves and plants, tens of thousands of rocks, and thousands of sponges, corals and fish.
-- Everything is drawn with **WebGPU** directly. No game engine or 3D library is used.
-- The ship, whale tail, mantas, fish and corals are built from simple mathematical shapes.
-- The sound is synthesized live with the Web Audio API.
-- It's built to run smoothly: about 180 fps at 2560×1440 on an RTX 5070 Ti. On slower hardware it aims for 60 fps by lowering first the resolution and then how far away plants and rocks are drawn, in small steps. The scene is already running, blurred, behind the start menu, so most of that tuning is done before you dive in. A low-end phone (Samsung Galaxy A16) reaches about 20 fps at 670×372 on Low.
+| 生物 | 白天 | 黄昏 / 夜晚 |
+|---|---|---|
+| 眼斑双锯鱼（小丑鱼） | 在海葵上方游动，你靠太近会冲过来"赶人"，有危险就钻进触手里 | 在海葵里过夜，海葵的触手收拢一些 |
+| 蓝绿光鳃鱼 | 成群停在枝状珊瑚上方，头朝着水流啄食浮游生物 | 一有捕食者靠近就钻进珊瑚；夜里躲在珊瑚里 |
+| 裂唇鱼（清洁鱼） | 守在清洁站，别的鱼来"摆姿势"时给它清理 | 躲起来睡觉 |
+| 鹦嘴鱼 | 三五成群，用"鸟嘴"啃礁石上的藻类，偶尔去清洁站 | 裹在黏液"睡袋"里睡觉 |
+| 镰鱼 | 成对巡游，啄食海绵和藻类 | 在礁石旁休息 |
+| 豹纹鳃棘鲈（东星斑） | 停在珊瑚旁伏击，偶尔出击 | 黄昏、清晨捕猎最积极，会悄悄接近光鳃鱼然后冲刺 |
+| 黄尾副刺尾鱼（蓝倒吊） | 成群在礁区上方觅食，受惊就钻进珊瑚缝 | 躲在珊瑚缝里过夜 |
+| 黑鳍礁鲨 | 在礁区巡游，会避开你 | 游得更快，开始觅食 |
+| 爪哇裸胸鳝（巨海鳝） | 从洞里探出头呼吸 | 出洞觅食，天亮前回洞 |
+| 阿氏前口蝠鲼 | 在礁区上方滑翔 | |
 
-## Make it your own
+物种的知识和行为都有出处，见 [SPECIES.md](SPECIES.md)。这是一个"好看、放松"的观景作品，行为是简化过的，不是科学模拟。
 
-The readable source code is in the [`source`](source) folder. To change something and rebuild `index.html` you need [Node.js](https://nodejs.org) 18 or newer:
+## 自己改
+
+源代码在 [`source`](source) 文件夹。需要 [Node.js](https://nodejs.org) 18 以上：
 
 ```bash
 cd source
 npm install
-npm run build
+npm run build        # 生成 index.html
+npm run build:dev    # 生成 dev.html（带开发工具）
 ```
 
-This writes a new `index.html` next to this README. `npm run build:readable` writes an unminified version instead, which is easier to debug in the browser's developer tools.
-
-`npm run build:dev` writes a separate `dev.html` with two extra tools that are not part of `index.html`: `F` flies the camera along a one-minute path through the whole world, and `B` runs that flight as a benchmark and reports frame and GPU times.
-
-| File | What's inside |
+| 文件 | 内容 |
 |---|---|
-| [`source/src/world.js`](source/src/world.js) | The world layout: rock walls, arches, tunnels, kelp forests, sponge gardens, fish schools, mantas, the ship and the whale tail. **A good place to start.** |
-| [`source/src/shaders.js`](source/src/shaders.js) | The look: water and fog colors, lighting, kelp, rocks, the water surface and light rays (WGSL shader code) |
-| [`source/src/main.js`](source/src/main.js) | The renderer, the camera, the controls, the six viewpoints and the camera path the world is laid out around |
-| [`source/src/audio.js`](source/src/audio.js) | The soundscape |
-| [`source/src/quality.js`](source/src/quality.js) | The detail levels: which one a device starts on, and what is remembered between visits |
-| [`source/src/math.js`](source/src/math.js) | Noise, random numbers and mesh-building helpers |
-| [`source/src/dev.js`](source/src/dev.js) | Development tools (fly-through and benchmark), only in `dev.html` |
-| [`source/template.html`](source/template.html) | The page around the scene: loading bar, start menu, links and their styles |
+| [`source/src/eco.js`](source/src/eco.js) | 礁区的生物：物种资料、每种鱼的行为、昼夜、介绍卡片、跟随和导览 |
+| [`source/src/reef.js`](source/src/reef.js) | 脑珊瑚、桌形珊瑚、海葵、鱼、鲨鱼、海鳝的模型 |
+| [`source/src/world.js`](source/src/world.js) | 地形和珊瑚礁的布置 |
+| [`source/src/shaders.js`](source/src/shaders.js) | 画面：水的颜色、光照、珊瑚和每种鱼的花纹（`W_REEF`） |
+| [`source/src/main.js`](source/src/main.js) | 渲染器、镜头、操作 |
 
-Some easy first tweaks:
+## 致谢和许可
 
-- **Water color:** `WCOL` (blue-green water) and `PCOL` (purple grotto) near the top of the shared scene code in `shaders.js`
-- **Sunlight color:** `SUNC` right next to them
-- **Brightness and light rays:** `EXPO` and `RAYS` in `main.js`
-- **Swimming speed:** search for `26 : 7` in `main.js` (fast speed : normal speed)
-
-## License
-
-[MIT](LICENSE): free to use, change and share, including in your own projects.
+本项目基于 Maksymilian Dendura（Noniv）的 [Abyssal Garden](https://github.com/Noniv/abyssal-garden)，以 [MIT 许可](LICENSE) 发布。
+地形、水、光线、渲染器都来自原作；珊瑚礁、生物和它们的行为是本项目加的。原作的版权声明保留在 [LICENSE](LICENSE) 里。

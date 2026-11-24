@@ -1,8 +1,8 @@
 <!doctype html>
-<html lang=en>
+<html lang=zh-CN>
 <head>
 <meta charset=utf-8>
-<title>Abyssal Garden</title>
+<title>珊瑚之窗 Coral Window</title>
 <meta name=viewport content="width=device-width,initial-scale=1">
 <meta name=theme-color content=#03131c>
 <style>
@@ -117,38 +117,64 @@ svg { width: 1.5em; height: 1.5em; fill: currentColor; }
   position: absolute; top: 1em; left: 1.2em; margin: 0; font: .8em/1.6 ui-monospace, Consolas, monospace;
   white-space: pre-wrap; text-shadow: 0 1px 4px #000; pointer-events: none;
 }
+
+/* the reef HUD: clock + buttons (top centre), the info card (bottom left), the fade between tour stops */
+#hud { position: absolute; top: .6em; left: 50%; transform: translateX(-50%); display: none; align-items: center; gap: .5em; font-size: .85em; }
+.g #hud { display: flex; }
+#ck { padding: .35em .8em; border-radius: 1em; background: #03131c99; letter-spacing: .08em; white-space: nowrap; }
+#hud button { padding: .35em .8em; font-size: .9em; letter-spacing: .05em; background: #03222dd9; color: #e8fbff; box-shadow: inset 0 0 0 2px #7ff3ff80; }
+.p #hud button { display: none; }
+#sub { font-size: .95em; color: #bff8ff; letter-spacing: .1em; text-shadow: 0 1px 6px #000; }
+#cd {
+  position: absolute; left: 1em; bottom: 1em; max-width: min(30em, 70vw); padding: .9em 1.1em; border-radius: .8em;
+  background: #03131cc4; box-shadow: inset 0 0 0 1px #7ff3ff55, 0 .3em 1.5em #0008; font-weight: 500; line-height: 1.5;
+  opacity: 0; visibility: hidden; transform: translateY(.6em); transition: opacity .4s, visibility .4s, transform .4s; cursor: pointer;
+}
+.g #cd.on { opacity: 1; visibility: visible; transform: none; }
+#cn { display: block; font-size: 1.15em; font-weight: 800; color: #fff; }
+#cl { display: block; font-size: .85em; color: #9fe9f5; margin-bottom: .4em; }
+#cg { color: #ffe08a; margin-bottom: .35em; }
+#cf { font-size: .88em; color: #d6f3f8; }
+#fd { position: absolute; inset: 0; background: #021018; opacity: 0; pointer-events: none; transition: opacity .45s; }
+#fd.on { opacity: 1; }
 </style>
 </head>
 <body class=l>
 <canvas id=c></canvas>
 <div id=m>
-  <h1>Abyssal Garden</h1>
+  <h1>珊瑚之窗</h1>
+  <p id=sub>一片印度-太平洋珊瑚礁 · 白天黑夜 · 鱼儿们各忙各的</p>
   <div id=a>
-    <div id=l><div id=p><i id=b></i></div><p id=s>Diving…</p><p id=w hidden>Use Google Chrome for optimal experience</p></div>
+    <div id=l><div id=p><i id=b></i></div><p id=s>下潜中…</p><p id=w hidden>用 Google Chrome 打开效果最好</p></div>
     <div id=g>
-      <button id=d>Dive in</button>
-      <p id=q><span>Detail</span><button>Low</button><button>Medium</button><button>High</button></p>
+      <button id=d>潜入水中</button>
+      <p id=q><span>画质</span><button>低</button><button>中</button><button>高</button></p>
       <div id=k>
         <p>
-          <i><b>W</b><b>A</b><b>S</b><b>D</b></i>Swim
-          <i><b>Q</b><b>E</b></i>Down / up
-          <i><b>Shift</b></i>Faster
-          <i><b>1</b>–<b>6</b></i>Viewpoints
+          <i><b>W</b><b>A</b><b>S</b><b>D</b></i>游动
+          <i><b>Q</b><b>E</b></i>下 / 上
+          <i><b>Shift</b></i>加速
+          <i><b>1</b>–<b>6</b></i>观景点
         </p>
         <p>
-          <i><b>Esc</b></i>Menu
-          <i><b>M</b></i>Mute
-          <i><b>H</b></i>Stats
+          <i><b>G</b></i>跟随看着的鱼
+          <i><b>T</b></i>自动导览
+          <i><b>N</b></i>按住快进时间
+          <i><b>Esc</b></i>菜单
+          <i><b>M</b></i>静音
         </p>
       </div>
-      <p id=h>Hold to swim forward · slide to steer · second finger to go faster</p>
+      <p id=h>按住屏幕向前游 · 滑动转向 · 两根手指加速 · 点一下鱼看介绍，再点卡片跟随它</p>
     </div>
   </div>
   <p id=f>
-    <a href=https://github.com/Noniv/abyssal-garden target=_blank><svg viewBox="0 0 16 16"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>GitHub</a>
-    <a href=https://ko-fi.com/noniv target=_blank><svg viewBox="0 0 24 24"><path fill-rule=evenodd d="M2 5h16.5a4.5 4.5 0 0 1 0 9H17a6 6 0 0 1-6 5H8a6 6 0 0 1-6-6zM17 8v3h1.5a1.5 1.5 0 0 0 0-3zM9.5 15.5 5.9 12a2.2 2.2 0 0 1 3.6-2.5 2.2 2.2 0 0 1 3.6 2.5z"/></svg>Support</a>
+    <a href=https://github.com/Noniv/abyssal-garden target=_blank><svg viewBox="0 0 16 16"><path d="M8 0c4.42 0 8 3.58 8 8a8.013 8.013 0 0 1-5.45 7.59c-.4.08-.55-.17-.55-.38 0-.27.01-1.13.01-2.2 0-.75-.25-1.23-.54-1.48 1.78-.2 3.65-.88 3.65-3.95 0-.88-.31-1.59-.82-2.15.08-.2.36-1.02-.08-2.12 0 0-.67-.22-2.2.82-.64-.18-1.32-.27-2-.27-.68 0-1.36.09-2 .27-1.53-1.03-2.2-.82-2.2-.82-.44 1.1-.16 1.92-.08 2.12-.51.56-.82 1.28-.82 2.15 0 3.06 1.86 3.75 3.64 3.95-.23.2-.44.55-.51 1.07-.46.21-1.61.55-2.33-.66-.15-.24-.6-.83-1.23-.82-.67.01-.27.38.01.53.34.19.73.9.82 1.13.16.45.68 1.31 2.69.94 0 .67.01 1.3.01 1.49 0 .21-.15.45-.55.38A7.995 7.995 0 0 1 0 8c0-4.42 3.58-8 8-8Z"/></svg>原作 Abyssal Garden</a>
+    <a href=https://ko-fi.com/noniv target=_blank><svg viewBox="0 0 24 24"><path fill-rule=evenodd d="M2 5h16.5a4.5 4.5 0 0 1 0 9H17a6 6 0 0 1-6 5H8a6 6 0 0 1-6-6zM17 8v3h1.5a1.5 1.5 0 0 0 0-3zM9.5 15.5 5.9 12a2.2 2.2 0 0 1 3.6-2.5 2.2 2.2 0 0 1 3.6 2.5z"/></svg>支持原作者</a>
   </p>
 </div>
+<div id=fd></div>
+<div id=hud><span id=ck></span><button id=bt>导览</button><button id=bn>时间 +3 小时</button></div>
+<div id=cd><b id=cn></b><i id=cl></i><p id=cg></p><p id=cf></p></div>
 <button id=o aria-label=Menu>≡</button>
 <pre id=i></pre>
 <script>
