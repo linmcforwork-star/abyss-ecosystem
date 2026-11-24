@@ -12,16 +12,20 @@ function meshTable() {
   rseed(231);
   return meshLathe([[0, 0, 0.25], [0.11, 0, 0.35], [0.09, 0.22, 0.5], [0.13, 0.36, 0.7], [0.45, 0.43, 0.85], [0.85, 0.5, 1], [1.05, 0.56, 1], [1.08, 0.6, 1], [1.02, 0.63, 1], [0.7, 0.58, 1], [0.3, 0.55, 0.9], [0, 0.56, 0.9]], 32, 0.3);
 }
-// sea anemone: an oral disc with ~70 tentacles; aux = position along the tentacle (0 base, 1 tip), -0.5 the disc
+// sea anemone (Heteractis magnifica): a low mound packed with ~420 short, fat tentacles with rounded tips, like a thick carpet;
+// aux = position along the tentacle (0 base, 1 tip), -0.5 the oral disc
 function meshAnemone() {
   rseed(232);
-  const m = new Mesh();
-  const disc = []; for (let s = 0; s < 16; s++) { const a = s / 16 * TAU; disc.push(m.v(cos(a) * 0.42, 0.06, sin(a) * 0.42, -0.5)); }
-  const c = m.v(0, 0.09, 0, -0.5); for (let s = 0; s < 16; s++) m.tri(disc[(s + 1) % 16], disc[s], c);
-  for (let i = 0; i < 150; i++) {
-    const a = i * 2.39996 + rr(-0.1, 0.1), r = 0.05 + 0.4 * sqrt((i + 0.5) / 150), L = rr(0.2, 0.32), out = 0.4 + r;
-    const pts = []; for (let k = 0; k <= 3; k++) { const t = k / 3; pts.push([cos(a) * (r + out * L * t * 0.8), 0.06 + L * t * (1 - 0.3 * t), sin(a) * (r + out * L * t * 0.8)]); }
-    m.tube(pts, (k) => 0.016 * (1 - 0.3 * k / 3), 4, true, (k) => k / 3);
+  const m = new Mesh(), R = 0.55, top = (r) => 0.03 + 0.13 * (1 - (r / R) ** 2);
+  const disc = []; for (let s = 0; s < 20; s++) { const a = s / 20 * TAU; disc.push(m.v(cos(a) * R, 0.02, sin(a) * R, -0.5)); }
+  const c = m.v(0, top(0), 0, -0.5); for (let s = 0; s < 20; s++) m.tri(disc[(s + 1) % 20], disc[s], c);
+  for (let i = 0; i < 420; i++) {
+    const a = i * 2.39996 + rr(-0.15, 0.15), r = R * 0.98 * sqrt((i + 0.5) / 420), y0 = top(r) - 0.02;
+    const out = 0.25 + 0.95 * r / R, L = rr(0.2, 0.3) * (1 - 0.25 * r / R), bend = rr(-0.3, 0.3);
+    let dx = cos(a + bend) * out, dz = sin(a + bend) * out, dy = 1; const dl = hypot(dx, dy, dz); dx /= dl; dy /= dl; dz /= dl;
+    const pts = []; for (const t of [0, 0.35, 0.7, 0.9, 1]) pts.push([cos(a) * r + dx * L * t + cos(a) * 0.04 * t * t, y0 + dy * L * t - 0.03 * t * t * r / R, sin(a) * r + dz * L * t + sin(a) * 0.04 * t * t]);
+    const r0 = rr(0.018, 0.023);
+    m.tube(pts, (k) => r0 * [1, 0.88, 0.95, 1.25, 0.8][k], 6, true, (k) => [0, 0.35, 0.7, 0.9, 1][k]);
   }
   return m;
 }

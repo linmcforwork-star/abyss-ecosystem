@@ -306,7 +306,7 @@ function makeWorld(D, T, flyPts, POSES) {
     [[0.8, 0], [2.4, -3], [2, 3.2], [-2.2, -1.7], [-1.6, 2.4], [-0.6, 5.4]].forEach(([f, r], k) => {
       let [x, z] = at(f + rr(-0.3, 0.3), r + rr(-0.3, 0.3)), y = top(x, z);
       for (let t = 0; t < 8 && (Dw(x, y + 0.7, z) > -0.5 || Dw(x, y + 1.5, z) > -0.8); t++) { x += (g.x - x) * 0.25; z += (g.z - z) * 0.25; y = top(x, z); }
-      anemones.push([x, y - 0.05, z, rr(1.3, 1.65), (k + 0.5) / 6]); // the last value picks the colours (six different ones)
+      anemones.push([x, y - 0.03, z, rr(1.05, 1.3), (k + 0.5) / 6]); // the last value picks the colours (six different ones)
     });
     const q = (x, y, z, n = 0.2) => qMul(qFromY(rr(-n, n), 1, rr(-n, n)), qAxis(0, 1, 0, rnd() * TAU));
     const put = (kind, f, r, sc, mat, sink = 0.15) => { const [x, z] = at(f - 1, r * 1.2), y = top(x, z); solid(kind, x, y - sink * sc, z, sc, q(x, y, z), mat, rnd(), 1, 0); return [x, y, z]; };
@@ -318,7 +318,7 @@ function makeWorld(D, T, flyPts, POSES) {
     }
     put(8, -5.8, -1.8, 1.4, 5, 0.05); put(8, -5.6, 2.2, 1.1, 5, 0.05);                                    // sea fans
     for (const [f, r] of [[-4, -1], [-3, 2.4], [-4.8, 5.2], [-2, -3.4]]) put(4 + (rnd() * 3 | 0), f, r, rr(0.4, 0.7), 4, 0.1); // sponges
-    for (let j = 0; j < 14; j++) { const [x, z] = at(rr(-6, 3), rr(-6, 6)), y = top(x, z), sc = rr(0.15, 0.45); solid(rnd() * 4 | 0, x, y + sc * 0.1, z, sc, qRand(), 1, rnd(), 1, 0); } // rubble
+    for (let j = 0; j < 14; j++) { const [x, z] = at(rr(-7, -2.5), rr(-6, 6)), y = top(x, z), sc = rr(0.1, 0.3); solid(rnd() * 4 | 0, x, y + sc * 0.1, z, sc, qRand(), 1, rnd(), 1, 0); } // rubble
   }
   for (let i = 0; i < 400000 && holes.length < 18; i++) {
     const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
@@ -342,7 +342,7 @@ function makeWorld(D, T, flyPts, POSES) {
   }
   rseed(9);
   for (let i = 0; i < 2600; i++) {
-    const k = pickV(); if (T.wn[k + 1] < 0.7 || hypot(T.wp[k], T.wp[k + 2]) > 170 || nearFly(T.wp[k], T.wp[k + 1], T.wp[k + 2], 6) || inZone(T.wp[k], T.wp[k + 2])) continue;
+    const k = pickV(); if (T.wn[k + 1] < 0.7 || hypot(T.wp[k], T.wp[k + 2]) > 170 || nearFly(T.wp[k], T.wp[k + 1], T.wp[k + 2], 6) || inZone(T.wp[k], T.wp[k + 2], 4)) continue;
     const sc = rr(0.25, 1.3) * (rnd() < 0.1 ? 2 : 1);
     solid(rnd() * 4 | 0, T.wp[k], T.wp[k + 1] + sc * 0.2, T.wp[k + 2], sc, qRand(), 1, rnd(), 1, 0);
   }
@@ -350,7 +350,7 @@ function makeWorld(D, T, flyPts, POSES) {
   rseed(10);
   for (let i = 0; i < 60000; i++) {
     const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
-    if (hypot(x, z) > 172 || y > -3 || (ny > 0.8 && rnd() < 0.6) || nearFly(x, y, z, 3.5) || inZone(x, z)) continue;
+    if (hypot(x, z) > 172 || y > -3 || (ny > 0.8 && rnd() < 0.6) || nearFly(x, y, z, 3.5) || inZone(x, z, 4)) continue;
     const sc = (0.35 + 2.1 * pow(rnd(), 2.6)) * (ny > 0.8 ? 0.5 : 1), q = qRand();
     chunks[(sc > 1.15 ? 3 : 0) + (rnd() * 3 | 0)][cellOf(x, z)].push(x - T.wn[k] * sc * 0.3, y - ny * sc * 0.3, z - T.wn[k + 2] * sc * 0.3, sc, q[0], q[1], q[2], q[3], 1, rnd(), sc > 1.15 ? 0 : 96, 0);
   }

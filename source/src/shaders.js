@@ -746,6 +746,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   if (isF) { c += alb * E * sat(-ndl) * .5; }                                   // light through the fins
   c += E * pow(sat(dot(n, normalize(V + L))), 30.) * spec * .9;
   c += (.5 + .5 * cos(TAU * (vec3f(0., .33, .67) + ndv * 1.3 + .45))) * iri * .25 * E * pow(1. - ndv, 2.);
+  if (k == 0) { c += alb * (.06 + .5 * g.mis.w); }                                  // clownfish: keep their orange at depth (the showpiece)
   // asleep in a mucus cocoon (parrotfish): a milky film over the body
   if (i.sp.y > .5) { c = mix(c, amb(i.wp, n, vv.g, z) * vec3f(1.6, 1.8, 1.9) + E * .1, .25 + .45 * pow(1. - ndv, 2.)); }
   return fin(fog(c, i.wp, z));
@@ -771,18 +772,18 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let L = g.sun.xyz; let V = normalize(g.cam.xyz - i.wp);
   let z = zone(i.wp); let vv = vol(i.wp);
   // magnificent sea anemone: sandy-green tentacles with paler tips over a coloured column
-  // six colour forms (real ones vary a lot): column/disc, tentacle, tip; the tips fluoresce a little so they read against the sand
+  // six colour forms (real ones vary): pale tentacles with brighter, slightly fluorescent tips, a coloured column/disc
   let k = u32(i.sp.x * 6.) % 6u;
-  var PD = array<vec3f, 6>(vec3f(.75, .05, .45), vec3f(.85, .08, .12), vec3f(.35, .1, .75), vec3f(.9, .3, .05), vec3f(.15, .3, .85), vec3f(.8, .1, .6));
-  var PT = array<vec3f, 6>(vec3f(.35, .85, .25), vec3f(1., .55, .7), vec3f(.75, .55, 1.), vec3f(1., .75, .25), vec3f(.3, .95, .8), vec3f(.95, .9, .4));
-  var PX = array<vec3f, 6>(vec3f(.85, 1., .3), vec3f(1., .9, .95), vec3f(1., .6, .9), vec3f(1., 1., .55), vec3f(.7, 1., .95), vec3f(.6, 1., .4));
-  let tip = ss(.55, 1., i.aux);
-  var alb = mix(mix(PD[k] * .9, PT[k], ss(0., .35, i.aux)), PX[k], tip);
+  var PD = array<vec3f, 6>(vec3f(.85, .2, .5), vec3f(.9, .25, .2), vec3f(.55, .3, .9), vec3f(.95, .55, .2), vec3f(.3, .45, .95), vec3f(.9, .3, .7));
+  var PT = array<vec3f, 6>(vec3f(.9, .85, .7), vec3f(1., .8, .75), vec3f(.85, .8, .95), vec3f(1., .9, .7), vec3f(.8, .95, .9), vec3f(.95, .85, .9));
+  var PX = array<vec3f, 6>(vec3f(.55, 1., .45), vec3f(1., .55, .8), vec3f(.55, .75, 1.), vec3f(1., .95, .4), vec3f(.4, 1., .9), vec3f(.85, .6, 1.));
+  let tip = ss(.7, .95, i.aux);
+  var alb = mix(mix(PD[k] * .7, PT[k] * mix(vec3f(1.), PX[k], .35), ss(0., .6, i.aux)) * (.75 + .25 * i.aux), PX[k], tip);
   if (i.aux < 0.) { alb = PD[k]; }
   let E = sunE(i.wp.y, z) * i.lt;
   var c = alb * (E * (.45 + .7 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * 1.6) + alb * E * .2;
   c += E * pow(sat(dot(n, normalize(V + L))), 20.) * .3;
-  c += PX[k] * tip * (.18 + .25 * (1. - g.mis.w)) * select(1., 0., i.aux < 0.); // a soft glow at the tips, stronger at night
+  c += (PX[k] * tip * .4 + alb * .06) * (.4 + .6 * g.mis.w) * select(1., 0., i.aux < 0.) + PX[k] * tip * .15 * (1. - g.mis.w); // a soft glow at the tips, stronger at night
   return fin(fog(c, i.wp, z));
 }
 `;

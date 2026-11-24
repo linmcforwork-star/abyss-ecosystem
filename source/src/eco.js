@@ -201,7 +201,7 @@ function ecoFrame(dtIn) {
   for (let i = 0; i < nA; i++) if (SP[i] === 8) put(i);
   nEcoE = n - nEcoF - nEcoS;
   cardStep(dtIn);
-  mapStep();
+  mapStep(); tagStep(); zoneStep(dtIn);
 }
 
 function clown(i, dt) {
