@@ -191,9 +191,9 @@ const WK = array<vec3f, 10>(vec3f(1., 2., 1.), vec3f(-2., 1., .9), vec3f(3., 1.,
 // ---------------------------------------------------------------- shared scene code
 const S_G = /*wgsl*/`
 struct G { vp: mat4x4f, sm: mat4x4f, cam: vec4f, right: vec4f, up: vec4f, fwd: vec4f, sun: vec4f, res: vec4f, mis: vec4f };
-const SIG = vec3f(.058, .0235, .0195);
-const KD = vec3f(.056, .0245, .0170);
-const WCOL = vec3f(.16, .58, .90);
+const SIG = vec3f(.056, .0225, .0185);
+const KD = vec3f(.048, .021, .0148); // clear tropical water: a little less absorption than the original
+const WCOL = vec3f(.10, .50, .95);
 const KDZ = vec3f(.034, .023, .018);
 const PCOL = vec3f(.58, .66, .98);
 const SUNC = vec3f(1.7, 1.6, 1.45);
@@ -206,6 +206,8 @@ fn hs(x: f32) -> f32 { return fract(sin(x * 127.1) * 43758.5453); }
 fn kd(z: f32) -> vec3f { return mix(KD, KDZ, z); }
 fn sg(z: f32) -> vec3f { return mix(SIG, vec3f(.034, .026, .022), z); }
 fn fin(c: vec3f) -> vec4f { return vec4f(min(max(c, vec3f(0.)), vec3f(40.)), 1.); }
+// daylight: 1 at day, a dim blue moonlight at night (g.mis.w, set by eco.js)
+fn dayL() -> vec3f { let d = g.mis.w; return mix(vec3f(.03, .05, .1), vec3f(1.), d) * mix(vec3f(1.), vec3f(1.25, .9, .7), 4. * d * (1. - d) * .7); }
 const KDF = vec3f(.043, .045, .042);
 fn fogIn(ro: vec3f, rd: vec3f, d: f32, z: f32, sun: vec3f) -> vec3f {
   let k = mix(KD, KDF, z);
@@ -213,7 +215,7 @@ fn fogIn(ro: vec3f, rd: vec3f, d: f32, z: f32, sun: vec3f) -> vec3f {
   let I = (1. - exp(-a * d)) / a;
   let mu = max(dot(rd, sun), 0.);
   let m2 = mu * mu;
-  return mix(WCOL, PCOL, z) * sg(z) * exp(k * ro.y) * I * (1.22 + .3 * m2 * m2);
+  return mix(WCOL, PCOL, z) * sg(z) * exp(k * ro.y) * I * (1.22 + .3 * m2 * m2) * dayL();
 }
 `;
 
@@ -254,14 +256,14 @@ fn caus2(p: vec3f, d: f32) -> f32 {
   let c = min(pow(textureSample(tW, sR, q / 4.1).r, 1.4) * 2.6 * (.45 + textureSample(tW, sR, q.yx / 6.9 + .37).r * 1.3), 2.6);
   return mix(c, .33, ss(35., 100., d));
 }
-fn sunE(y: f32, z: f32) -> vec3f { return SUNC * exp(kd(z) * (min(y, 0.) / g.sun.y)) * (.5 + .5 * sat(-y / 30.)); }
+fn sunE(y: f32, z: f32) -> vec3f { return SUNC * dayL() * exp(kd(z) * (min(y, 0.) / g.sun.y)) * (.5 + .5 * sat(-y / 30.)); }
 fn vol(p: vec3f) -> vec4f { return textureSampleLevel(tV, sC, (p - vec3f(-192., -56., -192.)) / vec3f(384., 60., 384.), 0.); }
 fn amb(p: vec3f, n: vec3f, sky: f32, z: f32) -> vec3f {
   let up = n.y * .5 + .5;
-  return mix(vec3f(.22, .60, .80), vec3f(.34, .56, .82), z) * exp(kd(z) * min(p.y, 0.) * 1.2) * (.3 + .7 * sky) * (.24 + .76 * up * up) * 1.3 * (.55 + .45 * sat(-p.y / 30.)) + vec3f(.003, .010, .016);
+  return mix(vec3f(.22, .60, .80), vec3f(.34, .56, .82), z) * exp(kd(z) * min(p.y, 0.) * 1.2) * (.3 + .7 * sky) * (.24 + .76 * up * up) * 1.3 * (.55 + .45 * sat(-p.y / 30.)) * dayL() + vec3f(.003, .010, .016);
 }
 fn zone(p: vec3f) -> f32 { return mix(g.sun.w, textureSampleLevel(tM, sC, p.xz / 384. + .5, 0.).b, .2); }
-fn side(p: vec3f, n: vec3f, open: f32, z: f32) -> vec3f { return mix(WCOL, PCOL, z) * exp(kd(z) * min(p.y, 0.)) * open * (1. - abs(n.y)) * .7; }
+fn side(p: vec3f, n: vec3f, open: f32, z: f32) -> vec3f { return mix(WCOL, PCOL, z) * exp(kd(z) * min(p.y, 0.)) * open * (1. - abs(n.y)) * .7 * dayL(); }
 // skylight at most 150 m along the ray: past that, terrain and the background behind it (vsB) get the same haze
 fn fog(c: vec3f, wp: vec3f, z: f32) -> vec3f {
   let v = wp - g.cam.xyz; let d = length(v); let rd = v / d;
@@ -320,12 +322,13 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     alb = mix(vec3f(.11, .12, .13), vec3f(.33, .30, .25), sat(A.c * 1.5 - .25));
     alb = mix(alb, mix(vec3f(.26, .19, .10), vec3f(.20, .22, .14), bed), ss(.42, .66, big) * .7);
     alb *= mix(.72, 1.15, bed) * (1. - .45 * ss(.12, .0, sf) * (1. - abs(on.y)));
-    let enc = ss(.46, .6, big2 * .6 + B.c * .5) * ss(.3, .6, hgt);
-    alb = mix(alb, mix(vec3f(.34, .07, .10), vec3f(.40, .25, .07), ss(.45, .6, A.c)) * (.5 + .8 * B.h), enc * .75);
+    // reef rock: crusts of pink and purple coralline algae, brown-olive algal turf
+    let enc = ss(.38, .55, big2 * .6 + B.c * .5) * ss(.25, .55, hgt);
+    alb = mix(alb, mix(vec3f(.50, .20, .30), vec3f(.36, .20, .40), ss(.45, .6, A.c)) * (.55 + .8 * B.h), enc * .8);
     alb = mix(alb, vec3f(.50, .50, .46) * (.5 + .7 * C.h), ss(.60, .70, B.c * .6 + C.c * .5) * .5);
     let alg = ss(-.1, .6, n0.y) * ss(.3, .52, B.c * .55 + big * .5);
-    alb = mix(alb, vec3f(.035, .14, .07), alg * .8);
-    alb *= (.22 + 1.3 * hgt) * mix(1., .62 + .76 * F.h, fk);
+    alb = mix(alb, vec3f(.13, .13, .06), alg * .75);
+    alb *= (.2 + 1.1 * hgt) * mix(1., .62 + .76 * F.h, fk);
     sgro = -ss(.14, .0, sf) * (1. - abs(on.y)) * 1.2;
     if (mat == 0) {
       alb = mix(alb, vec3f(.13, .15, .14) * (.55 + .6 * B.h), flt * gm.a * .7);
@@ -351,13 +354,35 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     if (hue > .75) { alb = vec3f(.44, .18, .42); }
     alb *= (.45 + .75 * B.h) * (.7 + .3 * C.h);
     vao = i.ao * i.ao; gloss = .2; bump = 1.4; flu = .55;
+  } else if (mat == 6) {
+    // brain coral: meandering ridges and valleys over a dome
+    let hue = fract(sd * 3.91);
+    var base = mix(vec3f(.30, .26, .10), vec3f(.20, .26, .09), fract(hue * 3.));
+    if (hue > .65) { base = vec3f(.36, .28, .16); }
+    if (hue > .88) { base = vec3f(.14, .24, .18); }
+    let mq = sin((B.c * 2.5 + C.c * 1.1) * TAU * 3.);
+    let ridge = 1. - ss(.4, .0, abs(mq));                        // dark winding valleys between rounded ridges
+    alb = mix(base * .3, base * (.9 + .25 * F.h), ridge) * (.7 + .3 * B.h) * (.5 + .5 * i.ao);
+    sgro = (ridge - .5) * 1.6; vao = .55 + .45 * ridge; flu = .25; gloss = .3; bump = 1.1;
+  } else if (mat == 7) {
+    // table coral: pastel plate, a paler growing rim, fine corallite texture on top
+    let hue = fract(sd * 4.37);
+    var base = mix(vec3f(.40, .44, .30), vec3f(.46, .38, .24), fract(hue * 2.));
+    if (hue > .7) { base = vec3f(.34, .44, .46); }
+    alb = base * (.7 + .5 * F.h) * (.8 + .3 * C.h);
+    alb = mix(alb, vec3f(.75, .72, .62), ss(.97, 1., i.ao) * .5);
+    alb *= mix(.45, 1., ss(-.2, .4, on.y));
+    flu = .6; gloss = .2; bump = 1.6;
   } else {
+    // branching coral and sea fans
     let hue = fract(sd * 5.73);
-    alb = mix(vec3f(.80, .08, .10), vec3f(.90, .22, .40), fract(hue * 4.));
-    if (hue > .7) { alb = vec3f(.88, .42, .10); }
-    if (hue > .9) { alb = vec3f(.55, .22, .75); }
-    alb *= (.4 + .8 * B.h) * (.5 + .9 * i.ao * i.ao);
-    alb = mix(alb, vec3f(1., .75, .6), ss(.8, 1., i.ao) * .35);
+    alb = mix(vec3f(.52, .34, .16), vec3f(.36, .40, .16), fract(hue * 3.));
+    if (hue > .5) { alb = vec3f(.78, .30, .46); }
+    if (hue > .66) { alb = vec3f(.80, .62, .26); }
+    if (hue > .8) { alb = vec3f(.62, .14, .10); }
+    if (hue > .92) { alb = vec3f(.40, .32, .78); }
+    alb *= (.45 + .75 * B.h) * (.5 + .9 * i.ao * i.ao);
+    alb = mix(alb, mix(vec3f(.9, .85, .7), vec3f(.5, .7, 1.), step(.5, fract(hue * 7.))), ss(.9, 1., i.ao) * .3);
     emi = alb * .01; flu = .75; gloss = .25; bump = 1.5;
   }
   let rip = select(0., flt * gm.a * cos((i.wp.x * .8 + i.wp.z * .35) * 5. + A.c * 9.) * .65, mat == 0);
@@ -578,6 +603,185 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
 }
 `;
 
+// ---------------------------------------------------------------- reef animals (eco.js) and sea anemones
+// instance: a = position + length (m), b = heading * tail-beat strength, w = species + 16 * asleep + phase (fraction)
+// species: 0 clownfish, 1 chromis, 2 cleaner wrasse, 3 parrotfish, 4 moorish idol, 5 coral trout, 6 blue tang,
+// 7 blacktip reef shark, 8 moray eel
+const W_REEF = S_B + /*wgsl*/`
+struct VI { @location(0) p: vec3f, @location(1) n: vec4f, @location(2) a: vec4f, @location(3) b: vec4f };
+struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n: vec3f, @location(2) op: vec3f,
+  @location(3) @interpolate(flat) sp: vec2f, @location(4) aux: f32, @location(5) lt: f32 };
+@vertex fn vsReef(i: VI) -> VO {
+  var o: VO;
+  let t = g.cam.w; let sz = i.a.w; let bw = floor(i.b.w); let ph = fract(i.b.w) * TAU;
+  let k = i32(bw) % 16; let asleep = bw >= 16.;
+  let bl = length(i.b.xyz); let T = i.b.xyz / max(bl, 1e-4);
+  let c = cross(vec3f(0., 1., 0.), T); let S = select(vec3f(0., 0., 1.), normalize(c), length(c) > 1e-3); let Up = cross(T, S);
+  var l = i.p; let aux = i.n.w;
+  // body shape per species: height, width, extra fin height
+  var hs = 1.; var ws = 1.; var fs = 1.; var fq = 9.; var amp = .1;
+  switch k {
+    case 0 { hs = 1.05; ws = 1.15; fs = .85; fq = 11.; }
+    case 1 { hs = 1.2; ws = .9; fs = 1.1; fq = 12.; }
+    case 2 { hs = .62; ws = .95; fs = .7; fq = 10.; }
+    case 3 { hs = 1.; ws = 1.2; fs = .55; fq = 6.; }
+    case 4 { hs = 1.75; ws = .55; fs = 1.; fq = 8.; }
+    case 5 { hs = .82; ws = 1.1; fs = .7; fq = 6.; }
+    case 6 { hs = 1.45; ws = .7; fs = .8; fq = 8.; }
+    case 7 { fq = 2.2; amp = .07; }
+    default { fq = 3.; amp = .06; }
+  }
+  if (k < 7) {
+    let isF = aux > .5 && aux < .7;
+    l.y *= hs; l.z *= ws;
+    if (isF) { let e = sat((abs(i.p.y) - .14) / .08); l.y *= 1. + (fs - 1.) * e; }
+    // moorish idol: the dorsal fin's front edge streams back into a long white filament
+    if (k == 4 && aux > .58 && aux < .62 && i.p.y > .2 && i.p.x > -.05) { l.y += .28; l.x -= .2; }
+  }
+  // swimming: a wave down the body, stronger toward the tail (eels: the whole body)
+  let ex = select(.25 - l.x, .55 - l.x, k == 8);
+  let wv = sin(t * fq * (.5 + .5 * min(bl, 2.)) + ph - l.x * select(4., 13., k == 8)) * amp * ex * ex * select(1., 1.6, k == 8) * min(bl, 2.);
+  l.z += select(wv, wv * .1, asleep);
+  // pectoral fins flutter
+  if (aux > .75 && aux < .85) { l.y += sin(t * 7. + ph) * .02 * abs(l.z) * 10.; }
+  let w = i.a.xyz + (T * l.x + Up * l.y + S * l.z) * sz;
+  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = T * i.n.x + Up * i.n.y + S * i.n.z; o.op = l; o.sp = vec2f(f32(k), select(0., 1., asleep)); o.aux = aux;
+  o.lt = shadow1(w);
+  return o;
+}
+fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); let f = fract(q) - .5 - (vec2f(hs(c.x * 7.1 + c.y * 3.3), hs(c.x * 1.7 + c.y * 9.1)) - .5) * .5; return ss(r, r * .6, length(f)); }
+@fragment fn fsReef(i: VO, @builtin(front_facing) ff: bool) -> @location(0) vec4f {
+  var n = normalize(i.n); let isF = i.aux < .9; if (isF && !ff) { n = -n; }
+  let L = g.sun.xyz; let V = normalize(g.cam.xyz - i.wp);
+  let z = zone(i.wp); let vv = vol(i.wp);
+  let k = i32(i.sp.x + .5); let x = i.op.x; let y = i.op.y; let ay = abs(y);
+  let hb = .19 * sat(1. - pow((x - .02) / .52, 2.));            // body half-height along the fish
+  let edge = sat((ay - hb) / .08);                               // 0 at the body, 1 at a fin's outer edge
+  let tail = i.aux > .25 && i.aux < .35;
+  var alb = vec3f(.5); var spec = .5; var iri = 0.;
+  switch k {
+    case 0 { // clownfish: orange, three white bands edged in black, black-rimmed fins
+      alb = vec3f(1., .30, .02);
+      let b1 = abs(x - .29 + y * .15); let b2 = abs(x - .02 - y * .25); let b3 = abs(x + .3);
+      let bd = min(min(b1 - .035, b2 - .045), b3 - .025);
+      alb = mix(alb, vec3f(.02), ss(.018, .008, bd) * f32(!isF));
+      alb = mix(alb, vec3f(.95, .95, .9), ss(.004, -.004, bd) * f32(!isF));
+      if (isF) { alb = mix(alb, vec3f(.02), ss(.55, .85, edge) + select(0., ss(-.44, -.48, x), tail)); }
+    }
+    case 1 { // blue-green chromis
+      alb = mix(vec3f(.25, .95, .55), vec3f(.45, .85, 1.), ss(-.1, .1, -y));
+      if (isF) { alb = vec3f(.4, .8, .8); }
+      iri = .5; spec = .8;
+    }
+    case 2 { // cleaner wrasse: black stripe widening to the tail, pale front, electric blue rear
+      let back = ss(.25, -.2, x);
+      alb = mix(vec3f(.85, .82, .62), vec3f(.08, .30, .95), back);
+      alb = mix(alb, vec3f(.92, .9, .85), ss(.0, -.08, y) * (1. - back));
+      let sw = .022 + (.5 - x) * .045;
+      alb = mix(alb, vec3f(.01), ss(sw, sw * .7, abs(y - .01)) * f32(!isF || tail));
+      if (isF && !tail) { alb = mix(vec3f(.08, .30, .95), vec3f(.02), edge * .7); }
+    }
+    case 3 { // parrotfish (terminal phase): green-teal scales edged in salmon, pale beak, pastel tail
+      let sc = spots(vec2f(x * 1.2, y) , 26., .42);
+      alb = mix(vec3f(.85, .42, .36), vec3f(.10, .52, .42), sc);
+      alb = mix(alb, vec3f(.15, .55, .7), ss(.1, .2, y) * .5);
+      alb = mix(alb, vec3f(.75, .85, .8), ss(.43, .47, x));
+      if (isF) { alb = mix(vec3f(.12, .5, .55), vec3f(.85, .45, .4), ss(.3, .9, edge)); }
+      if (tail) { alb = mix(vec3f(.2, .6, .55), vec3f(.85, .5, .45), ss(-.42, -.48, x)); }
+      spec = .7;
+    }
+    case 4 { // moorish idol: cream and yellow with two broad black bands, orange snout saddle
+      alb = mix(vec3f(.95, .93, .82), vec3f(1., .82, .12), ss(-.02, -.12, x) * ss(.1, .2, ay + .1));
+      let band = ss(.012, -.012, abs(x - .2) - .08) + ss(.012, -.012, abs(x + .14) - .065);
+      alb = mix(alb, vec3f(.02), band);
+      alb = mix(alb, vec3f(1., .45, .05), ss(.03, .0, length(vec2f(x - .4, y - .05)) - .035));
+      if (tail) { alb = mix(vec3f(.02), vec3f(.95), ss(-.47, -.49, x)); }
+      if (isF && !tail && i.op.y > .3) { alb = vec3f(.95, .95, .9); }
+    }
+    case 5 { // coral trout: red-orange with small bright blue spots
+      alb = vec3f(.78, .16, .06) * (.8 + .3 * ss(.1, -.1, y));
+      alb = mix(alb, vec3f(.25, .55, 1.), spots(vec2f(x, y), 38., .28));
+      spec = .6;
+    }
+    case 6 { // blue tang: royal blue, a black "palette" mark, yellow tail
+      alb = vec3f(.05, .22, .95);
+      let up = y - (.06 + .05 * sin((x + .1) * 5.));
+      let pal = ss(.03, .015, abs(up) ) * ss(.42, .3, x) * ss(-.3, -.2, x);
+      let pal2 = ss(.025, .012, abs(y + .02 - (x - .1) * .35)) * ss(.3, .2, x) * ss(-.25, -.1, x);
+      alb = mix(alb, vec3f(.01), max(pal, pal2) * f32(!isF));
+      if (isF && !tail) { alb = mix(alb, vec3f(.01), ss(.4, .9, edge)); }
+      if (tail) { alb = mix(vec3f(1., .82, .05), vec3f(.01), ss(.13, .17, ay) + ss(-.46, -.49, x)); }
+      if (i.aux > .75 && i.aux < .85) { alb = vec3f(1., .82, .05); }
+      spec = .7;
+    }
+    case 7 { // blacktip reef shark: grey-brown back, white belly, black fin tips
+      alb = mix(vec3f(.85, .84, .80), vec3f(.40, .37, .32), ss(-.03, .02, y + i.n.y * .0));
+      if (isF) {
+        alb = vec3f(.40, .37, .32);
+        alb = mix(alb, vec3f(.02), ss(.15, .18, y) + select(0., ss(-.47, -.52, x), tail) + select(0., ss(.18, .23, abs(i.op.z)), i.aux > .75));
+      }
+      spec = .35;
+    }
+    default { // giant moray: brown with dense dark leopard spots, a black gill patch
+      alb = vec3f(.42, .34, .16) * (.8 + .4 * ss(-.02, .03, y));
+      alb = mix(alb, vec3f(.05, .04, .02), spots(vec2f(x * 2., y + i.op.z), 55., .38) * .85);
+      alb = mix(alb, vec3f(.02), ss(.02, .01, length(vec2f(x - .4, y + .005)) - .012));
+      let mouth = ss(.004, .0, abs(y + .004 + .0 * x)) * ss(.43, .46, x);
+      alb = mix(alb, vec3f(.01), mouth);
+      spec = .4;
+    }
+  }
+  // eyes: a dark pupil in a lighter ring
+  if (!isF && k < 9) {
+    let ex = select(select(.39, .41, k == 7), .45, k == 8); let ey = select(select(.055, .025, k == 7), .012, k == 8);
+    let er = select(select(.032, .016, k == 7), .009, k == 8) * select(1., 1.25, k == 4 || k == 6 || k == 1);
+    let de = length(vec2f(x - ex, y - ey));
+    alb = mix(alb, select(vec3f(.9, .75, .3), vec3f(.75), k > 6), ss(er * 1.45, er * 1.25, de) * f32(k != 7));
+    alb = mix(alb, vec3f(.01), ss(er, er * .8, de));
+  }
+  let E = sunE(i.wp.y, z) * i.lt;
+  let ndv = sat(dot(n, V));
+  let ndl = dot(n, L);
+  var c = alb * (E * (.22 + .78 * sat(ndl)) + amb(i.wp, n, vv.g, z) * 1.25);
+  if (isF) { c += alb * E * sat(-ndl) * .5; }                                   // light through the fins
+  c += E * pow(sat(dot(n, normalize(V + L))), 30.) * spec * .9;
+  c += (.5 + .5 * cos(TAU * (vec3f(0., .33, .67) + ndv * 1.3 + .45))) * iri * .25 * E * pow(1. - ndv, 2.);
+  // asleep in a mucus cocoon (parrotfish): a milky film over the body
+  if (i.sp.y > .5) { c = mix(c, amb(i.wp, n, vv.g, z) * vec3f(1.6, 1.8, 1.9) + E * .1, .25 + .45 * pow(1. - ndv, 2.)); }
+  return fin(fog(c, i.wp, z));
+}
+// sea anemone: a = base position + size, b.x colour seed, b.y how far the tentacles are drawn in (night)
+@vertex fn vsAnem(i: VI) -> VO {
+  var o: VO;
+  let t = g.cam.w; let sz = i.a.w; var l = i.p; let a = i.n.w;
+  if (a > 0.) {
+    let sw = a * a;
+    let r = length(l.xz); let dirx = l.xz / max(r, 1e-4);
+    let shrink = 1. - i.b.y * .45 * a;
+    l = vec3f(l.x * mix(1., .75, i.b.y * a), (l.y - .06) * shrink + .06, l.z * mix(1., .75, i.b.y * a));
+    l.x += sw * (.06 * sin(t * 1.3 + l.z * 9. + i.b.x * 20.) + .04 * sin(t * .7 + i.b.x * 9.));
+    l.z += sw * (.06 * cos(t * 1.1 + l.x * 8. + i.b.x * 13.) + .03 * cos(t * .6));
+  }
+  let w = i.a.xyz + l * sz;
+  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = i.n.xyz; o.op = i.p; o.sp = vec2f(i.b.x, 0.); o.aux = a; o.lt = shadow1(w);
+  return o;
+}
+@fragment fn fsAnem(i: VO, @builtin(front_facing) ff: bool) -> @location(0) vec4f {
+  var n = normalize(i.n); if (!ff) { n = -n; }
+  let L = g.sun.xyz; let V = normalize(g.cam.xyz - i.wp);
+  let z = zone(i.wp); let vv = vol(i.wp);
+  // magnificent sea anemone: sandy-green tentacles with paler tips over a coloured column
+  let hue = fract(i.sp.x * 5.3);
+  var tc = mix(vec3f(.55, .55, .30), vec3f(.45, .58, .32), hue);
+  var alb = mix(tc * .8, vec3f(.92, .9, .75), ss(.7, 1., i.aux));
+  if (i.aux < 0.) { alb = mix(vec3f(.55, .2, .35), vec3f(.30, .45, .25), step(.5, hue)); }
+  let E = sunE(i.wp.y, z) * i.lt;
+  var c = alb * (E * (.3 + .7 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * 1.3) + alb * E * .15;
+  c += E * pow(sat(dot(n, normalize(V + L))), 20.) * .3;
+  return fin(fog(c, i.wp, z));
+}
+`;
+
 // ---------------------------------------------------------------- water surface seen from below
 const W_SURF = S_B + /*wgsl*/`
 struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f };
@@ -603,7 +807,7 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f };
   let z = zone(i.wp);
   let R = reflect(V, n);
   let refl = fogIn(i.wp, R, 300., z, g.sun.xyz) * 1.15;
-  let c = mix(refl, sky, win);
+  let c = mix(refl, sky * dayL(), win);
   return fin(fog(c, i.wp, z));
 }
 // behind everything: where no terrain is drawn (it stops at ~240 m) the water looks as it does at that distance
@@ -719,7 +923,7 @@ const W_RAYS = S_G + W_FS + /*wgsl*/`
   let mu = max(dot(rd, sx), 0.);
   let ph = mix(.2 + 2.0 * mu * mu * mu, .8, g.sun.w);
   let wc = mix(WCOL + vec3f(.04, .07, .05), PCOL + vec3f(.28, .16, .12), g.sun.w);
-  return vec4f(min(acc * dt * sgz * wc * SUNC * ph * g.mis.y * (1. - .55 * g.sun.w), vec3f(20.)), zl);
+  return vec4f(min(acc * dt * sgz * wc * SUNC * dayL() * ph * g.mis.y * (1. - .55 * g.sun.w), vec3f(20.)), zl);
 }
 `;
 // depth-aware 3x3 blur of the half-res shafts (hides the sampling dither)
