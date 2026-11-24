@@ -135,6 +135,10 @@ svg { width: 1.5em; height: 1.5em; fill: currentColor; }
 #cl { display: block; font-size: .85em; color: #9fe9f5; margin-bottom: .4em; }
 #cg { color: #ffe08a; margin-bottom: .35em; }
 #cf { font-size: .88em; color: #d6f3f8; }
+#mp { position: absolute; top: 3.4em; right: .6em; display: none; width: min(19em, 44vmin); padding: .4em; border-radius: .7em; background: #03131cd0; box-shadow: inset 0 0 0 1px #7ff3ff55, 0 .3em 1.2em #0008; }
+.g #mp.on { display: block; }
+#mc { position: static; display: block; width: 100%; height: auto; border-radius: .4em; filter: none; transform: none; opacity: 1; cursor: default; }
+#ml { margin-top: .3em; font-size: .62em; font-weight: 500; text-align: center; line-height: 1.6; }
 #fd { position: absolute; inset: 0; background: #021018; opacity: 0; pointer-events: none; transition: opacity .45s; }
 #fd.on { opacity: 1; }
 </style>
@@ -160,8 +164,9 @@ svg { width: 1.5em; height: 1.5em; fill: currentColor; }
           <i><b>G</b></i>跟随看着的鱼
           <i><b>T</b></i>自动导览
           <i><b>N</b></i>按住快进时间
+          <i><b>M</b></i>小地图（开 / 关）
           <i><b>Esc</b></i>菜单
-          <i><b>M</b></i>静音
+          <i><b>V</b></i>静音
         </p>
       </div>
       <p id=h>按住屏幕向前游 · 滑动转向 · 两根手指加速 · 点一下鱼看介绍，再点卡片跟随它</p>
@@ -173,7 +178,8 @@ svg { width: 1.5em; height: 1.5em; fill: currentColor; }
   </p>
 </div>
 <div id=fd></div>
-<div id=hud><span id=ck></span><button id=bt>导览</button><button id=bn>时间 +3 小时</button></div>
+<div id=hud><span id=ck></span><button id=bm>地图</button><button id=bt>导览</button><button id=bn>时间 +3 小时</button></div>
+<div id=mp><canvas id=mc width=440 height=440></canvas><p id=ml><b style=color:#ff8a3d>●</b> 海葵 <b style=color:#7dffb0>●</b> 清洁站 <b style=color:#d9b26a>●</b> 海鳝洞 <b style=color:#fff>①</b> 观景点</p></div>
 <div id=cd><b id=cn></b><i id=cl></i><p id=cg></p><p id=cf></p></div>
 <button id=o aria-label=Menu>≡</button>
 <pre id=i></pre>
