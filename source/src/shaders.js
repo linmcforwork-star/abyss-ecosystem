@@ -861,7 +861,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     alb = mix(alb * (1. - .5 * vf), vec3f(.28, .08, .45) * .6, .35 * vf);
     if (i.aux < 0. && rf < .12) { alb = vec3f(.55, .6, .35) * .5; } }              // carpet: one strong colour all over
   alb = mix(alb, T, tip * .7);
-  if (i.aux < 0.) { alb = select(select(B * 1.2, B * .6 + M * .3, kind == 1.), vec3f(.12, .09, .07), kind == 4.); } // disc / column
+  if (i.aux < 0.) { alb = select(select(B * 1.2, B * .5 + M * .12, kind == 1.), vec3f(.12, .09, .07), kind == 4.); } // disc / column
   // tissue pattern: darker stripes along the bubble-tip's tentacles, soft mottling on the magnificent's
   let stp = .5 + .5 * sin(phi * select(6., 8., kind == 2.));
   if (kind == 2. && okT) { alb *= 1. - .35 * ss(.35, .9, stp) * (1. - tip); }

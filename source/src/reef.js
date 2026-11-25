@@ -67,11 +67,12 @@ function meshAnem(kind, lo) {
       // the rim's underside down to the sand, so the folds read as solid, not a floating sheet
       const lip = []; for (let k = 0; k < ns; k++) { const a = k / ns * TAU, [rq] = surf(a, 1); lip.push(m.v(cos(a) * rq * 0.93, -0.02, sin(a) * rq * 0.93, -0.5)); }
       for (let k = 0; k < ns; k++) { const k2 = (k + 1) % ns; m.quad(rows[nr][k], rows[nr][k2], lip[k2], lip[k]); } }
-    tent(lo ? 520 : 1050, (i, n) => {
+    tent(lo ? 600 : 1300, (i, n) => {
       const a = i * 2.39996 + rr(-0.15, 0.15);
-      if (i % 6 === 0) { // the outer wall of the rolled-over rim is covered too: tentacles point outward and down
-        const [rq, y] = surf(a, 1), u = rr(0.1, 0.9), x = cos(a) * rq * (1 - 0.07 * u), z = sin(a) * rq * (1 - 0.07 * u), yy = mix(y, -0.02, u), L = rr(0.045, 0.07) * (lo ? 1.3 : 1);
-        return { r: rr(0.005, 0.0062) * (lo ? 2 : 1), pts: (lo ? [0, 0.5, 1] : [0, 0.35, 0.65, 0.86, 1]).map((t) => [x + cos(a) * L * t, yy + L * t * (0.3 - 0.2 * u), z + sin(a) * L * t]) };
+      if (i % 3 === 0) { // the outer wall of the rolled-over rim is just as densely covered: tentacles stand out from the wall
+        const [rq, y] = surf(a, 1), u = Math.sqrt(rnd()) * 0.95, x = cos(a) * rq * (1 - 0.07 * u), z = sin(a) * rq * (1 - 0.07 * u), yy = mix(y, -0.02, u), L = rr(0.045, 0.07) * (lo ? 1.3 : 1);
+        const ox = cos(a) * 0.85, oy = 0.5 - 0.3 * u, ol = Math.hypot(ox, oy, 0.85 * sin(a)) || 1;
+        return { r: rr(0.005, 0.0062) * (lo ? 2 : 1), pts: (lo ? [0, 0.5, 1] : [0, 0.4, 0.75, 1]).map((t) => [x + ox / ol * L * t, yy + (oy / ol + 0.3 * t) * L * t, z + 0.85 * sin(a) / ol * L * t]) };
       }
       const f = min(1, 0.12 + 0.9 * sqrt((i + 0.5) / n)), [rq, y] = surf(a, f), x = cos(a) * rq, z = sin(a) * rq;
       const [r2, y2] = surf(a, min(1, f + 0.02)), [r3, y3] = surf(a + 0.02, f);                     // surface normal from two tangents
@@ -79,7 +80,7 @@ function meshAnem(kind, lo) {
       let nx = t1[1] * t2[2] - t1[2] * t2[1], ny = t1[2] * t2[0] - t1[0] * t2[2], nz = t1[0] * t2[1] - t1[1] * t2[0]; if (ny < 0) { nx = -nx; ny = -ny; nz = -nz; }
       const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
       const L = rr(0.045, 0.07) * (lo ? 1.3 : 1), sw = sin(x * 9 + 1) + cos(z * 7);
-      return { r: rr(0.005, 0.0062) * (lo ? 2 : 1), pts: (lo ? [0, 0.5, 1] : [0, 0.35, 0.65, 0.86, 1]).map((t) => [x + (nx + cos(sw) * 0.25) * L * t, y - 0.004 + ny * L * t, z + (nz + sin(sw) * 0.25) * L * t]) };
+      return { r: rr(0.005, 0.0062) * (lo ? 2 : 1), pts: (lo ? [0, 0.5, 1] : [0, 0.4, 0.75, 1]).map((t) => [x + (nx + cos(sw) * 0.25) * L * t, y - 0.004 + ny * L * t, z + (nz + sin(sw) * 0.25) * L * t]) };
     }, (t) => 1 - 0.2 * t + 0.5 * Math.exp(-(((t - 0.93) / 0.07) ** 2)), lo ? 4 : 6);
   } else if (kind === 2) {
     // bubble-tip (the peach hero): a crown of long tentacles rising from the mouth, then bending over, each swollen
