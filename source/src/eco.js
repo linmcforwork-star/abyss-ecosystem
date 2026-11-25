@@ -127,8 +127,9 @@ let nG = 0;
   for (let k = 0; k < Wd.mantas.length / 8; k++) { const i = add(9, 0, -20, 0, k); if (i >= 0) LEN[i] = Wd.mantas[k * 8 + 6] * 2; }
 }
 // anemone instances (static apart from closing at night)
-for (let k = 0; k < ANE.length && k < 32; k++) { const a = ANE[k]; AN.set([a[0], a[1], a[2], a[3], a[4], 0, 0, 0], k * 8); }
-nAnem = min(ANE.length, 32);
+// (instance: position, size, colour seed, night closing, and the tilt for the ones on rock walls: normal x, z)
+for (let k = 0; k < ANE.length && k < 48; k++) { const a = ANE[k]; AN.set([a[0], a[1], a[2], a[3], a[4], 0, a[5] || 0, a[6] || 0], k * 8); }
+nAnem = min(ANE.length, 48);
 
 // ---------------------------------------------------------------- movement helpers
 const PRED = [];                // indices of the predators (trout, sharks) for the prey's threat checks
@@ -207,7 +208,7 @@ function ecoFrame(dtIn) {
 }
 
 function clown(i, dt) {
-  const a = ANE[HM[i]], ax = a[0], ay = a[1] + 0.1 * a[3], az = a[2], camD = hypot(F[CX] - ax, F[CY] - ay, F[CZ] - az);
+  const a = ANE[HM[i]], nx = a[5] || 0, nz = a[6] || 0, ny = sqrt(max(0, 1 - nx * nx - nz * nz)), ax = a[0] + nx * 0.1 * a[3], ay = a[1] + ny * 0.1 * a[3], az = a[2] + nz * 0.1 * a[3], camD = hypot(F[CX] - ax, F[CY] - ay, F[CZ] - az);
   const big = LEN[i] > 0.25, thr = threat(i, 0);
   if (night()) ST[i] = S_SLEEP;
   else if (thr < 4) ST[i] = S_HIDE;
@@ -215,9 +216,9 @@ function clown(i, dt) {
   else ST[i] = S_HOVER;
   if ((TM[i] -= dt) < 0 || ST[i] === S_GUARD) {
     TM[i] = rr(0.6, 2);
-    if (ST[i] === S_HOVER) { const r = rr(0, 0.45) * a[3], t = rnd() * TAU; setT(i, ax + cos(t) * r, ay + rr(0.15, 0.6) * a[3], az + sin(t) * r); }
+    if (ST[i] === S_HOVER) { const r = rr(0, 0.45) * a[3], t = rnd() * TAU; { const o = rr(0.15, 0.6) * a[3]; setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny + sin(t) * r * (1 - ny), az + sin(t) * r * ny + nz * o); } }
     else if (ST[i] === S_GUARD) { const k = 0.8 / camD; setT(i, ax + (F[CX] - ax) * k, ay + (F[CY] - ay) * k, az + (F[CZ] - az) * k); }
-    else { const r = rr(0, 0.2) * a[3], t = rnd() * TAU; setT(i, ax + cos(t) * r, ay + rr(0.02, 0.1), az + sin(t) * r); }
+    else { const r = rr(0, 0.2) * a[3], t = rnd() * TAU, o = rr(0.02, 0.1); setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny, az + sin(t) * r * ny + nz * o); }
   }
   steer(i, ST[i] === S_GUARD ? 1.2 : ST[i] === S_HIDE ? 0.8 : 0.35, dt, 3, 0, false);
   face(i, dt, ST[i] === S_GUARD ? F[CX] - P[i * 3] : 0, ST[i] === S_GUARD ? F[CY] - P[i * 3 + 1] : 0, ST[i] === S_GUARD ? F[CZ] - P[i * 3 + 2] : 0);

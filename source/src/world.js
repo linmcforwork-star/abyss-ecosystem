@@ -351,6 +351,23 @@ function makeWorld(D, T, flyPts, POSES) {
         }
         for (let j = 0; j < 25; j++) { const x = cx + rr(-3.5, 3.5), z = cz + rr(-3.5, 3.5), y = top(x, z); if (y < cy + 10) solid(rnd() < 0.5 ? 7 : 4 + (rnd() * 3 | 0), x, y - 0.05, z, rr(0.3, 0.7), q(x, y, z), rnd() < 0.5 ? 5 : 4, rnd(), 1, 0); } // ground cover
       });
+      // anemone walls (after a Red Sea photo): big golden / rose anemones packed on two outcrops of the basin wall
+      const wallSpots = [];
+      for (let i = 0; i < 400000 && wallSpots.length < 2; i++) {
+        const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
+        if (hypot(x - g.x, z - g.z) > R + 8 || abs(ny) > 0.3 || y < cy + 2 || y > cy + 14 || wallSpots.some((p) => hypot(p[0] - x, p[2] - z) < 20)) continue;
+        wallSpots.push([x, y, z]);
+      }
+      wallSpots.forEach(([sx, sy, sz], w) => {
+        const placed = [];
+        for (let i = 0; i < 400000 && placed.length < 8; i++) {
+          const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
+          if (hypot(x - sx, y - sy, z - sz) > 3.2 || ny < -0.2 || ny > 0.75 || placed.some((p) => hypot(p[0] - x, p[1] - y, p[2] - z) < 1.1)) continue;
+          const nx = T.wn[k], nz = T.wn[k + 2], l = hypot(nx, ny, nz), m = hypot(nx, nz) / l;
+          const tx = nx / l, tz = nz / l, c = min(1, 0.97 / max(m, 1e-3)); // keep the tilt below ~75 deg (the shader rebuilds y)
+          placed.push([x, y, z]); anemones.push([x - tx * 0.05, y, z - tz * 0.05, rr(1.1, 1.45), w ? 5.5 / 6 : 3.5 / 6, tx * c, tz * c]);
+        }
+      });
       // the basin walls: fans and sponges on the steep rock around it
       for (let i = 0, made = 0; i < 300000 && made < 260; i++) {
         const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];

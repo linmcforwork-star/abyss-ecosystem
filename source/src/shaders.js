@@ -789,8 +789,12 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     l.x += sw * (.045 * sin(t * (1.1 + fract(sd * .37) * .9) + ph) + cur);
     l.z += sw * (.045 * cos(t * (1. + fract(sd * .61) * .8) + ph * 1.3) + .4 * cur);
   }
-  let w = i.a.xyz + l * sz;
-  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = i.n.xyz; o.op = i.p; o.sp = vec2f(i.b.x, 0.); o.aux = a; o.lt = shadow1(w);
+  // tilt onto the rock it grows on (b.zw: the normal's x and z; upright when 0)
+  let N = vec3f(i.b.z, sqrt(max(0., 1. - i.b.z * i.b.z - i.b.w * i.b.w)), i.b.w);
+  let Tx = normalize(select(vec3f(1., 0., 0.), cross(vec3f(0., 0., 1.), N), length(i.b.zw) > .05) * select(1., -1., length(i.b.zw) > .05));
+  let Tz = cross(Tx, N);
+  let w = i.a.xyz + (Tx * l.x + N * l.y + Tz * l.z) * sz;
+  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = Tx * i.n.x + N * i.n.y + Tz * i.n.z; o.op = i.p; o.sp = vec2f(i.b.x, 0.); o.aux = a; o.lt = shadow1(w);
   return o;
 }
 @fragment fn fsAnem(i: VO, @builtin(front_facing) ff: bool) -> @location(0) vec4f {
