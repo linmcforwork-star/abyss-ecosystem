@@ -842,7 +842,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   c += alb * torch(i.wp, n) * .6;
   T = mix(T, M * M * 1.3 + .04, .85 * nite()); // at night the tips glow in the body's own, deeply saturated colour (pale colours turn pastel on screen)
   // fluorescence under the blue torch: a deep saturated body rising to bright tips
-  if (i.aux >= 0.) { c += (M * M * ss(0., .7, i.aux) * .8 + T * tip * 1.2) * nite() * torchI(i.wp, n) * (.35 + .65 * sat(dot(n, V))); }
+  if (i.aux >= 0.) { c += (M * M * ss(0., .7, i.aux) * .8 + T * tip * 1.2) * nite() * torchI(i.wp, n) * (.35 + .65 * sat(dot(n, V)));
+    c += M * M * pow(1. - sat(dot(n, V)), 2.) * .25 * nite() * (.3 + torchI(i.wp, n)) * ss(.1, .6, i.aux); } // a translucent rim
   { let mx = max(c.r, max(c.g, c.b)); c *= 1. / (1. + 2. * max(mx - .3, 0.)); } // never burn out to white (night exposure is ~2.6x)
   c += E * pow(sat(dot(n, normalize(V + L))), 24.) * .25;
   // their own light: a little in the saturated body, much more at the tips; stronger at night

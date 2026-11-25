@@ -33,15 +33,15 @@ function meshAnem(kind, lo) {
     for (let r = 0; r < nr; r++) for (let s = 0; s < ns; s++) { const s2 = (s + 1) % ns; m.quad(rows[r][s2], rows[r][s], rows[r + 1][s], rows[r + 1][s2]); }
   };
   const spiral = (i, n, R) => [i * 2.39996 + rr(-0.15, 0.15), R * 0.98 * sqrt((i + 0.5) / n)];
-  const F = lo ? 4 : 1, S = lo ? 4 : 8; // far: a quarter of the tentacles, fatter
+  const F = lo ? 4 : 1, S = lo ? 4 : 6; // far: a quarter of the tentacles, fatter
   if (kind === 0) {
     const R = 0.55, top = (r) => 0.03 + 0.13 * (1 - (r / R) ** 2);
     disc(R, 0.02, 0.14, 0, 1, 20);
-    tent(560 / F, (i, n) => {
-      const [a, r] = spiral(i, n, R), y0 = top(r) - 0.02, out = 0.25 + 0.95 * r / R, L = rr(0.24, 0.38) * (1 - 0.25 * r / R), bend = rr(-0.3, 0.3);
+    tent(720 / F, (i, n) => {
+      const [a, r] = spiral(i, n, R), y0 = top(r) - 0.02, out = 0.25 + 0.95 * r / R, L = rr(0.13, 0.2) * (1 - 0.2 * r / R), bend = rr(-0.3, 0.3);
       let dx = cos(a + bend) * out, dz = sin(a + bend) * out, dy = 1; const dl = hypot(dx, dy, dz); dx /= dl; dy /= dl; dz /= dl;
-      return { r: rr(0.011, 0.014) * (lo ? 3.4 : 1), pts: [0, 0.35, 0.7, 0.9, 1].map((t) => [cos(a) * r + dx * L * t + cos(a) * 0.06 * t * t, y0 + dy * L * t - 0.05 * t * t * r / R, sin(a) * r + dz * L * t + sin(a) * 0.06 * t * t]) };
-    }, [1.15, 0.8, 0.75, 1.05, 0.8], S);
+      return { r: rr(0.008, 0.0105) * (lo ? 3.4 : 1), pts: [0, 0.35, 0.7, 0.9, 1].map((t) => [cos(a) * r + dx * L * t + cos(a) * 0.06 * t * t, y0 + dy * L * t - 0.05 * t * t * r / R, sin(a) * r + dz * L * t + sin(a) * 0.06 * t * t]) };
+    }, [1.25, 0.95, 0.8, 1.15, 0.9], S);
   } else if (kind === 1) {
     // carpet: a wide, folded oral disc covered in very short sticky tentacles
     const R = 0.62; disc(R, 0.03, 0.16, 0.9, 5, 64);
