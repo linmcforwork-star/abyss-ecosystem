@@ -203,7 +203,7 @@ function ecoFrame(dtIn) {
   for (let i = 0; i < nA; i++) if (SP[i] === 8) put(i);
   nEcoE = n - nEcoF - nEcoS;
   cardStep(dtIn);
-  mapStep(); tagStep(); zoneStep(dtIn);
+  mapStep(); tagStep(); zoneStep(dtIn); cvRender();
 }
 
 function clown(i, dt) {
@@ -413,7 +413,7 @@ const spOf = (id) => id >= ANEB ? 10 : SP[id];
 const stOf = (id) => id >= ANEB ? S_HOVER : ST[id];
 function showCard(id) {
   const sp = spOf(id), s = SPC[sp];
-  cN.textContent = s.zh; cL.textContent = s.la; cPic.innerHTML = PORT[sp] || ''; cF.textContent = s.facts.join(' ');
+  cN.textContent = s.zh; cL.textContent = s.la; cvShow(sp, id); cF.textContent = s.facts.join(' ');
   card.className = 'on'; cardI = id; lastDo = '';
 }
 let lastDo = '';
@@ -631,3 +631,76 @@ function zoneStep(dt) {
   if (k !== zIn) { zIn = k; if (k >= 0) { znN.textContent = ZON[k].zh; znS.textContent = ZON[k].sub; znEl.className = 'on'; znT = 4.5; } }
   if (znT > 0 && (znT -= dt) <= 0) znEl.className = '';
 }
+
+// ---------------------------------------------------------------- the card's picture: the animal's own 3D model, side on, turning slowly
+// rendered with the scene's shaders into a small canvas, in clear shallow-water daylight, so it always matches the reef
+const cvEl = document.createElement('canvas'); cvEl.id = 'cpv'; cvEl.width = 320; cvEl.height = 192; cPic.appendChild(cvEl);
+const cvCtx = cvEl.getContext('webgpu'); cvCtx.configure({ device, format: FMT, alphaMode: 'opaque' });
+const uboC = device.createBuffer({ size: 272, usage: BU.UNIFORM | BU.COPY_DST }), UC = new Float32Array(68), bgC = mkBG0(uboC, tShadow);
+const cvMS = tex(AA > 1 ? 320 : 1, 192, HDR, TU.RENDER_ATTACHMENT, { samples: AA }), cvRes = tex(320, 192, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING);
+const cvDp = tex(320, 192, DEPTH, TU.RENDER_ATTACHMENT, { samples: AA });
+const ibCard = device.createBuffer({ size: 32, usage: BU.VERTEX | BU.COPY_DST }), CVI = new Float32Array(8);
+const mCard = device.createShaderModule({ code: /*wgsl*/`
+@group(0) @binding(0) var t: texture_2d<f32>;
+@vertex fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f { return vec4f(f32(i32(i & 1u) * 4 - 1), f32(i32(i >> 1u) * 4 - 1), 0., 1.); }
+@fragment fn fs(@builtin(position) fc: vec4f) -> @location(0) vec4f {
+  let q = fc.xy / vec2f(320., 192.) - .5;
+  var c = textureLoad(t, vec2i(fc.xy), 0).rgb * .85 * (1. - dot(q, q) * .8);
+  c = clamp((c * (2.51 * c + .03)) / (c * (2.43 * c + .59) + .14), vec3f(0.), vec3f(1.));
+  return vec4f(pow(c, vec3f(1. / 2.2)), 1.);
+}` });
+const pCard = device.createRenderPipeline({ layout: 'auto', vertex: { module: mCard, entryPoint: 'vs' }, fragment: { module: mCard, entryPoint: 'fs', targets: [{ format: FMT }] } });
+const bgCard = device.createBindGroup({ layout: pCard.getBindGroupLayout(0), entries: [{ binding: 0, resource: cvRes.createView() }] });
+let cvSp = -1, cvSeed = 0.75;
+// the picture is taken high above the anemone garden, in open water
+const cvPos = [ZON[0].x, floorAt(ZON[0].x, ZON[0].z) + 9, ZON[0].z];
+function cvShow(sp, id) { cvSp = sp === 9 ? -1 : sp; if (sp === 10) cvSeed = AN[(id - ANEB) * 8 + 4]; cvEl.style.display = cvSp < 0 ? 'none' : 'block'; }
+function cvRender() {
+  if (cvSp < 0 || card.className !== 'on') return;
+  const sp = cvSp, an = sp === 10, t = ecoT;
+  // the subject: unit length (a smaller anemone), heading +x with a slow swing so it reads as 3D
+  const [x, y, z] = cvPos, a = 0.45 * sin(t * 0.5);
+  if (an) CVI.set([x, y - 0.25, z, 0.7, cvSeed, 0, 0, 0]);
+  else CVI.set([x, y, z, sp === 8 ? 1.3 : 1, cos(a) * 0.5, 0, sin(a) * 0.5, sp + 0.25]);
+  Q.writeBuffer(ibCard, 0, CVI);
+  // camera: side on (slightly above for the anemone), narrow field of view
+  const th = 0.3, asp = 320 / 192, dist = an ? 1.9 : sp === 8 ? 2.4 : 1 / (2 * th * asp) * 1.35;
+  const pitch = an ? -0.45 : -0.08, cp = cos(pitch), fy = sin(pitch), fx = 0, fz = -cp, rx = 1, rz = 0;
+  const ux = 0, uy = rz * fx - rx * fz, uz = rx * fy;
+  const cx = x - fx * dist, cy = y - fy * dist + (an ? 0.1 : 0), cz = z - fz * dist;
+  const m = UC; m.set(UB);
+  const sx = 1 / (th * asp), sy = 1 / th;
+  m[0] = rx * sx; m[4] = 0; m[8] = rz * sx; m[12] = -(rx * cx + rz * cz) * sx;
+  m[1] = ux * sy; m[5] = uy * sy; m[9] = uz * sy; m[13] = -(ux * cx + uy * cy + uz * cz) * sy;
+  m[2] = 0; m[6] = 0; m[10] = 0; m[14] = 0.05;
+  m[3] = fx; m[7] = fy; m[11] = fz; m[15] = -(fx * cx + fy * cy + fz * cz);
+  m[32] = cx; m[33] = cy; m[34] = cz; m[35] = t;
+  m[36] = rx; m[37] = 0; m[38] = rz; m[39] = th * asp; m[40] = ux; m[41] = uy; m[42] = uz; m[43] = th; m[44] = fx; m[45] = fy; m[46] = fz; m[47] = 0.05;
+  m[51] = 0; m[56] = an ? 0.55 : 0.9; m[57] = 0; m[59] = 1; // daylight, no purple zone
+  m[60] = cx; m[61] = cy + 0.3; m[62] = cz; m[63] = an ? 0 : 1; m[64] = fx; m[65] = fy; m[66] = fz; // a soft lamp from the camera
+  Q.writeBuffer(uboC, 0, UC);
+  const e = device.createCommandEncoder();
+  let r = e.beginRenderPass({ colorAttachments: [{ view: (AA > 1 ? cvMS : cvRes).createView(), resolveTarget: AA > 1 ? cvRes.createView() : undefined, clearValue: [0.03, 0.16, 0.24, 1], loadOp: 'clear', storeOp: 'store' }],
+    depthStencilAttachment: { view: cvDp.createView(), depthClearValue: 0, depthLoadOp: 'clear', depthStoreOp: 'discard' } });
+  r.setBindGroup(0, bgC); r.setVertexBuffer(0, vbMesh); r.setIndexBuffer(ibMesh, 'uint32'); r.setVertexBuffer(1, ibCard);
+  const M = meshes[an ? 31 : sp === 7 ? 29 : sp === 8 ? 30 : 28];
+  r.setPipeline(an ? pAnem : pReef); r.drawIndexed(M.ib.length, 1, M.i0, M.v0, 0); r.end();
+  r = e.beginRenderPass({ colorAttachments: [{ view: cvCtx.getCurrentTexture().createView(), loadOp: 'clear', clearValue: [0, 0, 0, 1], storeOp: 'store' }] });
+  r.setPipeline(pCard); r.setBindGroup(0, bgCard); r.draw(3); r.end();
+  Q.submit([e.finish()]);
+}
+
+// ---------------------------------------------------------------- developer mode (hidden): the ` key (left of 1) turns it on and off
+// K: day <-> night at once; click the mini map: jump there
+let devOn = false;
+const devEl = document.createElement('div'); devEl.id = 'dev'; devEl.textContent = '开发者模式 · K 白天/黑夜 · 点小地图瞬移'; document.body.appendChild(devEl);
+addEventListener('keydown', (e) => {
+  if (menu || e.repeat) return;
+  if (e.code === 'Backquote') { devOn = !devOn; devEl.className = devOn ? 'on' : ''; mc.style.cursor = devOn ? 'crosshair' : 'default'; }
+  else if (devOn && e.code === 'KeyK') { HOUR = DAY > 0.5 ? 22 : 10; frameN = frameN - (frameN % 20); }
+});
+mc.addEventListener('click', (e) => {
+  if (!devOn) return;
+  const r = mc.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * MW - 192, z = (e.clientY - r.top) / r.height * MW - 192;
+  unfollow(); F[CX] = x; F[CZ] = z; F[CY] = min(floorAt(x, z) + 3, -2); F[VX] = F[VY] = F[VZ] = 0;
+});
