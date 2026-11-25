@@ -45,11 +45,11 @@ function meshAnem(kind, lo) {
   } else if (kind === 1) {
     // carpet: a wide, folded oral disc covered in very short sticky tentacles
     const R = 0.62; disc(R, 0.03, 0.16, 0.9, 5, 64);
-    tent(lo ? 140 : 640, (i, n) => {
+    tent(lo ? 160 : 900, (i, n) => {
       const [a, r] = spiral(i, n, R * 1.02), f = r / R, rr0 = r * (1 + 0.9 * f * lobe(a) * 0.5), y = 0.03 + 0.16 * (1 - f * f) + 0.9 * f * f * 0.25 * lobe(a + 0.4) * R;
-      const L = rr(0.03, 0.05) * (lo ? 1.3 : 1), x = cos(a) * rr0, z = sin(a) * rr0;
+      const L = rr(0.05, 0.09) * (lo ? 1.3 : 1), x = cos(a) * rr0, z = sin(a) * rr0;
       return { r: rr(0.011, 0.014) * (lo ? 2.2 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => [x + cos(a) * L * t * 0.4, y + L * t, z + sin(a) * L * t * 0.4]) };
-    }, [1, 1, 0.95, 0.85, 0.6], lo ? 3 : 4);
+    }, [1, 0.9, 0.8, 1.05, 0.7], lo ? 3 : 4); // small bulb tips
   } else if (kind === 2) {
     // bubble-tip: a small column hidden in rock, tentacles swollen into a bulb just below the tip
     const R = 0.3; disc(R, 0.02, 0.1, 0, 2, 20);

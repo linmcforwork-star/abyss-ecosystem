@@ -692,10 +692,10 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   var alb = vec3f(.5); var spec = .5; var iri = 0.;
   switch k {
     case 0 { // clownfish: orange, three white bands edged in black, black-rimmed fins
-      alb = vec3f(1., .34, .0);
+      alb = vec3f(1., .25, .0);
       let b1 = abs(x - .29 + y * .15); let b2 = abs(x - .02 - y * .25); let b3 = abs(x + .3);
       let bd = min(min(b1 - .035, b2 - .045), b3 - .025);
-      alb = mix(alb, vec3f(.01), ss(.026, .012, bd) * f32(!isF));
+      alb = mix(alb, vec3f(.01), ss(.042, .022, bd) * f32(!isF));
       alb = mix(alb, vec3f(.95, .95, .9), ss(.004, -.004, bd) * f32(!isF));
       if (isF) { alb = mix(alb, vec3f(.02), ss(.55, .85, edge) + select(0., ss(-.44, -.48, x), tail)); }
     }
@@ -765,7 +765,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   // eyes: a dark pupil in a lighter ring
   if (!isF && k < 9) {
     let ex = select(select(.39, .41, k == 7), .45, k == 8); let ey = select(select(.055, .025, k == 7), .012, k == 8);
-    let er = select(select(.032, .016, k == 7), .009, k == 8) * select(1., 1.25, k == 4 || k == 6 || k == 1);
+    let er = select(select(.032, .016, k == 7), .009, k == 8) * select(1., 1.25, k == 4 || k == 6 || k == 1) * select(1., .7, k == 0);
     let de = length(vec2f(x - ex, y - ey));
     alb = mix(alb, select(vec3f(.9, .75, .3), vec3f(.75), k > 6), ss(er * 1.45, er * 1.25, de) * f32(k != 7));
     alb = mix(alb, vec3f(.01), ss(er, er * .8, de));
@@ -775,7 +775,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let ndl = dot(n, L);
   alb = pow(alb, vec3f(1.2)); // a touch more contrast: blacks stay black, colours stay rich in the blue light
   var c = alb * (E * (.22 + .78 * sat(ndl)) + amb(i.wp, n, vv.g, z) * .95);
-  c += alb * torch(i.wp, n) * 1.3 + alb * torchI(i.wp, n) * nite() * vec3f(4., 2.8, 1.4);
+  c += alb * torch(i.wp, n) * 1.3 + alb * torchI(i.wp, n) * nite() * vec3f(4., 1.7, .7);
   { let dc = distance(i.wp, g.cam.xyz); c += alb * nite() * vec3f(1., .85, .7) * .35 * (.4 + .6 * sat(dot(n, V))) / (1. + .2 * dc * dc); } // a soft fill light from the camera (like a photographer's strobe), so the fish read at night // seen through a yellow filter, like fluorescence photos
   if (isF) { c += alb * E * sat(-ndl) * .5; }                                   // light through the fins
   c += E * pow(sat(dot(n, normalize(V + L))), 30.) * spec * .9;
@@ -794,7 +794,9 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let yaw = hsh * 6.2832; let cs = cos(yaw); let sn = sin(yaw);
   l = vec3f(l.x * cs - l.z * sn, l.y, l.x * sn + l.z * cs) * vec3f(.88 + .24 * fract(hsh * 7.), .8 + .4 * fract(hsh * 13.), .88 + .24 * fract(hsh * 7.));
   // the violet-and-coral magnificent anemone: taller, more upright tentacles (reference: purple-column Heteractis magnifica)
-  if (kind == 0. && u32(i.b.x * 6.) % 6u == 2u) { l *= vec3f(.85, 1.7, .85); }
+  let form = u32(i.b.x * 6.) % 6u;
+  if (kind == 0. && form == 2u) { l *= vec3f(.85, 1.9, .85); }   // violet: tall and upright
+  if (kind == 0. && form == 1u) { l *= vec3f(1.2, .85, 1.2); }   // peach: lower, wider, the tentacles stream in the current
   if (i.n.w > -.1) {
     // a tentacle: each sways on its own (own phase and pace), the base stays put, plus a gentle shared push of the current
     let v = round(i.n.w * 127.); let ring = v - 5. * floor(v / 5.); let sd = floor(v / 5.) + i.b.x * 7. + hsh * 31.;
@@ -806,8 +808,12 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     l = vec3f(l.x * mix(1., .9, i.b.y * a), (l.y - py) * shrink + py, l.z * mix(1., .9, i.b.y * a));
     // the garden's current: all tentacles lean downstream together (more toward the tips) and breathe with slow surges,
     // like anemones in a reef current or an aquarium's pump flow; each tentacle then adds only a small sway of its own
-    let lean = array<f32, 5>(.2, .012, .08, .1, .14)[u32(kind)] * a * a * (.75 + .25 * sin(t * .45 + i.a.x * .15 + i.a.z * .1) + .08 * sin(t * 1.3 + sd));
-    l.x += lean * .86; l.z += lean * .51; l.y -= lean * .35;
+    let lean = array<f32, 5>(.2, .035, .08, .1, .14)[u32(kind)] * a * a * (.75 + .25 * sin(t * .45 + i.a.x * .15 + i.a.z * .1) + .08 * sin(t * 1.3 + sd));
+    var ln = lean;
+    if (kind == 0. && form == 1u) { ln *= 2.; l.y -= a * a * a * .07; }          // peach: long hair-like tentacles flowing to one side
+    if (kind == 0. && form == 2u) { l = vec3f(l.x * (1. - .4 * a), l.y, l.z * (1. - .4 * a)); ln *= .7; } // violet: bunches gather upward like flames
+    l.x += ln * .86; l.z += ln * .51; l.y -= ln * .35;
+    let cv = a * a * .035 * sin(sd * 1.7 + a * 3.); l.x += cv * -.51; l.z += cv * .86;   // each tentacle curls a little its own way
     let cur = .02 * sin(t * .55 + l.x * 1.5);
     l.x += sw * (.028 * sin(t * (1.1 + fract(sd * .37) * .9) + ph) + cur);
     l.z += sw * (.028 * cos(t * (1. + fract(sd * .61) * .8) + ph * 1.3) + .4 * cur);
@@ -831,12 +837,14 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   // shows the real animal.
   let k = u32(i.sp.x * 6.) % 6u; let kind = floor(i.sp.x);
   //                              blue                  peach-orange           violet-pink           golden                green                 rose-red
-  var CB = array<vec3f, 6>(vec3f(.02, .04, .25), vec3f(.30, .08, .03), vec3f(.08, .03, .30), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
-  var CM = array<vec3f, 6>(vec3f(.10, .28, 1.), vec3f(1., .42, .2), vec3f(.42, .22, 1.), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
-  var CT = array<vec3f, 6>(vec3f(.55, .85, 1.), vec3f(.85, .75, 1.), vec3f(1., .3, .2), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
+  var CB = array<vec3f, 6>(vec3f(.02, .04, .25), vec3f(.35, .12, .05), vec3f(.08, .03, .30), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
+  var CM = array<vec3f, 6>(vec3f(.10, .28, 1.), vec3f(1., .55, .32), vec3f(.42, .22, 1.), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
+  var CT = array<vec3f, 6>(vec3f(.55, .85, 1.), vec3f(1., .82, .6), vec3f(1., .38, .22), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
   var B = CB[k]; var M = CM[k]; var T = CT[k];
+  if (kind == 1.) { T = mix(M, T, .55); } // carpet: small tinted dots, not white blobs
   if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
-  let tip = select(ss(.72, .98, i.aux), ss(.4, .95, i.aux), k == 2u); // the violet form fades into coral over half its length
+  var tip = select(ss(.72, .98, i.aux), ss(.4, .95, i.aux), k == 2u);
+  if (kind == 1.) { tip = ss(.93, 1., i.aux); } // carpet: only the very tip is a pale dot // the violet form fades into coral over half its length
   var alb = mix(B, M, ss(0., .55, i.aux));
   if (kind == 4.) { alb = mix(alb, M * .35, step(.5, fract(i.aux * 3.5)) * .6); }  // tube: banded tentacles
   if (kind == 1.) { alb = mix(B, M, .4 + .6 * ss(0., .5, i.aux)); }              // carpet: one strong colour all over
@@ -846,9 +854,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let E = sunE(i.wp.y, z) * i.lt;
   var c = alb * (E * (.35 + .65 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * .8);
   c += alb * torch(i.wp, n) * .6 * (1. - .75 * nite()); // at night the blue light itself mostly turns into the glow below
-  if (k != 2u) { T = mix(T, M * M * 1.3 + .04, .85 * nite()); } // (violet form keeps its coral tips) // at night the tips glow in the body's own, deeply saturated colour (pale colours turn pastel on screen)
   // fluorescence under the blue torch: a deep saturated body rising to bright tips
-  if (i.aux >= 0.) { c += (M * M * ss(0., .7, i.aux) * .8 * (1. - tip) + T * tip * 1.2) * nite() * torchI(i.wp, n) * (.35 + .65 * sat(dot(n, V)));
+  if (i.aux >= 0.) { c += (mix(M, M * M, .5) * ss(0., .7, i.aux) * .5 * (1. - tip) + T * tip * 1.3) * nite() * torchI(i.wp, n) * (.35 + .65 * sat(dot(n, V)));
     c += M * M * pow(1. - sat(dot(n, V)), 2.) * .25 * nite() * (.3 + torchI(i.wp, n)) * ss(.1, .6, i.aux); } // a translucent rim
   { let m0 = max(max(c.r, max(c.g, c.b)), 1e-4); c = mix(c, m0 * pow(c / m0, vec3f(1.8)), nite()); } // night: richer colour (the screen's gamma washes thin colours to pastel)
   { let mx = max(c.r, max(c.g, c.b)); c *= mix(1. / (1. + 2. * max(mx - .3, 0.)), min(1., .26 / max(mx, 1e-4)), nite()); } // never burn out to white (night exposure is ~2.6x)

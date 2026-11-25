@@ -40,11 +40,11 @@
 // test hook: lets automated screenshot scripts move the camera, set the time and frame an animal (dev.html only)
 // test tank (dev only): three hero anemones side by side on bare sand, two clownfish each; everything else is hidden,
 // so a close-up renders fast. Same meshes and shaders as the garden.
-function tank(x = -6, z = 36, cols = [0, 1, 2], s = 1) {
+function tank(x = -6, z = 36, cols = [[1, 0, 0.8], [0, 1, 0.9], [0, 2, 1]], s = 1) { // [kind, colour, size]
   if (!TANK) TANK = nAnem;
   nAnem = TANK; let c = 0;
-  cols.forEach((col, j) => {
-    const hx = x + (j - (cols.length - 1) / 2) * 1.9 * s, hz = z + (j % 2) * 0.4, a = [hx, floorAt(hx, hz), hz, s, (col + 0.5) / 6, 0, 0];
+  cols.forEach(([kd, col, sz], j) => {
+    const hx = x + (j - (cols.length - 1) / 2) * 1.9 * s, hz = z + (j % 2) * 0.4, a = [hx, floorAt(hx, hz), hz, s * sz, kd + (col + 0.5) / 6, 0, 0];
     ANE[nAnem] = a; AN.set([a[0], a[1], a[2], a[3], a[4], 0, 0, 0], nAnem * 8);
     for (let i = 0, m = 0; i < nA && m < 2; i++) if (SP[i] === 0 && !(i in tank.used)) { tank.used[i] = 1; HM[i] = nAnem; P[i * 3] = hx; P[i * 3 + 1] = a[1] + 0.4 * s; P[i * 3 + 2] = hz; m++; c++; }
     nAnem++;
