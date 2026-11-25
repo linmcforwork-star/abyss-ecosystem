@@ -43,21 +43,21 @@ function meshAnem(kind, lo) {
     m.tube([[0, -0.08, 0], [0, H * 0.5, 0], [0, H, 0]], (k) => R * [0.95, 0.9, 1][k], lo ? 10 : 18, false, () => -0.5);
     disc(R, H, 0.03, 0, 2, lo ? 10 : 18);
     const TP = lo ? [0, 0.25, 0.5, 0.75, 1] : [0, 0.15, 0.3, 0.45, 0.6, 0.75, 0.88, 1];
-    tent(lo ? 170 : 620, (i, n) => {
+    tent(lo ? 180 : 700, (i, n) => {
       // tentacles grow in clumps (lobes around the rim); each is a soft, tapered finger with two or three gentle bends,
       // and they all bow downstream together (+x), more toward the tips
       const a = i * 2.39996 + rr(-0.1, 0.1), f = sqrt((i + 0.5) / n), r = 0.06 + 0.28 * f, cl = 0.5 + 0.5 * sin(a * 5 + 0.8);
-      const tilt = min(0.5, 0.04 + 0.26 * f + 0.12 * cl + rr(-0.12, 0.12)), L = rr(0.5, 0.9) * (1.05 - 0.25 * f) * (0.85 + 0.3 * cl), ph = rr(0, 6.3), w = rr(0.03, 0.06), nb = rr(2.2, 3.4);
+      const tilt = min(0.32, 0.02 + 0.18 * f + 0.12 * cl + rr(-0.12, 0.12)), L = rr(0.6, 1.0) * (1.05 - 0.25 * f) * (0.85 + 0.3 * cl), ph = rr(0, 6.3), w = rr(0.03, 0.06), nb = rr(2.2, 3.4);
       const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
-      return { r: rr(0.011, 0.016) * (lo ? 1.7 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t + 0.12 * L * t * t * (0.3 + f), h = cos(tilt) * L * t - 0.12 * L * t * t * t, c = w * sin(t * nb * 3.1416 + ph) * t, ld = 0.16 * L * t * t;
+      return { r: rr(0.01, 0.014) * (lo ? 1.7 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t + 0.06 * L * t * t * (0.3 + f), h = cos(tilt) * L * t - 0.12 * L * t * t * t, c = w * sin(t * nb * 3.1416 + ph) * t, ld = 0.15 * L * t * t;
         return [ox * (r + o) + tx * c + ld, H + h - 0.25 * ld, oz * (r + o) + tz * c + 0.4 * ld]; }) };
-    }, (t) => 1.15 - 0.45 * t, lo ? 4 : 6); // tapered, round ends
+    }, (t) => 1.2 - 0.6 * t, lo ? 4 : 7); // tapered, round ends
   } else if (kind === 1) {
     // carpet (the blue hero): a broad, gently waved mat packed with short tentacles that end in small round beads
     const R = 0.62; disc(R, 0.03, 0.10, 0.9, 8, lo ? 48 : 96);
     tent(lo ? 450 : 1800, (i, n) => {
       const [a, r] = spiral(i, n, R * 1.02), f = r / R, rr0 = r * (1 + 0.9 * f * lobe(a * 1.8) * 0.5), y = 0.03 + 0.10 * (1 - f * f) + 0.9 * f * f * 0.25 * lobe(a * 1.8 + 0.4) * R;
-      const L = rr(0.09, 0.14) * (lo ? 1.2 : 1), x = cos(a) * rr0, z = sin(a) * rr0, sw = sin(x * 6 + 1) + cos(z * 5), sx = cos(sw * 1.6), sz = sin(sw * 1.6); // tentacles lie over in sweeps
+      const L = rr(0.09, 0.14) * (1 - 0.4 * f * f) * (lo ? 1.2 : 1), x = cos(a) * rr0, z = sin(a) * rr0, sw = sin(x * 6 + 1) + cos(z * 5), sx = cos(sw * 1.6), sz = sin(sw * 1.6); // tentacles lie over in sweeps
       return { r: rr(0.0055, 0.007) * (lo ? 1.8 : 1), pts: [0, 0.4, 0.75, 1].map((t) => [x + (sx * 0.55 + cos(a) * 0.2 + 0.25) * L * t, y + L * t * (1 - 0.45 * t), z + (sz * 0.55 + sin(a) * 0.2) * L * t]) };
     }, [1, 0.85, 1.1, 1.25], lo ? 3 : 4);
   } else if (kind === 2) {
@@ -65,12 +65,12 @@ function meshAnem(kind, lo) {
     // into a bulb just below its tip
     const R = 0.3; disc(R, 0, 0.03, 0, 2, lo ? 12 : 24);
     const TB = lo ? [0, 0.35, 0.7, 0.88, 1] : [0, 0.2, 0.4, 0.6, 0.74, 0.84, 0.92, 1];
-    tent(lo ? 130 : 480, (i, n) => {
+    tent(lo ? 220 : 820, (i, n) => {
       const a = i * 2.39996 + rr(-0.1, 0.1), f = sqrt((i + 0.5) / n), r = 0.03 + 0.22 * f, cl = 0.5 + 0.5 * sin(a * 4 + 2.1), L = rr(0.32, 0.46) * (0.8 + 0.25 * f) * (0.9 + 0.2 * cl), sp = 0.2 + 0.7 * f, ph = rr(0, 6.3);
       const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
-      return { r: rr(0.011, 0.014) * (lo ? 1.7 : 1), pts: TB.map((t) => { const q = t * (1 + 0.6 * f), o = L * sp * (1 - cos(q)) * 0.8, h = L * sin(q) * 1.05 + 0.08 * (1 - f), c = 0.05 * sin(ph + t * 5) * t, fl = 0.13 * L * t * t;
+      return { r: rr(0.0075, 0.0095) * (lo ? 1.7 : 1), pts: TB.map((t) => { const q = t * (1 + 0.6 * f), o = L * sp * (1 - cos(q)) * 0.8, h = L * sin(q) * 1.05 + 0.08 * (1 - f), c = 0.05 * sin(ph + t * 5) * t, fl = 0.09 * L * t * t;
         return [ox * (r + o) + tx * c + fl, h - 0.2 * fl, oz * (r + o) + tz * c + 0.3 * fl]; }) };
-    }, (t) => 0.95 - 0.25 * t + 0.9 * exp(-(((t - 0.88) / 0.08) ** 2)), lo ? 4 : 6);
+    }, (t) => 0.95 - 0.25 * t + 0.7 * exp(-(((t - 0.9) / 0.07) ** 2)), lo ? 4 : 5);
   } else if (kind === 3) {
     // long-tentacle: the column buried in sand, long thin tentacles arching out and lying over the sand
     const R = 0.22; disc(R, 0.01, 0.05, 0, 2, 18);
