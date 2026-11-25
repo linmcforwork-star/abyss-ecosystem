@@ -834,13 +834,14 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let k = u32(i.sp.x * 6.) % 6u; let kind = floor(i.sp.x);
   //                              blue                  peach-orange           violet-pink           golden                green                 rose-red
   var CB = array<vec3f, 6>(vec3f(.02, .06, .3), vec3f(.35, .12, .05), vec3f(.15, .04, .40), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
-  var CM = array<vec3f, 6>(vec3f(.06, .35, 1.), vec3f(1., .36, .2), vec3f(1., .42, .32), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
-  var CT = array<vec3f, 6>(vec3f(.6, .95, 1.), vec3f(1., .6, .5), vec3f(1., .62, .5), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
+  var CM = array<vec3f, 6>(vec3f(.06, .35, 1.), vec3f(.85, .4, .16), vec3f(1., .42, .32), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
+  var CT = array<vec3f, 6>(vec3f(.6, .95, 1.), vec3f(.95, .8, .55), vec3f(1., .62, .5), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
   var B = CB[k]; var M = CM[k]; var T = CT[k];
   if (kind == 1.) { T = mix(M, T, .9); } // carpet: small tinted dots, not white blobs
   if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
   var tip = ss(.72, .98, i.aux);
-  if (kind == 1.) { tip = ss(.93, 1., i.aux); } // carpet: only the very tip is a pale dot // the violet form fades into coral over half its length
+  if (kind == 1.) { tip = ss(.93, 1., i.aux); }
+  if (kind == 2.) { tip = ss(.88, 1., i.aux); } // bubble-tip: only the bulb end is pale // carpet: only the very tip is a pale dot // the violet form fades into coral over half its length
   var alb = mix(B, M, ss(0., select(.55, .4, k == 2u), i.aux));
   if (kind == 4.) { alb = mix(alb, M * .35, step(.5, fract(i.aux * 3.5)) * .6); }  // tube: banded tentacles
   if (kind == 1.) { alb = mix(B, M, .4 + .6 * ss(0., .5, i.aux)); }              // carpet: one strong colour all over
@@ -858,7 +859,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     let rim = pow(1. - sat(dot(n, V)), 2.);
     let occ = mix(.12, 1., ss(0., .75, i.aux));                       // deep inside the crown it is dark
     let VI = vec3f(.30, .16, 1.);                                       // the blue-violet of the reef light
-    let lit = alb * dif * dif * 7. + VI * (1. - dif) * (1. - dif) * .1 + VI * rim * (.22 - .12 * f32(k == 2u)) + T * tip * (.2 + dif) * .45;
+    let vk = select(select(1., .4, k == 1u), 2.4, k == 2u);           // how much of the reef light's blue shows: peach little, violet a lot
+    let lit = alb * dif * dif * 7. + VI * (1. - dif) * (1. - dif) * .1 * vk + VI * rim * .22 * vk + T * tip * (.2 + dif) * .45;
     c += lit * occ * (.25 + tI) * nite();
   }
   c += E * pow(sat(dot(n, normalize(V + L))), 24.) * .25;
