@@ -858,24 +858,28 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   {
     let a0 = max(i.aux, 0.);
     let ld = normalize(i.wp - g.lmp.xyz); let tI = torchI(i.wp, n);
-    let Ld = normalize(vec3f(.25, 1., .15) * .55 + V * .85 - ld * .3);  // reef lights from above and in front (like the photos): faces toward us show their colour, edges turn blue
-    let ndl = dot(n, Ld); let key = sat(ndl); let wrap = sat((ndl + .6) / 1.6);
-    let rim = pow(1. - sat(dot(n, V)), 3.);
-    let occ = mix(.22, 1., ss(0., .6, a0));                           // deep inside the crown it is darker
+    // a real surface, not a glow stick: fine ridges and bumps along the tentacles bend the light (mesh-space, so they stay put)
+    let q = i.op * vec3f(70., 34., 70.);
+    let nb = normalize(n + (vec3f(sin(q.x + 2.1 * sin(q.y)), 0., sin(q.z + 1.7 * cos(q.y * 1.3))) * .22 + vec3f(0., sin(q.x * 1.7 + q.z * 1.3) * .12, 0.)) * select(1., .4, kind == 1.) * step(0., i.aux));
+    let Ld = normalize(vec3f(.25, 1., .15) + V * .35 - ld * .2);   // reef lights shine from above (a little toward us): tops lit, undersides in shadow
+    let ndl = dot(nb, Ld); let key = sat(ndl); let wrap = sat((ndl + .6) / 1.6);
+    let nv = sat(dot(nb, V)); let rim = pow(1. - nv, 3.);
+    let occ = mix(select(.22, .08, kind == 1.), 1., ss(0., .6, a0));                           // deep inside the crown it is darker
     let VI = vec3f(.20, .26, 1.);                                       // the blue of the reef light
-    let vk = array<f32, 6>(1., .25, 1.1, 1., 1., 1.)[k];
+    let vk = array<f32, 6>(1., .25, 1.4, 1., 1., 1.)[k];
     let kb = array<f32, 6>(1., .3, .45, 1., 1., 1.)[k];             // warm colours sit much closer to white on screen: less light
-    let body = alb * kb * (.04 + 1.3 * key * key);               // own colour where the light hits, soft falloff
-    let term = alb * vec3f(1., .55, .65) * pow(1. - abs(ndl), 3.) * .35; // light through the tissue at the edge: richer colour
-    let blue = VI * vk * (wrap * (1. - key) * select(.45, .2, k == 1u) + rim * .30 * (1. - .7 * key)); // blue only where the key light is absent
-    let lit = (body + term * kb + blue) * occ + T * tip * kb * (.25 + .45 * key);
+    let body = alb * kb * (.03 + 1.5 * key * key) * (.55 + .45 * nv);   // own colour where the light hits; edges turn away and darken
+    let term = alb * vec3f(1., .55, .65) * pow(1. - abs(ndl), 3.) * .08; // a little light through the tissue at the terminator
+    let sp = pow(sat(dot(nb, normalize(Ld + V))), 40.) * (.35 + .4 * a0) * vec3f(.8, .85, 1.); // wet sheen: small sharp highlights
+    let blue = VI * vk * (wrap * (1. - key) * select(.45, .2, k == 1u) + rim * select(.1, .2, k == 2u) * (1. - key)); // blue only where the key light is absent
+    let lit = (body + term * kb + blue + sp) * occ + T * tip * kb * (.05 + .6 * key);
     c += lit * (.35 + tI) * nite();
   }
   c += E * pow(sat(dot(n, normalize(V + L))), 24.) * .25;
   // their own light: a little in the saturated body, much more at the tips; stronger at night
   let gl = (.5 + .5 * g.mis.w) * (1. - .85 * nite());
   if (i.aux >= 0.) { c += M * ss(.2, .7, i.aux) * .14 * gl + T * tip * (.55 + .35 * (1. - g.mis.w)) * gl; }
-  { let m0 = max(max(c.r, max(c.g, c.b)), 1e-4); c = mix(c, m0 * pow(c / m0, vec3f(select(1.5, 2.1, k == 1u || k == 2u))), nite()); } // night: richer colour (the screen's gamma washes thin colours to pastel)
+  { c = max(c, vec3f(0.)); let m0 = max(max(c.r, max(c.g, c.b)), 1e-4); c = mix(c, m0 * pow(c / m0, vec3f(select(1.5, 2.1, k == 1u || k == 2u))), nite()); } // night: richer colour (the screen's gamma washes thin colours to pastel)
   { let mx = max(c.r, max(c.g, c.b)); c *= mix(1. / (1. + 2. * max(mx - .3, 0.)), 1. / (1. + .8 * max(mx - .5, 0.)), nite()); } // a soft roll-off that keeps light and dark apart // never burn out to white (night exposure is ~2.6x)
   return fin(fog(c, i.wp, z));
 }
