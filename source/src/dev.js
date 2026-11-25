@@ -52,4 +52,4 @@ function tank(x = -6, z = 36, cols = [0, 1, 2], s = 1) {
   return 'tank at ' + [x, z] + ', ' + cols.length + ' anemones, ' + c + ' clownfish';
 }
 tank.used = {};
-window.__dev = { lookAt, F, POSES, tank, set tankOff(v) { TANK = 0; }, set gn(v) { GNITE = v; }, get menu() { return menu; }, go: () => ui(false), setHour: (h) => { HOUR = h; }, P, SP, ST, LEN, Hd, get nA() { return nA; }, follow, camTo, unfollow, get fol() { return fol; }, ANE, HEADS, STA, HOL, AN, get counts() { return [nEcoF, nEcoS, nEcoE, nAnem, nA]; }, floorAt, rockAt };
+window.__dev = { lookAt, F, POSES, tank, set tankOff(v) { TANK = 0; }, set nearK(v) { NEARK = v; }, set gn(v) { GNITE = v; }, get menu() { return menu; }, go: () => ui(false), setHour: (h) => { HOUR = h; }, P, SP, ST, LEN, Hd, get nA() { return nA; }, follow, camTo, unfollow, get fol() { return fol; }, ANE, HEADS, STA, HOL, AN, get counts() { return [nEcoF, nEcoS, nEcoE, nAnem, nA]; }, floorAt, rockAt };
