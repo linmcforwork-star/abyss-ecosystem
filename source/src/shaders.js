@@ -777,14 +777,17 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
 // sea anemone: a = base position + size, b.x colour seed, b.y how far the tentacles are drawn in (night)
 @vertex fn vsAnem(i: VI) -> VO {
   var o: VO;
-  let t = g.cam.w; let sz = i.a.w; var l = i.p; let a = i.n.w;
-  if (a > 0.) {
-    let sw = a * a;
-    let r = length(l.xz); let dirx = l.xz / max(r, 1e-4);
-    let shrink = 1. - i.b.y * .45 * a;
-    l = vec3f(l.x * mix(1., .75, i.b.y * a), (l.y - .06) * shrink + .06, l.z * mix(1., .75, i.b.y * a));
-    l.x += sw * (.06 * sin(t * 1.3 + l.z * 9. + i.b.x * 20.) + .04 * sin(t * .7 + i.b.x * 9.));
-    l.z += sw * (.06 * cos(t * 1.1 + l.x * 8. + i.b.x * 13.) + .03 * cos(t * .6));
+  let t = g.cam.w; let sz = i.a.w; var l = i.p; var a = -.5;
+  if (i.n.w > -.1) {
+    // a tentacle: each sways on its own (own phase and pace), the base stays put, plus a gentle shared push of the current
+    let v = round(i.n.w * 127.); let ring = v - 5. * floor(v / 5.); let sd = floor(v / 5.) + i.b.x * 7.;
+    a = select(select(select(select(1., .9, ring < 3.5), .7, ring < 2.5), .35, ring < 1.5), 0., ring < .5);
+    let sw = a * a; let ph = sd * 2.39996;
+    let shrink = 1. - i.b.y * .4 * a;
+    l = vec3f(l.x * mix(1., .9, i.b.y * a), (l.y - .06) * shrink + .06, l.z * mix(1., .9, i.b.y * a));
+    let cur = .03 * sin(t * .55 + l.x * 1.5) + .02;
+    l.x += sw * (.045 * sin(t * (1.1 + fract(sd * .37) * .9) + ph) + cur);
+    l.z += sw * (.045 * cos(t * (1. + fract(sd * .61) * .8) + ph * 1.3) + .4 * cur);
   }
   let w = i.a.xyz + l * sz;
   o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = i.n.xyz; o.op = i.p; o.sp = vec2f(i.b.x, 0.); o.aux = a; o.lt = shadow1(w);
