@@ -319,7 +319,7 @@ function anemSort() {
   }
   ANC[10] = o;
 }
-let nEcoF = 0, nEcoS = 0, nEcoE = 0, nAnem = 0, DAY = 1;
+let nEcoF = 0, nEcoS = 0, nEcoE = 0, nAnem = 0, DAY = 1, GNITE = 1; // GNITE: how far the garden's night has faded in
 Q.writeTexture({ texture: tVol }, Wd.volD, { bytesPerRow: NX, rowsPerImage: NY / 2 }, [NX / 2, NY / 2, NZ / 2]);
 Q.writeTexture({ texture: tMap }, Wd.gm, { bytesPerRow: 2048 }, [512, 512]);
 
@@ -465,7 +465,13 @@ function render() {
   const zx = cx - PURPLE[0], zz = cz - PURPLE[1]; let zt = (44 - sqrt(zx * zx + zz * zz)) / 18; zt = zt < 0 ? 0 : zt > 1 ? 1 : zt;
   m[51] = zt * zt * (3 - 2 * zt);
   let ek = (-cy - 8) / 26; ek = ek < 0 ? 0 : ek > 1 ? 1 : ek;
-  m[56] = EXPO * (0.6 + 0.4 * ek) * (2.6 - 1.6 * DAY); m[57] = RAYS * DAY; m[58] = det; m[59] = DAY;
+  { // the anemone garden (start basin) is shown as a night dive under blue light: swimming in, the light fades to night;
+    // leaving, day comes back. Only the look changes; the animals keep the real time of day.
+    const b = (a, c, x) => { const t = clamp((x - a) / (c - a), 0, 1); return t * t * (3 - 2 * t); };
+    GNITE += (b(-23, -15, cx) * b(28, 20, cx) * b(-18, -10, cz) * b(54, 46, cz) - GNITE) * 0.03;
+  }
+  const DV = DAY * (1 - GNITE);
+  m[56] = EXPO * (0.6 + 0.4 * ek) * (2.6 - 1.6 * DV); m[57] = RAYS * DV; m[58] = det; m[59] = DV;
   { // the diver's lamp: held low on the right, aimed at what is 6 m ahead in the middle of the screen
     const lx = cx + rx * 0.35 - ux * 0.3 + fx * 0.1, ly = cy - uy * 0.3 + fy * 0.1, lz = cz + rz * 0.35 - uz * 0.3 + fz * 0.1;
     let dx = cx + fx * 6 - lx, dy = cy + fy * 6 - ly, dz = cz + fz * 6 - lz; const dl = Math.hypot(dx, dy, dz); dx /= dl; dy /= dl; dz /= dl;
