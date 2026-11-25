@@ -362,7 +362,7 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
       alb = mix(alb, vec3f(.20, .02, .12) * (.4 + .9 * B.h), mg * .8);
       flu = mg * .35;
       alb = mix(alb, alb * vec3f(.85, .8, 1.4) + vec3f(.015, .0, .05), gm.b * .8);
-      alb *= 1. - .6 * gm.g * flt;
+      alb *= 1. - .75 * gm.g * flt;
     }
   } else if (mat == 2) {
     // whale fluke: smooth pale stone with dark streaks running along its length
@@ -797,8 +797,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
 
   if (i.n.w > -.1) {
     // a tentacle: each sways on its own (own phase and pace), the base stays put, plus a gentle shared push of the current
-    let v = round(i.n.w * 127.); let ring = v - 5. * floor(v / 5.); let sd = floor(v / 5.) + i.b.x * 7. + hsh * 31.;
-    a = select(select(select(select(1., .9, ring < 3.5), .7, ring < 2.5), .35, ring < 1.5), 0., ring < .5);
+    let v = round(i.n.w * 127.); let q = v - 16. * floor(v / 16.); let sd = floor(v / 16.) + i.b.x * 7. + hsh * 31.;
+    a = q / 15.;   // position along the tentacle, 0 root .. 1 tip
     // sway and pivot by kind: carpet barely moves, long thin tentacles swing more; a tube anemone closes toward its tube top
     let amp = array<f32, 5>(1., .35, .8, 2.2, 1.8)[u32(kind)]; let py = select(.06, .5, kind > 3.5);
     let sw = a * a * amp; let ph = sd * 2.39996;
@@ -806,7 +806,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     l = vec3f(l.x * mix(1., .9, i.b.y * a), (l.y - py) * shrink + py, l.z * mix(1., .9, i.b.y * a));
     // the garden's current: all tentacles lean downstream together (more toward the tips) and breathe with slow surges,
     // like anemones in a reef current or an aquarium's pump flow; each tentacle then adds only a small sway of its own
-    let lean = array<f32, 5>(.13, .05, .14, .1, .14)[u32(kind)] * a * a * (.75 + .25 * sin(t * .45 + i.a.x * .15 + i.a.z * .1) + .08 * sin(t * 1.3 + sd));
+    let lean = array<f32, 5>(.2, .07, .2, .1, .14)[u32(kind)] * a * a * (.75 + .25 * sin(t * .45 + i.a.x * .15 + i.a.z * .1) + .08 * sin(t * 1.3 + sd));
     var ln = lean;
     l.x += ln * .86; l.z += ln * .51; l.y -= ln * .35;
     let cv = a * a * .035 * sin(sd * 1.7 + a * 3.); l.x += cv * -.51; l.z += cv * .86;   // each tentacle curls a little its own way
@@ -833,13 +833,13 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   // shows the real animal.
   let k = u32(fract(i.sp.x) * 6.) % 6u; let kind = floor(i.sp.x);
   //                              blue                  peach-orange           violet-pink           golden                green                 rose-red
-  var CB = array<vec3f, 6>(vec3f(.03, .05, .35), vec3f(.30, .12, .12), vec3f(.35, .08, .12), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
-  var CM = array<vec3f, 6>(vec3f(.05, .30, 1.), vec3f(.9, .42, .18), vec3f(1., .38, .36), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
-  var CT = array<vec3f, 6>(vec3f(.75, .90, 1.), vec3f(1., .78, .6), vec3f(1., .70, .66), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
+  var CB = array<vec3f, 6>(vec3f(.03, .05, .35), vec3f(.30, .12, .08), vec3f(.25, .05, .12), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
+  var CM = array<vec3f, 6>(vec3f(.05, .30, 1.), vec3f(.9, .42, .18), vec3f(1., .3, .17), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
+  var CT = array<vec3f, 6>(vec3f(.85, .72, 1.), vec3f(1., .85, .62), vec3f(1., .62, .45), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
   var B = CB[k]; var M = CM[k]; var T = CT[k];
     if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
   var tip = ss(.72, .98, i.aux);
-  if (kind == 1.) { tip = ss(.85, 1., i.aux); }
+  if (kind == 1.) { tip = ss(.9, 1., i.aux) * .7; }
   if (kind == 2.) { tip = ss(.88, 1., i.aux); } // bubble-tip: only the bulb end is pale // carpet: only the very tip is a pale dot // the violet form fades into coral over half its length
   var alb = mix(B, M, ss(0., .55, i.aux));
   if (kind == 4.) { alb = mix(alb, M * .35, step(.5, fract(i.aux * 3.5)) * .6); }  // tube: banded tentacles
@@ -865,7 +865,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     let kb = array<f32, 6>(1., .3, .45, 1., 1., 1.)[k];             // warm colours sit much closer to white on screen: less light
     let body = alb * kb * (.04 + 1.3 * key * key);               // own colour where the light hits, soft falloff
     let term = alb * vec3f(1., .55, .65) * pow(1. - abs(ndl), 3.) * .35; // light through the tissue at the edge: richer colour
-    let blue = VI * vk * (wrap * (1. - key) * .45 + rim * .30 * (1. - .7 * key)); // blue only where the key light is absent
+    let blue = VI * vk * (wrap * (1. - key) * select(.45, .2, k == 1u) + rim * .30 * (1. - .7 * key)); // blue only where the key light is absent
     let lit = (body + term * kb + blue) * occ + T * tip * kb * (.25 + .45 * key);
     c += lit * (.35 + tI) * nite();
   }
