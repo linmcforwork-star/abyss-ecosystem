@@ -1071,8 +1071,11 @@ fn sat3(x: vec3f) -> vec3f { return clamp(x, vec3f(0.), vec3f(1.)); }
   let l0 = dot(c, vec3f(.2126, .7152, .0722));
   let l = mix(l0, l0 * l0 * (3. - 2. * l0), .55);
   c *= l / max(l0, 1e-4);
-  c = mix(c, vec3f(l), ss(.55, 1., l) * .1);
-  c = mix(vec3f(l), c, .93) + vec3f(.008, .002, 0.);
+  // the original's film look (soft highlights, a touch less colour, a lifted black) suits the day; the night garden's
+  // reef-light look needs the opposite: true blacks and full colour, like the aquarium photos it copies
+  let nt = nite();
+  c = mix(c, vec3f(l), ss(.55, 1., l) * .1 * (1. - nt));
+  c = max(mix(vec3f(l), c, mix(.93, 1.25, nt)) + vec3f(.008, .002, 0.) * (1. - nt) - .012 * nt, vec3f(0.));
   c = pow(max(c, vec3f(0.)), vec3f(1. / 2.2));
   let n = ign(fc.xy) + ign(fc.xy + 37.) - 1.;
   return vec4f(c + n / 255., 1.);
