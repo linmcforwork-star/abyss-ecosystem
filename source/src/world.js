@@ -34,9 +34,9 @@ const CLEARS = [
   [-60, -36, -60, 36, 13, 8], [-60, 42, -18, 46, 12, 8], [4, 58, 8, 100, 24, 10], [-34, -74, -56, -46, 11, 8],
 ];
 const PURPLE = [6, 84];
-const zoneP = () => 0; // the original's purple grotto: not part of a reef
-const MAGENTA = []; const MAGENTA0 = [[14, 6, 13], [-4, 20, 9], [6, 84, 30], [-58, 8, 10], [50, 30, 12], [8, -70, 10], [-12, -98, 9], [-36, 44, 9], [-46, -60, 9], [24, 42, 8], [-56, 26, 9], [-44, 38, 8], [-10, 44, 8], [12, 24, 8], [-50, -45, 8]];
-const magAt = () => 0, magAt0 = (x, z) => {
+const zoneP = (x, z) => sstep(44, 26, hypot(x - PURPLE[0], z - PURPLE[1])); // the original's purple grotto (an artistic touch, kept for its dreamy look)
+const MAGENTA = [[14, 6, 13], [-4, 20, 9], [6, 84, 30], [-58, 8, 10], [50, 30, 12], [8, -70, 10], [-12, -98, 9], [-36, 44, 9], [-46, -60, 9], [24, 42, 8], [-56, 26, 9], [-44, 38, 8], [-10, 44, 8], [12, 24, 8], [-50, -45, 8]];
+const magAt = (x, z) => { // the original's magenta patches (also artistic)
   let m = sstep(0.54, 0.66, fbm(x * 0.03, 7, z * 0.03, 3)) * 0.9;
   for (const p of MAGENTA) m = max(m, sstep(p[2], p[2] * 0.45, hypot(x - p[0], z - p[1])));
   return m * sstep(0.3, 0.55, fbm(x * 0.17, 1, z * 0.17, 2) + m * 0.25);
@@ -130,6 +130,9 @@ function makeWorld(D, T, flyPts, POSES) {
   const pickV = () => ((rnd() * T.nv) | 0) * 3;
   const tangent = (n) => { let t = abs(n[1]) < 0.9 ? [n[2], 0, -n[0]] : [1, 0, 0]; const l = hypot(...t); t = t.map((v) => v / l); return [t, [n[1] * t[2] - n[2] * t[1], n[2] * t[0] - n[0] * t[2], n[0] * t[1] - n[1] * t[0]]]; };
   const nearFly = (x, y, z, r) => { for (const p of flyPts) if (hypot(x - p[0], z - p[2]) < r && y < p[1] + 3 && y > p[1] - 13) return true; return false; };
+  // the exhibits: small themed areas on open sand, kept clear of the generic scatter and dressed by hand below
+  const ZONES = [{ zh: '海葵花园', sub: '小丑鱼和它们的海葵', x: 4, z: 2, r: 7.5 }];
+  const inZone = (x, z, pad = 0) => { for (const g of ZONES) if (hypot(x - g.x, z - g.z) < g.r + pad) return true; return false; };
   const nearPose = (x, z, r = 3) => { for (const p of POSES) if (hypot(x - p[0], z - p[2]) < r) return true; return false; };
   // --- kelp columns
   const column = (x, y, z, H, kind, dens = 1) => {
@@ -203,7 +206,7 @@ function makeWorld(D, T, flyPts, POSES) {
     const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
     if (hypot(x, z) > 172 || y > -6) continue;
     const h = hot(x, z), zp = zoneP(x, z), u = rnd();
-    if (nearFly(x, y, z, 4) || hypot(x + 1, z - 2) < 9 || nearPose(x, z, 8)) continue;
+    if (nearFly(x, y, z, 4) || hypot(x + 1, z - 2) < 9 || nearPose(x, z, 8) || inZone(x, z, 3)) continue;
     if (ny > 0.75 && u < 0.10 * h) cluster(x, y, z, 8 + rnd() * 14 | 0, 2, 1.0, 3.0, 0.13, 0.26, 0.6, 2.5);
     else if (ny > 0.6 && u < 0.10 * h + 0.07 * max(zp, h * 0.4)) cluster(x, y, z, 10 + rnd() * 18 | 0, rnd() < 0.8 ? 3 : 4, 0.9, 2.6, 0.14, 0.28, 0.9, 1.5);
     else if (ny < -0.35 && u < 0.5 * max(zp, 0.2)) { // hanging fronds
@@ -218,7 +221,7 @@ function makeWorld(D, T, flyPts, POSES) {
   rseed(4);
   for (const p of MAGENTA) for (let i = p[2] * p[2] * PI * 45; i > 0; i--) {
     const a = rnd() * TAU, r = sqrt(rnd()) * p[2], x = p[0] + cos(a) * r, z = p[1] + sin(a) * r;
-    if (rnd() > magAt(x, z) + 0.12 || nearPose(x, z)) continue;
+    if (rnd() > magAt(x, z) + 0.12 || nearPose(x, z) || inZone(x, z, 1)) continue;
     const f = floorsAt(x, z); if (!f.length) continue;
     const y = f[f.length - 2]; if (grad(x, y, z)[1] < 0.7) continue;
     const nl = 2 + (rnd() * 3 | 0), yw = rnd() * TAU;
@@ -244,7 +247,7 @@ function makeWorld(D, T, flyPts, POSES) {
   rseed(6);
   for (let i = 0; i < 13000; i++) {
     const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2];
-    if (hypot(x, z) > 170 || y > -8 || T.wn[k + 1] < -0.15 || rnd() > zw(x, z) || nearFly(x, y, z, 3)) continue;
+    if (hypot(x, z) > 170 || y > -8 || T.wn[k + 1] < -0.15 || rnd() > zw(x, z) || nearFly(x, y, z, 3) || inZone(x, z, 3)) continue;
     const n0 = [T.wn[k], T.wn[k + 1], T.wn[k + 2]], [t1, t2] = tangent(n0), coral = T.wn[k + 1] > 0.85 || rnd() < 0.35, cnt = coral ? 2 + rnd() * 5 | 0 : 3 + rnd() * 9 | 0, sd = rnd();
     for (let j = 0; j < cnt; j++) {
       const a = rr(-1, 1) * (0.5 + cnt * 0.13), b = rr(-1, 1) * (0.5 + cnt * 0.13);
@@ -263,7 +266,7 @@ function makeWorld(D, T, flyPts, POSES) {
     let made = 0;
     for (let i = 0; i < 400000 && made < g[3]; i++) {
       const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2];
-      if (hypot(x - g[0], z - g[1]) > g[2] || y > -14 || T.wn[k + 1] < -0.1 || nearFly(x, y, z, 2.2)) continue;
+      if (hypot(x - g[0], z - g[1]) > g[2] || y > -14 || T.wn[k + 1] < -0.1 || nearFly(x, y, z, 2.2) || inZone(x, z, 2)) continue;
       made++;
       const coral = T.wn[k + 1] > 0.85 || rnd() < 0.3, nx = T.wn[k], ny = T.wn[k + 1] + (coral ? 0.9 : 1.1), nz = T.wn[k + 2], l = hypot(nx, ny, nz);
       const sc = coral ? rr(0.5, 1.4) : rr(0.35, 0.9) * (rnd() < 0.15 ? 1.7 : 1);
@@ -275,13 +278,14 @@ function makeWorld(D, T, flyPts, POSES) {
   const reefAt = (x, y, z) => sstep(0.22, 0.55, fbm(x * 0.035, 5, z * 0.035, 3) + 0.25 * sstep(-40, -12, y)) * sstep(-3, -6, y);
   const heads = [], anemones = [], holes = [], stations = [];
   rseed(15);
-  for (let i = 0, made = 0; i < 1500000 && made < [24000, 14000, 8000][LV]; i++) {
+  // (only a sparse background now: real reefs are patches of coral between sand and rubble, and the showpieces are the exhibits)
+  for (let i = 0, made = 0; i < 1500000 && made < [2400, 1600, 1000][LV]; i++) {
     const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
-    if (ny < 0.1 || hypot(x, z) > 166 || y > -4 || nearFly(x, y, z, 2.2) || nearPose(x, z, 2.5)) continue;
-    if (rnd() > reefAt(x, y, z) * 0.9 + 0.05 || (ny < 0.45 && rnd() < 0.4)) continue;
+    if (ny < 0.1 || hypot(x, z) > 166 || y > -4 || nearFly(x, y, z, 2.2) || nearPose(x, z, 2.5) || inZone(x, z, 4)) continue;
+    const ra = reefAt(x, y, z); if (rnd() > ra * ra * 0.8 || (ny < 0.45 && rnd() < 0.4)) continue;
     made++;
     const u = rnd(), flat = ny > 0.82;
-    const kind = !flat ? (u < 0.45 ? 8 : u < 0.75 ? 4 + (rnd() * 3 | 0) : 7) : u < 0.3 ? 26 : u < 0.5 && y > -26 ? 27 : u < 0.8 ? 7 : u < 0.9 ? 9 : 4 + (rnd() * 3 | 0);
+    const kind = !flat ? (u < 0.45 ? 8 : u < 0.75 ? 4 + (rnd() * 3 | 0) : 7) : u < 0.1 ? 26 : u < 0.18 && y > -26 ? 27 : u < 0.6 ? 7 : u < 0.75 ? 9 : u < 0.85 ? 8 : 4 + (rnd() * 3 | 0);
     const lean = kind === 26 || kind === 27 ? 2.5 : kind === 8 ? 0.4 : 1;
     const nx = T.wn[k], nz = T.wn[k + 2], uy = ny + lean, l = hypot(nx, uy, nz);
     const sc = kind === 26 ? rr(0.35, 1.5) * (rnd() < 0.08 ? 1.8 : 1) : kind === 27 ? rr(0.6, 1.8) : kind === 7 ? rr(0.4, 1.15) : kind === 8 ? rr(0.7, 1.6) : kind === 9 ? rr(0.5, 1) : rr(0.35, 0.8);
@@ -293,11 +297,28 @@ function makeWorld(D, T, flyPts, POSES) {
   // sea anemones (with clownfish) on open sunny ground, cleaning stations on top of big coral heads,
   // moray holes in the steep rock walls
   rseed(16);
-  for (let i = 0; i < 400000 && anemones.length < 26; i++) {
-    const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2];
-    if (T.wn[k + 1] < 0.9 || y > -6 || y < -34 || hypot(x, z) > 140 || nearFly(x, y, z, 1.5) || anemones.some((a) => hypot(a[0] - x, a[2] - z) < 14)) continue;
-    if (Dw(x, y + 0.7, z) > -0.5 || Dw(x + 0.9, y + 0.5, z) > -0.3 || Dw(x - 0.9, y + 0.5, z) > -0.3 || Dw(x, y + 0.5, z + 0.9) > -0.3 || Dw(x, y + 0.5, z - 0.9) > -0.3 || Dw(x, y + 2, z) > -1) continue; // open ground around it
-    anemones.push([x, y - 0.05, z, rr(0.75, 1.1), rnd()]);
+  // --- exhibit 1, the anemone garden: six magnificent anemones on the sand (each with its clownfish, eco.js),
+  // a few coral heads behind them as a backdrop, seen from the start view
+  {
+    const g = ZONES[0], top = (x, z) => { const f = floorsAt(x, z); return f.length ? f[0] : -45; };
+    let bx = POSES[0][0] - g.x, bz = POSES[0][2] - g.z; const bl = hypot(bx, bz); bx /= bl; bz /= bl; // toward the start view
+    const at = (f, r) => [g.x + bx * f - bz * r, g.z + bz * f + bx * r]; // f: toward the viewer, r: to the side
+    [[0.8, 0], [2.4, -3], [2, 3.2], [-2.2, -1.7], [-1.6, 2.4], [-0.6, 5.4]].forEach(([f, r], k) => {
+      let [x, z] = at(f + rr(-0.3, 0.3), r + rr(-0.3, 0.3)), y = top(x, z);
+      for (let t = 0; t < 8 && (Dw(x, y + 0.7, z) > -0.5 || Dw(x, y + 1.5, z) > -0.8); t++) { x += (g.x - x) * 0.25; z += (g.z - z) * 0.25; y = top(x, z); }
+      anemones.push([x, y - 0.03, z, rr(1.05, 1.3), (k + 0.5) / 6]); // the last value picks the colours (six different ones)
+    });
+    const q = (x, y, z, n = 0.2) => qMul(qFromY(rr(-n, n), 1, rr(-n, n)), qAxis(0, 1, 0, rnd() * TAU));
+    const put = (kind, f, r, sc, mat, sink = 0.15) => { const [x, z] = at(f - 1, r * 1.2), y = top(x, z); solid(kind, x, y - sink * sc, z, sc, q(x, y, z), mat, rnd(), 1, 0); return [x, y, z]; };
+    put(26, -4.2, -2.5, 1.5, 6, 0.25); put(26, -3.6, 3.2, 1.1, 6, 0.25); put(26, -2.6, 5.6, 0.7, 6, 0.25);  // brain corals
+    put(27, -5, 0.6, 1.4, 7, 0.1);                                                                       // a table coral
+    for (const [f, r, s] of [[-3.4, 0.4, 1.2], [-4.4, -4.6, 1], [-2.8, -4.4, 0.8], [-5.4, 3.6, 1.1]]) {   // branching coral heads
+      const h = put(7, f, r, s, 5, 0.1); if (s > 0.9) heads.push([h[0], h[1] + s * 0.6, h[2], s]);
+      for (let j = 0; j < 3; j++) put(7, f + rr(-0.6, 0.6), r + rr(-0.6, 0.6), s * rr(0.5, 0.8), 5, 0.1);
+    }
+    put(8, -5.8, -1.8, 1.4, 5, 0.05); put(8, -5.6, 2.2, 1.1, 5, 0.05);                                    // sea fans
+    for (const [f, r] of [[-4, -1], [-3, 2.4], [-4.8, 5.2], [-2, -3.4]]) put(4 + (rnd() * 3 | 0), f, r, rr(0.4, 0.7), 4, 0.1); // sponges
+    for (let j = 0; j < 14; j++) { const [x, z] = at(rr(-7, -2.5), rr(-6, 6)), y = top(x, z), sc = rr(0.1, 0.3); solid(rnd() * 4 | 0, x, y + sc * 0.1, z, sc, qRand(), 1, rnd(), 1, 0); } // rubble
   }
   for (let i = 0; i < 400000 && holes.length < 18; i++) {
     const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
@@ -321,7 +342,7 @@ function makeWorld(D, T, flyPts, POSES) {
   }
   rseed(9);
   for (let i = 0; i < 2600; i++) {
-    const k = pickV(); if (T.wn[k + 1] < 0.7 || hypot(T.wp[k], T.wp[k + 2]) > 170 || nearFly(T.wp[k], T.wp[k + 1], T.wp[k + 2], 6)) continue;
+    const k = pickV(); if (T.wn[k + 1] < 0.7 || hypot(T.wp[k], T.wp[k + 2]) > 170 || nearFly(T.wp[k], T.wp[k + 1], T.wp[k + 2], 6) || inZone(T.wp[k], T.wp[k + 2], 4)) continue;
     const sc = rr(0.25, 1.3) * (rnd() < 0.1 ? 2 : 1);
     solid(rnd() * 4 | 0, T.wp[k], T.wp[k + 1] + sc * 0.2, T.wp[k + 2], sc, qRand(), 1, rnd(), 1, 0);
   }
@@ -329,7 +350,7 @@ function makeWorld(D, T, flyPts, POSES) {
   rseed(10);
   for (let i = 0; i < 60000; i++) {
     const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
-    if (hypot(x, z) > 172 || y > -3 || (ny > 0.8 && rnd() < 0.6) || nearFly(x, y, z, 3.5)) continue;
+    if (hypot(x, z) > 172 || y > -3 || (ny > 0.8 && rnd() < 0.6) || nearFly(x, y, z, 3.5) || inZone(x, z, 4)) continue;
     const sc = (0.35 + 2.1 * pow(rnd(), 2.6)) * (ny > 0.8 ? 0.5 : 1), q = qRand();
     chunks[(sc > 1.15 ? 3 : 0) + (rnd() * 3 | 0)][cellOf(x, z)].push(x - T.wn[k] * sc * 0.3, y - ny * sc * 0.3, z - T.wn[k + 2] * sc * 0.3, sc, q[0], q[1], q[2], q[3], 1, rnd(), sc > 1.15 ? 0 : 96, 0);
   }
@@ -429,7 +450,7 @@ function makeWorld(D, T, flyPts, POSES) {
     for (let c = 0; c < nCells; c++) { const a = L[c]; for (let i = 0; i < a.length; i += 12) { for (let j = 0; j < 12; j++) data[k++] = a[i + j]; lo[c] = min(lo[c], a[i + 1] - 3); hi[c] = max(hi[c], a[i + 1] + 3); } }
     return { data, n, start, lo, hi };
   };
-  return { gy, glints: new Float32Array(glints), chunks: chunks.map(packC), props: props.map(packC), big: pack(big), bigF: pack(big, 2, 1.5), small: pack(small), solids: { data: new Float32Array(sol.data), ranges: sol.ranges }, bubbles: new Float32Array(bubbles), volD, gm, fish: new Float32Array(fish), mantas: new Float32Array(mantas), snow, floorH, heads, anemones, holes, stations };
+  return { gy, glints: new Float32Array(glints), chunks: chunks.map(packC), props: props.map(packC), big: pack(big), bigF: pack(big, 2, 1.5), small: pack(small), solids: { data: new Float32Array(sol.data), ranges: sol.ranges }, bubbles: new Float32Array(bubbles), volD, gm, fish: new Float32Array(fish), mantas: new Float32Array(mantas), snow, floorH, heads, anemones, holes, stations, zones: ZONES };
 }
 const fract = (x) => x - floor(x);
 

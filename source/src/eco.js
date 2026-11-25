@@ -79,10 +79,12 @@ const SP = new Int8Array(NA), ST = new Int8Array(NA), HM = new Int16Array(NA), G
 const P = new Float64Array(NA * 3), Vv = new Float64Array(NA * 3), Hd = new Float64Array(NA * 3), TG = new Float64Array(NA * 3), OF = new Float64Array(NA * 3);
 const LEN = new Float32Array(NA), PH = new Float32Array(NA), TM = new Float32Array(NA), T2 = new Float32Array(NA), BEAT = new Float32Array(NA);
 let nA = 0;
+// shown bigger than life so you can tell them apart from the background fish at a glance (the small ones the most)
+const SHOW = [1, 3, 3, 1.7, 2.2, 1.3, 2, 1, 1, 1];
 const add = (sp, x, y, z, home, grp = -1) => {
   if (nA >= NA) return -1;
   const i = nA++, L = SPC[sp].len;
-  SP[i] = sp; HM[i] = home; GR[i] = grp; XI[i] = -1; LEN[i] = rr(L[0], L[1]); PH[i] = rnd(); TM[i] = rr(0, 3); T2[i] = rr(10, 60);
+  SP[i] = sp; HM[i] = home; GR[i] = grp; XI[i] = -1; LEN[i] = rr(L[0], L[1]) * SHOW[sp]; PH[i] = rnd(); TM[i] = rr(0, 3); T2[i] = rr(10, 60);
   P[i * 3] = x; P[i * 3 + 1] = y; P[i * 3 + 2] = z; TG[i * 3] = x; TG[i * 3 + 1] = y; TG[i * 3 + 2] = z;
   const a = rnd() * TAU; Hd[i * 3] = cos(a); Hd[i * 3 + 2] = sin(a);
   ST[i] = sp === 7 || sp === 9 ? S_PATROL : sp === 8 ? S_HOLE : sp === 3 || sp === 4 || sp === 6 ? S_TRAVEL : S_HOVER;
@@ -101,7 +103,7 @@ let nG = 0;
   for (const h of all) if (HEADS.length < 16 && !HEADS.some((q) => hypot(q[0] - h[0], q[2] - h[2]) < 9)) HEADS.push(h);
   if (!HEADS.length) HEADS.push([0, floorAt(0, 0) + 1, 0, 1]);
   // clownfish: a big female, a smaller male, sometimes a juvenile, in every anemone
-  ANE.forEach((a, k) => { const n = 2 + (rnd() < 0.5); for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) LEN[i] = [0.105, 0.08, 0.055][j]; } });
+  ANE.forEach((a, k) => { const n = 2 + (rnd() < 0.5); for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) LEN[i] = [0.26, 0.2, 0.15][j]; } }); // ~2.5x life size, so you can see them
   // chromis: a cloud over each coral head
   HEADS.forEach((h, k) => { const n = 10 + (rnd() * 10 | 0); for (let j = 0; j < n; j++) add(1, h[0] + rr(-0.5, 0.5), h[1] + rr(0.2, 0.9), h[2] + rr(-0.5, 0.5), k); });
   // cleaner wrasse at every station
@@ -201,23 +203,23 @@ function ecoFrame(dtIn) {
   for (let i = 0; i < nA; i++) if (SP[i] === 8) put(i);
   nEcoE = n - nEcoF - nEcoS;
   cardStep(dtIn);
-  mapStep();
+  mapStep(); tagStep(); zoneStep(dtIn); cvRender();
 }
 
 function clown(i, dt) {
   const a = ANE[HM[i]], ax = a[0], ay = a[1] + 0.1 * a[3], az = a[2], camD = hypot(F[CX] - ax, F[CY] - ay, F[CZ] - az);
-  const big = LEN[i] > 0.1, thr = threat(i, 0);
+  const big = LEN[i] > 0.25, thr = threat(i, 0);
   if (night()) ST[i] = S_SLEEP;
   else if (thr < 4) ST[i] = S_HIDE;
-  else if (big && camD < 1.7 && camD > 0.6) ST[i] = S_GUARD;
+  else if (big && camD < 2.2 && camD > 0.9) ST[i] = S_GUARD;
   else ST[i] = S_HOVER;
   if ((TM[i] -= dt) < 0 || ST[i] === S_GUARD) {
     TM[i] = rr(0.6, 2);
-    if (ST[i] === S_HOVER) { const r = rr(0, 0.45) * a[3], t = rnd() * TAU; setT(i, ax + cos(t) * r, ay + rr(0.12, 0.5), az + sin(t) * r); }
-    else if (ST[i] === S_GUARD) { const k = 0.55 / camD; setT(i, ax + (F[CX] - ax) * k, ay + (F[CY] - ay) * k, az + (F[CZ] - az) * k); }
+    if (ST[i] === S_HOVER) { const r = rr(0, 0.45) * a[3], t = rnd() * TAU; setT(i, ax + cos(t) * r, ay + rr(0.15, 0.6) * a[3], az + sin(t) * r); }
+    else if (ST[i] === S_GUARD) { const k = 0.8 / camD; setT(i, ax + (F[CX] - ax) * k, ay + (F[CY] - ay) * k, az + (F[CZ] - az) * k); }
     else { const r = rr(0, 0.2) * a[3], t = rnd() * TAU; setT(i, ax + cos(t) * r, ay + rr(0.02, 0.1), az + sin(t) * r); }
   }
-  steer(i, ST[i] === S_GUARD ? 0.9 : ST[i] === S_HIDE ? 0.6 : 0.22, dt, 3, 0, false);
+  steer(i, ST[i] === S_GUARD ? 1.2 : ST[i] === S_HIDE ? 0.8 : 0.35, dt, 3, 0, false);
   face(i, dt, ST[i] === S_GUARD ? F[CX] - P[i * 3] : 0, ST[i] === S_GUARD ? F[CY] - P[i * 3 + 1] : 0, ST[i] === S_GUARD ? F[CZ] - P[i * 3 + 2] : 0);
 }
 function chromis(i, dt) {
@@ -378,7 +380,7 @@ function manta(i) {
 }
 
 // ---------------------------------------------------------------- the info card: what you are looking at
-const card = $('cd'), cN = $('cn'), cL = $('cl'), cF = $('cf'), cD = $('cg'), clock = $('ck');
+const cPic = $('cpic'), card = $('cd'), cN = $('cn'), cL = $('cl'), cF = $('cf'), cD = $('cg'), clock = $('ck');
 let cardI = -1, candI = -1, candT = 0, lostT = 0, fol = -1, tour = false, tourT = 0, pickX = 0, pickY = 0, pickOn = false;
 const ANEB = 1000; // card index for anemone k: ANEB + k
 let pkX = 0, pkY = 0, pkZ = 0, pkB = -1, pkS = 1e9;
@@ -411,7 +413,7 @@ const spOf = (id) => id >= ANEB ? 10 : SP[id];
 const stOf = (id) => id >= ANEB ? S_HOVER : ST[id];
 function showCard(id) {
   const sp = spOf(id), s = SPC[sp];
-  cN.textContent = s.zh; cL.textContent = s.la; cF.textContent = s.facts.join(' ');
+  cN.textContent = s.zh; cL.textContent = s.la; cvShow(sp, id); cF.textContent = s.facts.join(' ');
   card.className = 'on'; cardI = id; lastDo = '';
 }
 let lastDo = '';
@@ -522,6 +524,7 @@ $('bn').onclick = () => { HOUR = (HOUR + 3) % 24; };
 
 // ---------------------------------------------------------------- mini map (M): the whole reef from above
 // grid A-H (west to east) x 1-8 (north to south), 48 m squares; north (-z) is up
+const ZON = Wd.zones;
 const mapEl = $('mp'), mc = $('mc'), mx = mc.getContext('2d'), MS = 440, MW = 384, mk = MS / MW;
 const mapBg = document.createElement('canvas'); mapBg.width = mapBg.height = MS;
 {
@@ -542,6 +545,11 @@ const mapBg = document.createElement('canvas'); mapBg.width = mapBg.height = MS;
   for (let k = 0; k < 8; k++) { const c = (k + 0.5) * 48 * mk; g.fillText('ABCDEFGH'[k], c, 11); g.fillText(String(k + 1), 10, c); }
   // what lives where
   const dot = (x, z, col, r) => { g.beginPath(); g.arc((x + 192) * mk, (z + 192) * mk, r, 0, TAU); g.fillStyle = col; g.fill(); g.strokeStyle = '#0008'; g.stroke(); };
+  for (const z of ZON) { // the exhibits: a ring and the name
+    const x = (z.x + 192) * mk, y = (z.z + 192) * mk, r = (z.r + 4) * mk;
+    g.beginPath(); g.arc(x, y, r, 0, TAU); g.fillStyle = '#ffd36b33'; g.fill(); g.lineWidth = 2; g.strokeStyle = '#ffd36b'; g.stroke(); g.lineWidth = 1;
+    g.font = 'bold 15px system-ui,sans-serif'; g.lineWidth = 4; g.strokeStyle = '#03131c'; g.strokeText(z.zh, x, y + r + 12); g.fillStyle = '#ffd36b'; g.fillText(z.zh, x, y + r + 12); g.lineWidth = 1;
+  }
   for (const a of ANE) dot(a[0], a[2], '#ff8a3d', 4.5);
   for (const s of STA) dot(s[0], s[2], '#7dffb0', 4.5);
   for (const h of HOL.slice(0, 10)) dot(h[0], h[2], '#d9b26a', 4);
@@ -567,3 +575,133 @@ function mapStep() {
   mx.fillText(`你在 ${gridOf(F[CX], F[CZ])} · 水深 ${(-F[CY]).toFixed(0)} 米`, MS - 101, MS - 19);
 }
 addEventListener('keydown', (e) => { if (!menu && !e.repeat && e.code === 'KeyM') mapToggle(); });
+
+// ---------------------------------------------------------------- name tags and the exhibit banner
+// Up close (within ~5 m) the nearest animal of each kind gets a ring and its everyday name, so you know what you are looking at.
+const TAGNAME = ['小丑鱼', '蓝绿光鳃鱼', '清洁鱼', '鹦嘴鱼', '镰鱼', '东星斑', '蓝倒吊', '黑鳍礁鲨', '巨海鳝', '蝠鲼', '海葵'];
+const TAGR = 5.5, tagEl = $('tg'), TAGN = 10, tags = [];
+for (let k = 0; k < TAGN; k++) {
+  const d = document.createElement('div'); d.className = 'tag'; d.innerHTML = '<i></i><b></b>'; tagEl.appendChild(d);
+  tags.push({ d, ring: d.firstChild, name: d.lastChild, txt: '', on: false, rr: -1 });
+}
+const tBest = new Float64Array(11), tagId = new Int32Array(11);
+function tagCand(id, sp, x, y, z) {
+  const d = hypot(x - F[CX], y - F[CY], z - F[CZ]);
+  if (d < TAGR && d < tBest[sp]) { tBest[sp] = d; tagId[sp] = id; }
+}
+// visible: in front, on screen, and not behind rock
+function tagPos(x, y, z, out) {
+  const dx = x - F[CX], dy = y - F[CY], dz = z - F[CZ], zc = dx * F[FX] + dy * F[FY] + dz * F[FZ];
+  if (zc < 0.3) return false;
+  const xc = (dx * F[RX] + dz * F[RZ]) / (zc * TANH * W / H), yc = (dx * F[UX] + dy * F[UY] + dz * F[UZ]) / (zc * TANH);
+  if (abs(xc) > 0.95 || abs(yc) > 0.95) return false;
+  for (const t of [0.35, 0.6, 0.85]) if (rockAt(F[CX] + dx * t, F[CY] + dy * t, F[CZ] + dz * t) > 0.15) return false;
+  out[0] = (xc + 1) * 0.5 * canvas.clientWidth; out[1] = (1 - yc) * 0.5 * canvas.clientHeight; out[2] = zc; out[3] = sqrt(dx * dx + dy * dy + dz * dz);
+  return true;
+}
+const TP = new Float64Array(4);
+function tagStep() {
+  if (frameN % 2) return;
+  let n = 0;
+  if (!menu && !jumpT_on()) {
+    tBest.fill(1e9); tagId.fill(-1);
+    for (let i = 0; i < nA; i++) if (ST[i] !== S_GONE) { const o = i * 3, h = SP[i] === 8 ? LEN[i] * 0.4 : 0; tagCand(i, SP[i], P[o] + Hd[o] * h, P[o + 1] + Hd[o + 1] * h, P[o + 2] + Hd[o + 2] * h); }
+    for (let k = 0; k < nAnem; k++) tagCand(ANEB + k, 10, AN[k * 8], AN[k * 8 + 1] + 0.2, AN[k * 8 + 2]);
+    for (let sp = 0; sp < 11 && n < TAGN; sp++) {
+      const id = tagId[sp]; if (id < 0) continue;
+      const an = id >= ANEB, o = id * 3, h = sp === 8 ? LEN[id] * 0.4 : 0, L = an ? 0.55 * AN[(id - ANEB) * 8 + 3] : sp === 8 ? 0.18 : LEN[id] * 0.55 + 0.04;
+      const x = an ? AN[(id - ANEB) * 8] : P[o] + Hd[o] * h, y = an ? AN[(id - ANEB) * 8 + 1] + 0.2 : P[o + 1] + Hd[o + 1] * h, z = an ? AN[(id - ANEB) * 8 + 2] : P[o + 2] + Hd[o + 2] * h;
+      if (!tagPos(x, y, z, TP)) continue;
+      const t = tags[n++], r = max(14, L / (TP[2] * TANH) * canvas.clientHeight * 0.5) | 0, a = min(1, (TAGR - TP[3]) / 1.2);
+      if (t.txt !== TAGNAME[sp]) { t.txt = TAGNAME[sp]; t.name.textContent = t.txt; }
+      if (t.rr !== r) { t.rr = r; t.ring.style.cssText = `width:${2 * r}px;height:${2 * r}px;transform:translate(${-r}px,${-r}px)`; t.name.style.top = `${r + 4}px`; }
+      t.d.style.transform = `translate(${TP[0].toFixed(1)}px,${TP[1].toFixed(1)}px)`; t.d.style.opacity = a.toFixed(2);
+      if (!t.on) { t.on = true; t.d.style.display = 'block'; }
+    }
+  }
+  for (let k = n; k < TAGN; k++) if (tags[k].on) { tags[k].on = false; tags[k].d.style.display = 'none'; }
+}
+function jumpT_on() { return jumpT >= 0; }
+// arriving at an exhibit shows its name for a few seconds
+const znEl = $('zn'), znN = $('znn'), znS = $('zns');
+let zIn = -1, znT = 0;
+function zoneStep(dt) {
+  if (menu) return;
+  let k = -1; ZON.forEach((z, j) => { if (hypot(F[CX] - z.x, F[CZ] - z.z) < z.r + 4) k = j; });
+  if (k !== zIn) { zIn = k; if (k >= 0) { znN.textContent = ZON[k].zh; znS.textContent = ZON[k].sub; znEl.className = 'on'; znT = 4.5; } }
+  if (znT > 0 && (znT -= dt) <= 0) znEl.className = '';
+}
+
+// ---------------------------------------------------------------- the card's picture: the animal's own 3D model, side on, turning slowly
+// rendered with the scene's shaders into a small canvas, in clear shallow-water daylight, so it always matches the reef
+const cvEl = document.createElement('canvas'); cvEl.id = 'cpv'; cvEl.width = 320; cvEl.height = 192; cPic.appendChild(cvEl);
+const cvCtx = cvEl.getContext('webgpu'); cvCtx.configure({ device, format: FMT, alphaMode: 'opaque' });
+const uboC = device.createBuffer({ size: 272, usage: BU.UNIFORM | BU.COPY_DST }), UC = new Float32Array(68), bgC = mkBG0(uboC, tShadow);
+const cvMS = tex(AA > 1 ? 320 : 1, 192, HDR, TU.RENDER_ATTACHMENT, { samples: AA }), cvRes = tex(320, 192, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING);
+const cvDp = tex(320, 192, DEPTH, TU.RENDER_ATTACHMENT, { samples: AA });
+const ibCard = device.createBuffer({ size: 32, usage: BU.VERTEX | BU.COPY_DST }), CVI = new Float32Array(8);
+const mCard = device.createShaderModule({ code: /*wgsl*/`
+@group(0) @binding(0) var t: texture_2d<f32>;
+@vertex fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f { return vec4f(f32(i32(i & 1u) * 4 - 1), f32(i32(i >> 1u) * 4 - 1), 0., 1.); }
+@fragment fn fs(@builtin(position) fc: vec4f) -> @location(0) vec4f {
+  let q = fc.xy / vec2f(320., 192.) - .5;
+  var c = textureLoad(t, vec2i(fc.xy), 0).rgb * .85 * (1. - dot(q, q) * .8);
+  c = clamp((c * (2.51 * c + .03)) / (c * (2.43 * c + .59) + .14), vec3f(0.), vec3f(1.));
+  return vec4f(pow(c, vec3f(1. / 2.2)), 1.);
+}` });
+const pCard = device.createRenderPipeline({ layout: 'auto', vertex: { module: mCard, entryPoint: 'vs' }, fragment: { module: mCard, entryPoint: 'fs', targets: [{ format: FMT }] } });
+const bgCard = device.createBindGroup({ layout: pCard.getBindGroupLayout(0), entries: [{ binding: 0, resource: cvRes.createView() }] });
+let cvSp = -1, cvSeed = 0.75;
+// the picture is taken high above the anemone garden, in open water
+const cvPos = [ZON[0].x, floorAt(ZON[0].x, ZON[0].z) + 9, ZON[0].z];
+function cvShow(sp, id) { cvSp = sp === 9 ? -1 : sp; if (sp === 10) cvSeed = AN[(id - ANEB) * 8 + 4]; cvEl.style.display = cvSp < 0 ? 'none' : 'block'; }
+function cvRender() {
+  if (cvSp < 0 || card.className !== 'on') return;
+  const sp = cvSp, an = sp === 10, t = ecoT;
+  // the subject: unit length (a smaller anemone), heading +x with a slow swing so it reads as 3D
+  const [x, y, z] = cvPos, a = 0.45 * sin(t * 0.5);
+  if (an) CVI.set([x, y - 0.25, z, 0.7, cvSeed, 0, 0, 0]);
+  else CVI.set([x, y, z, sp === 8 ? 1.3 : 1, cos(a) * 0.5, 0, sin(a) * 0.5, sp + 0.25]);
+  Q.writeBuffer(ibCard, 0, CVI);
+  // camera: side on (slightly above for the anemone), narrow field of view
+  const th = 0.3, asp = 320 / 192, dist = an ? 1.9 : sp === 8 ? 2.4 : 1 / (2 * th * asp) * 1.35;
+  const pitch = an ? -0.45 : -0.08, cp = cos(pitch), fy = sin(pitch), fx = 0, fz = -cp, rx = 1, rz = 0;
+  const ux = 0, uy = rz * fx - rx * fz, uz = rx * fy;
+  const cx = x - fx * dist, cy = y - fy * dist + (an ? 0.1 : 0), cz = z - fz * dist;
+  const m = UC; m.set(UB);
+  const sx = 1 / (th * asp), sy = 1 / th;
+  m[0] = rx * sx; m[4] = 0; m[8] = rz * sx; m[12] = -(rx * cx + rz * cz) * sx;
+  m[1] = ux * sy; m[5] = uy * sy; m[9] = uz * sy; m[13] = -(ux * cx + uy * cy + uz * cz) * sy;
+  m[2] = 0; m[6] = 0; m[10] = 0; m[14] = 0.05;
+  m[3] = fx; m[7] = fy; m[11] = fz; m[15] = -(fx * cx + fy * cy + fz * cz);
+  m[32] = cx; m[33] = cy; m[34] = cz; m[35] = t;
+  m[36] = rx; m[37] = 0; m[38] = rz; m[39] = th * asp; m[40] = ux; m[41] = uy; m[42] = uz; m[43] = th; m[44] = fx; m[45] = fy; m[46] = fz; m[47] = 0.05;
+  m[51] = 0; m[56] = an ? 0.55 : 0.9; m[57] = 0; m[59] = 1; // daylight, no purple zone
+  m[60] = cx; m[61] = cy + 0.3; m[62] = cz; m[63] = an ? 0 : 1; m[64] = fx; m[65] = fy; m[66] = fz; // a soft lamp from the camera
+  Q.writeBuffer(uboC, 0, UC);
+  const e = device.createCommandEncoder();
+  let r = e.beginRenderPass({ colorAttachments: [{ view: (AA > 1 ? cvMS : cvRes).createView(), resolveTarget: AA > 1 ? cvRes.createView() : undefined, clearValue: [0.03, 0.16, 0.24, 1], loadOp: 'clear', storeOp: 'store' }],
+    depthStencilAttachment: { view: cvDp.createView(), depthClearValue: 0, depthLoadOp: 'clear', depthStoreOp: 'discard' } });
+  r.setBindGroup(0, bgC); r.setVertexBuffer(0, vbMesh); r.setIndexBuffer(ibMesh, 'uint32'); r.setVertexBuffer(1, ibCard);
+  const M = meshes[an ? 31 : sp === 7 ? 29 : sp === 8 ? 30 : 28];
+  r.setPipeline(an ? pAnem : pReef); r.drawIndexed(M.ib.length, 1, M.i0, M.v0, 0); r.end();
+  r = e.beginRenderPass({ colorAttachments: [{ view: cvCtx.getCurrentTexture().createView(), loadOp: 'clear', clearValue: [0, 0, 0, 1], storeOp: 'store' }] });
+  r.setPipeline(pCard); r.setBindGroup(0, bgCard); r.draw(3); r.end();
+  Q.submit([e.finish()]);
+}
+
+// ---------------------------------------------------------------- developer mode (hidden): the 0 key (or ` / ^ left of 1) turns it on and off
+// K: day <-> night at once; U: free the mouse (no menu), then click the mini map to jump there (a click on the scene takes it back)
+let devOn = false;
+const devEl = document.createElement('div'); devEl.id = 'dev'; devEl.textContent = '开发者模式 · K 白天/黑夜 · U 放开鼠标，点小地图瞬移'; document.body.appendChild(devEl);
+addEventListener('keydown', (e) => {
+  if (menu || e.repeat) return;
+  if (e.code === 'Digit0' || e.code === 'Backquote' || e.code === 'IntlBackslash') { devOn = !devOn; devEl.className = devOn ? 'on' : ''; mc.style.cursor = devOn ? 'crosshair' : 'default'; }
+  else if (devOn && e.code === 'KeyU' && document.pointerLockElement) { freeMouse = true; document.exitPointerLock(); }
+  else if (devOn && e.code === 'KeyK') { HOUR = DAY > 0.5 ? 22 : 10; frameN = frameN - (frameN % 20); }
+});
+mc.addEventListener('click', (e) => {
+  if (!devOn) return;
+  const r = mc.getBoundingClientRect(), x = (e.clientX - r.left) / r.width * MW - 192, z = (e.clientY - r.top) / r.height * MW - 192;
+  unfollow(); F[CX] = x; F[CZ] = z; F[CY] = min(floorAt(x, z) + 3, -2); F[VX] = F[VY] = F[VZ] = 0;
+});
