@@ -843,8 +843,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let k = u32(fract(i.sp.x) * 6.) % 6u; let kind = floor(i.sp.x);
   //                              blue                  peach-orange           violet-pink           golden                green                 rose-red
   var CB = array<vec3f, 6>(vec3f(.06, .07, .5), vec3f(.40, .12, .08), vec3f(.40, .15, .55), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
-  var CM = array<vec3f, 6>(vec3f(.03, .22, 1.), vec3f(1., .5, .25), vec3f(1., .42, .3), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
-  var CT = array<vec3f, 6>(vec3f(.43, .62, 1.), vec3f(1., .72, .55), vec3f(1., .62, .7), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
+  var CM = array<vec3f, 6>(vec3f(.03, .22, 1.), vec3f(1., .5, .25), vec3f(1., .36, .26), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
+  var CT = array<vec3f, 6>(vec3f(.43, .62, 1.), vec3f(1., .72, .55), vec3f(.7, .55, 1.), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
   var B = CB[k]; var M = CM[k]; var T = CT[k];
     if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
   var tip = ss(.72, .98, i.aux);
@@ -881,7 +881,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     if (kind != 1.) { occ *= mix(.35, 1., ss(0., .8, i.op.y / select(.45, .5, kind == 2.))); } // lower tentacles sit in the shade of the upper ones
     let VI = vec3f(.20, .26, 1.);                                       // the blue of the reef light
     let vk = array<f32, 6>(1., .25, 1.4, 1., 1., 1.)[k];
-    let kb = array<f32, 6>(1., .5, .45, 1., 1., 1.)[k];             // warm colours sit much closer to white on screen: less light
+    let kb = array<f32, 6>(1., .5, .6, 1., 1., 1.)[k];             // warm colours sit much closer to white on screen: less light
     let body = alb * kb * (.03 + 1.5 * key * key) * (.55 + .45 * nv);   // own colour where the light hits; edges turn away and darken
     let term = alb * vec3f(1., .55, .65) * pow(1. - abs(ndl), 3.) * .08; // a little light through the tissue at the terminator
     // wet sheen: a long thin highlight streak along each tube (hair-style), not a plastic dot
@@ -894,7 +894,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     let trans = TR * thin * thin * (1. - key) * (.25 + .75 * sat(dot(-V, Ld) * .5 + .5)) * .35 * step(0., i.aux);
     let blue = VI * vk * wrap * (1. - key) * select(.45, .2, k == 1u); // blue only where the key light is absent
     // sheen (like a stocking or velvet): the edges of each tentacle, seen at a grazing angle, turn pale; the middle keeps its colour
-    let shK = array<f32, 5>(.08, 0., .55, .2, .2)[u32(kind)] * step(0., i.aux);
+    let shK = array<f32, 5>(.0, 0., .55, .2, .2)[u32(kind)] * step(0., i.aux);
     let sheen = mix(alb, vec3f(1., .95, .9), .6) * kb * pow(1. - nv, 1.6) * (.25 + .75 * wrap) * shK * 2.2;
     // the carpet's beads catch the reef light: a bright little highlight on each one makes them read as vivid, not grey
     let bead = select(0., 1., kind == 1.) * tip * pow(sat(dot(nb, normalize(Ld + V))), 12.) * .9 * vec3f(.45, .85, 1.);

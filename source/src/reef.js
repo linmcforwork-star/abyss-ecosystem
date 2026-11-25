@@ -43,13 +43,13 @@ function meshAnem(kind, lo) {
     // point up (the rim ones open outward) and bow together downstream, like a dense pile, not a broom
     const R = 0.44, H = 0.12, WV = 0.55;
     m.tube([[0, -0.08, 0], [0, H * 0.5, 0], [0, H, 0]], (k) => R * [0.6, 0.62, 0.75][k], lo ? 10 : 18, false, () => -0.5);
-    disc(R, H, 0.03, WV, 4, lo ? 24 : 48);
-    const TP = lo ? [0, 0.5, 1] : [0, 0.3, 0.6, 0.85, 1];
-    tent(lo ? 180 : 700, (i, n) => {
-      const [a, r] = spiral(i, n, R * 0.97), f = r / R, lb = lobe(a * 1.8), rr0 = r * (1 + WV * f * lb * 0.5), y = H + 0.03 * (1 - f * f) + WV * f * f * 0.25 * lobe(a * 1.8 + 0.4) * R;
-      const x = cos(a) * rr0, z = sin(a) * rr0, tilt = 0.08 + 0.55 * f * f + rr(-0.1, 0.1), L = rr(0.2, 0.32) * (1 - 0.25 * f), ph = rr(0, 6.3), w = rr(0.01, 0.025);
+    disc(R, H, 0.12, WV, 4, lo ? 24 : 48);
+    const TP = lo ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.7, 0.86, 1];
+    tent(lo ? 160 : 600, (i, n) => {
+      const [a, r] = spiral(i, n, R * 0.97), f = r / R, lb = lobe(a * 1.8), rr0 = r * (1 + WV * f * lb * 0.5), y = H + 0.12 * (1 - f * f) + WV * f * f * 0.25 * lobe(a * 1.8 + 0.4) * R;
+      const x = cos(a) * rr0, z = sin(a) * rr0, tilt = 0.06 + 0.45 * f * f + rr(-0.06, 0.06), L = rr(0.36, 0.55) * (1 - 0.2 * f), ph = rr(0, 6.3), w = rr(0.02, 0.04);
       const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
-      return { r: rr(0.016, 0.021) * (lo ? 1.5 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t, h = cos(tilt) * L * t, c = w * sin(t * 3.5 + ph) * t, ld = 0.12 * L * t * t;
+      return { r: rr(0.012, 0.016) * (lo ? 1.5 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t, h = cos(tilt) * L * t - 0.1 * L * t * t * t, c = w * sin(t * 3.5 + ph) * t, ld = 0.32 * L * t * t;
         return [x + ox * o + tx * c + ld, y + h - 0.2 * ld, z + oz * o + tz * c + 0.4 * ld]; }) };
     }, (t) => 1 - 0.25 * t + 0.1 * Math.exp(-(((t - 0.9) / 0.08) ** 2)), lo ? 5 : 7); // thick fingers, round ends
   } else if (kind === 1) {
