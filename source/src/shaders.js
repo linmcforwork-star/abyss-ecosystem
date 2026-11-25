@@ -190,7 +190,7 @@ const WK = array<vec3f, 10>(vec3f(1., 2., 1.), vec3f(-2., 1., .9), vec3f(3., 1.,
 
 // ---------------------------------------------------------------- shared scene code
 const S_G = /*wgsl*/`
-struct G { vp: mat4x4f, sm: mat4x4f, cam: vec4f, right: vec4f, up: vec4f, fwd: vec4f, sun: vec4f, res: vec4f, mis: vec4f };
+struct G { vp: mat4x4f, sm: mat4x4f, cam: vec4f, right: vec4f, up: vec4f, fwd: vec4f, sun: vec4f, res: vec4f, mis: vec4f, lmp: vec4f, lmd: vec4f };
 const SIG = vec3f(.056, .0225, .0185);
 const KD = vec3f(.048, .021, .0148); // clear tropical water: a little less absorption than the original
 const WCOL = vec3f(.10, .50, .95);
@@ -203,12 +203,23 @@ fn sat(x: f32) -> f32 { return clamp(x, 0., 1.); }
 fn ss(a: f32, b: f32, x: f32) -> f32 { let t = clamp((x - a) / (b - a), 0., 1.); return t * t * (3. - 2. * t); }
 fn ign(p: vec2f) -> f32 { return fract(52.9829189 * fract(dot(p, vec2f(.06711056, .00583715)))); }
 fn hs(x: f32) -> f32 { return fract(sin(x * 127.1) * 43758.5453); }
-// the diver's lamp (L key): a soft white light from the camera, so whatever is within a few metres shows its true colours,
-// like the lights in underwater films; strength in g.right.y
+// the diver's lamp (L key): a hand torch held low on the right (g.lmp: position, on/off; g.lmd: direction). A bright round spot
+// with a soft edge and a little spill; inside it things show their true colours, like the lights in underwater films
+fn spot(v: vec3f) -> f32 { let c = dot(v, g.lmd.xyz); return .03 + ss(.925, .935, c) * (.8 + .4 * ss(.94, .99, c)); }
 fn torch(p: vec3f, n: vec3f) -> vec3f {
-  let v = g.cam.xyz - p; let d = length(v); let l = v / max(d, 1e-3);
-  let cone = .3 + .7 * ss(.55, .93, -dot(l, g.fwd.xyz));
-  return vec3f(1., .94, .85) * g.right.y * cone * (.3 + .7 * sat(dot(n, l))) * exp(-SIG * d) / (1. + .06 * d * d);
+  let v = p - g.lmp.xyz; let d = length(v); let l = v / max(d, 1e-3);
+  let dc = distance(p, g.cam.xyz);
+  return vec3f(1.6, 1.05, .6) * g.lmp.w * spot(l) * (.25 + .75 * sat(-dot(n, l))) * exp(-SIG * (d + dc)) / (1. + .05 * d * d);
+}
+// the light the beam scatters toward you on its way through the water (the visible cone)
+fn beam(rd: vec3f, tmax: f32) -> vec3f {
+  if (g.lmp.w < .5) { return vec3f(0.); }
+  let T = min(tmax, 14.); let dt = T / 12.; var s = 0.;
+  for (var k = 0; k < 12; k++) {
+    let t = (f32(k) + .5) * dt; let q = g.cam.xyz + rd * t; let v = q - g.lmp.xyz; let d = max(length(v), .05);
+    s += ss(.9, .94, dot(v / d, g.lmd.xyz)) * exp(-.06 * (d + t)) / (1. + .12 * d * d) * dt;
+  }
+  return vec3f(.9, .85, .75) * s * .07;
 }
 fn kd(z: f32) -> vec3f { return mix(KD, KDZ, z); }
 fn sg(z: f32) -> vec3f { return mix(SIG, vec3f(.034, .026, .022), z); }
@@ -793,8 +804,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   var alb = mix(mix(PD[k] * .7, PT[k], ss(0., .6, i.aux)) * (.7 + .3 * i.aux), PX[k], tip * .8);
   if (i.aux < 0.) { alb = PD[k]; }
   let E = sunE(i.wp.y, z) * i.lt;
-  var c = alb * (E * (.45 + .7 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * 1.6) + alb * E * .2;
-  c += alb * torch(i.wp, n) * .8;
+  var c = alb * (E * (.4 + .6 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * 1.15) + alb * E * .15;
+  c += alb * torch(i.wp, n) * .6;
   c += E * pow(sat(dot(n, normalize(V + L))), 20.) * .3;
   c += (PX[k] * tip * .35 + alb * E * .2) * (.4 + .6 * g.mis.w) * select(1., 0., i.aux < 0.) + PX[k] * tip * .15 * (1. - g.mis.w); // a soft glow at the tips, stronger at night
   return fin(fog(c, i.wp, z));
@@ -987,6 +998,11 @@ fn sat3(x: vec3f) -> vec3f { return clamp(x, vec3f(0.), vec3f(1.)); }
     acc += r.rgb * w; ws += w;
   }
   var c = textureLoad(tS, px, 0).rgb + acc / ws;
+  { // the torch beam
+    let nd = vec2f(uv.x * 2. - 1., 1. - uv.y * 2.);
+    let rv = g.fwd.xyz + g.right.xyz * (nd.x * g.right.w) + g.up.xyz * (nd.y * g.up.w); let rl = length(rv);
+    c += beam(rv / rl, zf * rl);
+  }
   let bl = textureSampleLevel(tB, sC, uv, 0.).rgb;
   c = mix(c, bl, .06) + bl * .03;
   c *= g.mis.x;

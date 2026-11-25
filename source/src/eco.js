@@ -79,10 +79,12 @@ const SP = new Int8Array(NA), ST = new Int8Array(NA), HM = new Int16Array(NA), G
 const P = new Float64Array(NA * 3), Vv = new Float64Array(NA * 3), Hd = new Float64Array(NA * 3), TG = new Float64Array(NA * 3), OF = new Float64Array(NA * 3);
 const LEN = new Float32Array(NA), PH = new Float32Array(NA), TM = new Float32Array(NA), T2 = new Float32Array(NA), BEAT = new Float32Array(NA);
 let nA = 0;
+// shown bigger than life so you can tell them apart from the background fish at a glance (the small ones the most)
+const SHOW = [1, 3, 3, 1.7, 2.2, 1.3, 2, 1, 1, 1];
 const add = (sp, x, y, z, home, grp = -1) => {
   if (nA >= NA) return -1;
   const i = nA++, L = SPC[sp].len;
-  SP[i] = sp; HM[i] = home; GR[i] = grp; XI[i] = -1; LEN[i] = rr(L[0], L[1]); PH[i] = rnd(); TM[i] = rr(0, 3); T2[i] = rr(10, 60);
+  SP[i] = sp; HM[i] = home; GR[i] = grp; XI[i] = -1; LEN[i] = rr(L[0], L[1]) * SHOW[sp]; PH[i] = rnd(); TM[i] = rr(0, 3); T2[i] = rr(10, 60);
   P[i * 3] = x; P[i * 3 + 1] = y; P[i * 3 + 2] = z; TG[i * 3] = x; TG[i * 3 + 1] = y; TG[i * 3 + 2] = z;
   const a = rnd() * TAU; Hd[i * 3] = cos(a); Hd[i * 3 + 2] = sin(a);
   ST[i] = sp === 7 || sp === 9 ? S_PATROL : sp === 8 ? S_HOLE : sp === 3 || sp === 4 || sp === 6 ? S_TRAVEL : S_HOVER;
@@ -378,7 +380,7 @@ function manta(i) {
 }
 
 // ---------------------------------------------------------------- the info card: what you are looking at
-const card = $('cd'), cN = $('cn'), cL = $('cl'), cF = $('cf'), cD = $('cg'), clock = $('ck');
+const cPic = $('cpic'), card = $('cd'), cN = $('cn'), cL = $('cl'), cF = $('cf'), cD = $('cg'), clock = $('ck');
 let cardI = -1, candI = -1, candT = 0, lostT = 0, fol = -1, tour = false, tourT = 0, pickX = 0, pickY = 0, pickOn = false;
 const ANEB = 1000; // card index for anemone k: ANEB + k
 let pkX = 0, pkY = 0, pkZ = 0, pkB = -1, pkS = 1e9;
@@ -411,7 +413,7 @@ const spOf = (id) => id >= ANEB ? 10 : SP[id];
 const stOf = (id) => id >= ANEB ? S_HOVER : ST[id];
 function showCard(id) {
   const sp = spOf(id), s = SPC[sp];
-  cN.textContent = s.zh; cL.textContent = s.la; cF.textContent = s.facts.join(' ');
+  cN.textContent = s.zh; cL.textContent = s.la; cPic.innerHTML = PORT[sp] || ''; cF.textContent = s.facts.join(' ');
   card.className = 'on'; cardI = id; lastDo = '';
 }
 let lastDo = '';

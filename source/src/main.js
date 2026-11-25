@@ -48,8 +48,8 @@ const tDetail = tex(1024, 1024, 'rgba8unorm', TU.RENDER_ATTACHMENT | TU.TEXTURE_
 const tVol = tex(NX / 2, NY / 2, 'rg8unorm', TU.TEXTURE_BINDING | TU.COPY_DST, { d: NZ / 2 });
 const tMap = tex(512, 512, 'rgba8unorm', TU.TEXTURE_BINDING | TU.COPY_DST);
 
-const UB = new Float32Array(60), UBS = new Float32Array(60);
-const ubo = device.createBuffer({ size: 240, usage: BU.UNIFORM | BU.COPY_DST }), uboS = device.createBuffer({ size: 240, usage: BU.UNIFORM | BU.COPY_DST });
+const UB = new Float32Array(68), UBS = new Float32Array(68);
+const ubo = device.createBuffer({ size: 272, usage: BU.UNIFORM | BU.COPY_DST }), uboS = device.createBuffer({ size: 272, usage: BU.UNIFORM | BU.COPY_DST });
 const WT = new Float32Array(4), uboW = device.createBuffer({ size: 16, usage: BU.UNIFORM | BU.COPY_DST });
 
 const VF = SS.VERTEX | SS.FRAGMENT;
@@ -444,13 +444,18 @@ function render() {
   m[2] = 0; m[6] = 0; m[10] = 0; m[14] = NEAR;
   m[3] = fx; m[7] = fy; m[11] = fz; m[15] = -(fx * cx + fy * cy + fz * cz);
   m[32] = cx; m[33] = cy; m[34] = cz; m[35] = F[TIME];
-  m[36] = rx; m[37] = lamp ? 0.5 : 0; m[38] = rz; m[39] = TANH * asp;
+  m[36] = rx; m[37] = 0; m[38] = rz; m[39] = TANH * asp;
   m[40] = ux; m[41] = uy; m[42] = uz; m[43] = TANH;
   m[44] = fx; m[45] = fy; m[46] = fz; m[47] = NEAR;
   const zx = cx - PURPLE[0], zz = cz - PURPLE[1]; let zt = (44 - sqrt(zx * zx + zz * zz)) / 18; zt = zt < 0 ? 0 : zt > 1 ? 1 : zt;
   m[51] = zt * zt * (3 - 2 * zt);
   let ek = (-cy - 8) / 26; ek = ek < 0 ? 0 : ek > 1 ? 1 : ek;
   m[56] = EXPO * (0.6 + 0.4 * ek) * (2.6 - 1.6 * DAY); m[57] = RAYS * DAY; m[58] = det; m[59] = DAY;
+  { // the diver's lamp: held low on the right, aimed at what is 6 m ahead in the middle of the screen
+    const lx = cx + rx * 0.35 - ux * 0.3 + fx * 0.1, ly = cy - uy * 0.3 + fy * 0.1, lz = cz + rz * 0.35 - uz * 0.3 + fz * 0.1;
+    let dx = cx + fx * 6 - lx, dy = cy + fy * 6 - ly, dz = cz + fz * 6 - lz; const dl = Math.hypot(dx, dy, dz); dx /= dl; dy /= dl; dz /= dl;
+    m[60] = lx; m[61] = ly; m[62] = lz; m[63] = lamp ? 1 : 0; m[64] = dx; m[65] = dy; m[66] = dz; m[67] = 0;
+  }
   Q.writeBuffer(ubo, 0, UB);
   WT[0] = F[TIME]; Q.writeBuffer(uboW, 0, WT);
 

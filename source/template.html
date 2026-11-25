@@ -126,11 +126,13 @@ svg { width: 1.5em; height: 1.5em; fill: currentColor; }
 .p #hud button { display: none; }
 #sub { font-size: .95em; color: #bff8ff; letter-spacing: .1em; text-shadow: 0 1px 6px #000; }
 #cd {
-  position: absolute; left: 1em; bottom: 1em; max-width: min(30em, 70vw); padding: .9em 1.1em; border-radius: .8em;
+  position: absolute; left: 1em; bottom: 1em; max-width: min(34em, 70vw); padding: .9em 1.1em; border-radius: .8em;
   background: #03131cc4; box-shadow: inset 0 0 0 1px #7ff3ff55, 0 .3em 1.5em #0008; font-weight: 500; line-height: 1.5;
   opacity: 0; visibility: hidden; transform: translateY(.6em); transition: opacity .4s, visibility .4s, transform .4s; cursor: pointer;
 }
 .g #cd.on { opacity: 1; visibility: visible; transform: none; }
+#cpic { float: right; width: 10em; height: 6em; margin: -.3em -.4em .3em .9em; border-radius: .5em; background: radial-gradient(#1b4a5c, #0a2633); }
+#cpic svg { display: block; width: 100%; height: 100%; }
 #cn { display: block; font-size: 1.15em; font-weight: 800; color: #fff; }
 #cl { display: block; font-size: .85em; color: #9fe9f5; margin-bottom: .4em; }
 #cg { color: #ffe08a; margin-bottom: .35em; }
@@ -193,7 +195,7 @@ svg { width: 1.5em; height: 1.5em; fill: currentColor; }
 <div id=fd></div>
 <div id=hud><span id=ck></span><button id=bt>导览</button><button id=bn>时间 +3 小时</button></div>
 <div id=mp><canvas id=mc width=440 height=440></canvas><p id=ml><b style=color:#ffd36b>◯</b> 展区 <b style=color:#ff8a3d>●</b> 海葵 <b style=color:#7dffb0>●</b> 清洁站 <b style=color:#d9b26a>●</b> 海鳝洞 <b style=color:#fff>①</b> 观景点</p></div>
-<div id=cd><b id=cn></b><i id=cl></i><p id=cg></p><p id=cf></p></div>
+<div id=cd><div id=cpic></div><b id=cn></b><i id=cl></i><p id=cg></p><p id=cf></p></div>
 
 <pre id=i></pre>
 <script>
