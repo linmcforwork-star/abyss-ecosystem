@@ -113,7 +113,7 @@ let nG = 0;
   for (const h of all) if (HEADS.length < 16 && !HEADS.some((q) => hypot(q[0] - h[0], q[2] - h[2]) < 9)) HEADS.push(h);
   if (!HEADS.length) HEADS.push([0, floorAt(0, 0) + 1, 0, 1]);
   // clownfish: a big female, a smaller male, sometimes a juvenile, in every anemone
-  ANE.forEach((a, k) => { if ((a[4] | 0) > 1 || (k > 3 && rnd() > 0.45)) return; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) LEN[i] = [0.36, 0.29, 0.22][j]; } }); // ~3.5x life size (the hosts are big too), so you can see them
+  ANE.forEach((a, k) => { if ((a[4] | 0) > 1 || (k > 3 && rnd() > 0.45)) return; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) LEN[i] = [0.3, 0.27, 0.24][j]; } }); // ~3.5x life size (the hosts are big too), so you can see them
   // chromis: a cloud over each coral head
   HEADS.forEach((h, k) => { const n = 10 + (rnd() * 10 | 0); for (let j = 0; j < n; j++) add(1, h[0] + rr(-0.5, 0.5), h[1] + rr(0.2, 0.9), h[2] + rr(-0.5, 0.5), k); });
   // cleaner wrasse at every station
@@ -226,7 +226,7 @@ function clown(i, dt) {
   else ST[i] = S_HOVER;
   if ((TM[i] -= dt) < 0 || ST[i] === S_GUARD) {
     TM[i] = rr(0.6, 2);
-    if (ST[i] === S_HOVER) { const r = rr(0, 0.45) * a[3], t = rnd() * TAU; { const o = rr(0.08, 0.28) * a[3]; setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny + sin(t) * r * (1 - ny), az + sin(t) * r * ny + nz * o); } }
+    if (ST[i] === S_HOVER) { const r = rr(0, 0.45) * a[3], t = rnd() * TAU; { const o = rr(0.05, 0.2) * a[3]; setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny + sin(t) * r * (1 - ny), az + sin(t) * r * ny + nz * o); } }
     else if (ST[i] === S_GUARD) { const k = 0.8 / camD; setT(i, ax + (F[CX] - ax) * k, ay + (F[CY] - ay) * k, az + (F[CZ] - az) * k); }
     else { const r = rr(0, 0.2) * a[3], t = rnd() * TAU, o = rr(0.02, 0.1); setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny, az + sin(t) * r * ny + nz * o); }
   }

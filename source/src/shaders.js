@@ -214,7 +214,7 @@ fn torchI(p: vec3f, n: vec3f) -> f32 {
   let dc = distance(p, g.cam.xyz);
   return g.lmp.w * spot(l) * (.25 + .75 * sat(-dot(n, l))) * exp(-.06 * (d + dc)) / (1. + .05 * d * d);
 }
-fn torch(p: vec3f, n: vec3f) -> vec3f { return mix(vec3f(1.6, 1.05, .6), vec3f(.12, .3, 1.5), nite()) * torchI(p, n); }
+fn torch(p: vec3f, n: vec3f) -> vec3f { return mix(vec3f(1.6, 1.05, .6), vec3f(.08, .2, 1.), nite()) * torchI(p, n); }
 // the glow a fluorescent surface of colour a gives back under the blue light
 fn fluo(a: vec3f, p: vec3f, n: vec3f) -> vec3f { let m = max(max(a.r, a.g), a.b); return a / max(m, .05) * m * nite() * torchI(p, n); }
 // the light the beam scatters toward you on its way through the water (the visible cone)
@@ -833,15 +833,15 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   // shows the real animal.
   let k = u32(i.sp.x * 6.) % 6u; let kind = floor(i.sp.x);
   //                              blue                  peach-orange           violet-pink           golden                green                 rose-red
-  var CB = array<vec3f, 6>(vec3f(.02, .04, .25), vec3f(.35, .12, .05), vec3f(.08, .03, .30), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
-  var CM = array<vec3f, 6>(vec3f(.10, .28, 1.), vec3f(1., .55, .32), vec3f(.42, .22, 1.), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
-  var CT = array<vec3f, 6>(vec3f(.55, .85, 1.), vec3f(1., .62, .38), vec3f(1., .38, .22), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
+  var CB = array<vec3f, 6>(vec3f(.02, .04, .25), vec3f(.35, .12, .05), vec3f(.15, .04, .40), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
+  var CM = array<vec3f, 6>(vec3f(.10, .28, 1.), vec3f(1., .45, .22), vec3f(1., .4, .3), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
+  var CT = array<vec3f, 6>(vec3f(.55, .85, 1.), vec3f(1., .72, .5), vec3f(1., .78, .9), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
   var B = CB[k]; var M = CM[k]; var T = CT[k];
-  if (kind == 1.) { T = mix(M, T, .55); } // carpet: small tinted dots, not white blobs
+  if (kind == 1.) { T = mix(M, T, .8); } // carpet: small tinted dots, not white blobs
   if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
-  var tip = select(ss(.72, .98, i.aux), ss(.55, 1., i.aux), k == 2u);
+  var tip = ss(.72, .98, i.aux);
   if (kind == 1.) { tip = ss(.93, 1., i.aux); } // carpet: only the very tip is a pale dot // the violet form fades into coral over half its length
-  var alb = mix(B, M, ss(0., .55, i.aux));
+  var alb = mix(B, M, ss(0., select(.55, .4, k == 2u), i.aux));
   if (kind == 4.) { alb = mix(alb, M * .35, step(.5, fract(i.aux * 3.5)) * .6); }  // tube: banded tentacles
   if (kind == 1.) { alb = mix(B, M, .4 + .6 * ss(0., .5, i.aux)); }              // carpet: one strong colour all over
   alb = mix(alb, T, tip * .7);

@@ -40,30 +40,32 @@ function meshAnem(kind, lo) {
     const R = 0.42, H = 0.14;
     m.tube([[0, -0.03, 0], [0, H * 0.5, 0], [0, H, 0]], (k) => R * [0.95, 0.9, 1][k], lo ? 10 : 18, false, () => -0.5);
     disc(R, H, 0.03, 0, 2, lo ? 10 : 18);
-    tent(lo ? 70 : 300, (i, n) => {
-      const a = i * 2.39996 + rr(-0.1, 0.1), f = sqrt((i + 0.5) / n), r = 0.12 + 0.3 * f, tilt = 0.12 + 0.5 * f, L = rr(0.28, 0.42) * (1.1 - 0.25 * f), ph = rr(0, 6.3), w = rr(0.02, 0.04);
+    tent(lo ? 120 : 560, (i, n) => {
+      const a = i * 2.39996 + rr(-0.1, 0.1), f = sqrt((i + 0.5) / n), r = 0.1 + 0.32 * f, tilt = 0.05 + 0.22 * f, L = rr(0.42, 0.6) * (1.05 - 0.2 * f), ph = rr(0, 6.3), w = rr(0.035, 0.07);
       const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
-      return { r: rr(0.02, 0.026) * (lo ? 1.8 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => { const o = sin(tilt) * L * t + 0.06 * t * t * f, h = cos(tilt) * L * t, c = w * sin(t * 4 + ph) * t;
+      // rise steeply, then flare outward near the top (a vase), each with its own gentle wave
+      return { r: rr(0.013, 0.017) * (lo ? 2 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => { const o = sin(tilt) * L * t + 0.08 * L * t * t * (0.4 + f), h = cos(tilt) * L * t - 0.05 * L * t * t * t, c = w * sin(t * 4 + ph) * t;
         return [ox * (r + o) + tx * c, H + h, oz * (r + o) + tz * c]; }) };
-    }, [1.05, 0.95, 0.9, 1, 0.85], lo ? 4 : 7);
+    }, [1.1, 0.85, 0.72, 0.68, 0.6], lo ? 4 : 6);
   } else if (kind === 1) {
     // carpet (the blue hero): a broad, gently waved mat packed with short tentacles that end in small round beads
     const R = 0.62; disc(R, 0.03, 0.12, 0.45, 5, 64);
     tent(lo ? 200 : 800, (i, n) => {
       const [a, r] = spiral(i, n, R * 1.02), f = r / R, rr0 = r * (1 + 0.45 * f * lobe(a) * 0.5), y = 0.03 + 0.12 * (1 - f * f) + 0.45 * f * f * 0.25 * lobe(a + 0.4) * R;
-      const L = rr(0.08, 0.12) * (lo ? 1.2 : 1), x = cos(a) * rr0, z = sin(a) * rr0, ph = rr(0, 6.3);
-      return { r: rr(0.011, 0.013) * (lo ? 2 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => [x + cos(a) * L * t * 0.35 + 0.012 * sin(ph + t * 3) * t, y + L * t, z + sin(a) * L * t * 0.35 + 0.012 * cos(ph + t * 3) * t]) };
+      const L = rr(0.1, 0.15) * (lo ? 1.2 : 1), x = cos(a) * rr0, z = sin(a) * rr0, sw = sin(x * 6 + 1) + cos(z * 5), sx = cos(sw * 1.6), sz = sin(sw * 1.6); // tentacles lie over in sweeps
+      return { r: rr(0.01, 0.012) * (lo ? 2 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => [x + (sx * 0.55 + cos(a) * 0.2) * L * t, y + L * t * (1 - 0.45 * t), z + (sz * 0.55 + sin(a) * 0.2) * L * t]) };
     }, [1, 0.9, 0.85, 1.15, 0.95], lo ? 3 : 5);
   } else if (kind === 2) {
     // bubble-tip (the peach hero): a crown of long tentacles rising from the mouth, then bending over, each swollen
     // into a bulb just below its tip
     const R = 0.2; disc(R, 0.02, 0.06, 0, 2, 16);
-    tent(lo ? 40 : 160, (i, n) => {
-      const a = i * 2.39996 + rr(-0.1, 0.1), f = sqrt((i + 0.5) / n), r = 0.04 + 0.16 * f, L = rr(0.3, 0.42), sp = 0.35 + 0.55 * f, ph = rr(0, 6.3);
+    tent(lo ? 80 : 340, (i, n) => {
+      const a = i * 2.39996 + rr(-0.1, 0.1), f = sqrt((i + 0.5) / n), r = 0.03 + 0.17 * f, L = rr(0.28, 0.38), sp = 0.3 + 0.5 * f, ph = rr(0, 6.3);
       const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
-      return { r: rr(0.018, 0.022) * (lo ? 1.8 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => { const q = t * 1.35, o = L * sp * (1 - cos(q)) * 0.9, h = L * sin(q) * 0.85, c = 0.03 * sin(ph + t * 3) * t;
-        return [ox * (r + o) + tx * c, 0.05 + h, oz * (r + o) + tz * c]; }) };
-    }, [1, 0.85, 1, 1.35, 0.95], lo ? 4 : 7);
+      // rise from the mouth, arch over; the whole crown flops a little toward +x, as if in a current
+      return { r: rr(0.012, 0.015) * (lo ? 2 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => { const q = t * 1.3, o = L * sp * (1 - cos(q)) * 0.9, h = L * sin(q) * 0.85, c = 0.03 * sin(ph + t * 3) * t, fl = 0.12 * L * t * t;
+        return [ox * (r + o) + tx * c + fl, 0.05 + h - 0.3 * fl, oz * (r + o) + tz * c]; }) };
+    }, [1, 0.8, 0.85, 1.45, 0.9], lo ? 4 : 6);
   } else if (kind === 3) {
     // long-tentacle: the column buried in sand, long thin tentacles arching out and lying over the sand
     const R = 0.22; disc(R, 0.01, 0.05, 0, 2, 18);
