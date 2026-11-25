@@ -350,7 +350,9 @@ function makeWorld(D, T, flyPts, POSES) {
       for (let i = 0; i < 300 && put.length < n; i++) {
         const t = rr(-1, 1) * abs(rr(-1, 1)), a = dir + 0.6 * sin(t * 3), x = cx + cos(a) * t * len + rr(-0.8, 0.8), z = cz + sin(a) * t * len + rr(-0.8, 0.8);
         if (!inner(x, z, 1.5) || put.some((p) => hypot(p[0] - x, p[1] - z) < gap)) continue;
-        put.push([x, z]); ane(x, top(x, z) - 0.03, z, rr(lo, hi), kind, col);
+        put.push([x, z]); const s = rr(lo, hi), y = top(x, z);
+        if (kind === 0) { solid(rnd() * 3 | 0, x, y - 0.3 * s, z, s * 0.45, q(0.5), 1, rnd(), 1, 0); ane(x, y + 0.08 * s, z, s, kind, col); } // on a dark rubble rock
+        else ane(x, y - 0.03, z, s, kind, col);
       }
       taken.push([cx, cz, len + 1.5]);
     };
@@ -374,11 +376,11 @@ function makeWorld(D, T, flyPts, POSES) {
       return null;
     };
     // main exhibit: 5 drifts round the pinnacle, big and bright
-    for (const [kind, col, n, len, lo, hi, gap] of [[0, 3, 7, 4, 1.9, 2.6, 1.9], [1, 0, 3, 3, 2.5, 3.1, 2.6], [0, 5, 6, 3.5, 1.9, 2.5, 1.9], [1, 2, 3, 2.5, 2.5, 3, 2.6], [0, 1, 6, 3.5, 1.8, 2.4, 1.9], [1, 1, 2, 2, 2.4, 2.9, 2.6]]) {
+    for (const [kind, col, n, len, lo, hi, gap] of [[0, 0, 7, 4, 1.9, 2.6, 1.9], [1, 0, 3, 3, 2.5, 3.1, 2.6], [0, 1, 6, 3.5, 1.9, 2.5, 1.9], [1, 2, 3, 2.5, 2.5, 3, 2.6], [0, 2, 6, 3.5, 1.8, 2.4, 1.9], [1, 1, 2, 2, 2.4, 2.9, 2.6]]) {
       const p = site(6, 32, len + 0.5, 5.5, 12); if (p) drift(p[0], p[1], n, len, kind, col, lo, hi, gap);
     }
     // south sand flat: two small groups of tube anemones, long-tentacle anemones alone on the sand
-    for (const [col, z0] of [[2, 36], [3, 30], [5, 32]]) { const p = site(z0, bz1 - 3, 3.5, 14, 40); if (p) clump(p[0], p[1], 5, 2.2, 4, col, 1.6, 2.7, 1.1); }
+    for (const [col, z0] of [[4, 36], [0, 30], [4, 32]]) { const p = site(z0, bz1 - 3, 3.5, 14, 40); if (p) clump(p[0], p[1], 5, 2.2, 4, col, 1.6, 2.7, 1.1); }
     for (let i = 0, k = 0; i < 2000 && k < 5; i++) { const x = rr(bx0 + 3, bx1 - 3), z = rr(28, bz1 - 3); if (!inner(x, z, 1.5) || !free(x, z, 1.5)) continue; taken.push([x, z, 3]); k++; ane(x, top(x, z) - 0.02, z, rr(1.1, 1.7), 3, [2, 5, 0, 1, 4][k % 5]); }
     // north rocky end: bubble-tip clusters on low rocks
     for (const col of [4, 2, 1]) {
@@ -536,7 +538,7 @@ function makeWorld(D, T, flyPts, POSES) {
   const gm = new Uint8Array(512 * 512 * 4);
   for (let j = 0; j < 512; j++) for (let i = 0; i < 512; i++) {
     const x = (i + 0.5) / 512 * 384 - 192, z = (j + 0.5) / 512 * 384 - 192, o = (i + 512 * j) * 4;
-    gm[o] = magAt(x, z) * 255; gm[o + 2] = zoneP(x, z) * 255; gm[o + 3] = sstep(0.42, 0.6, fbm(x * 0.04, 3, z * 0.04, 3)) * 255;
+    gm[o] = (inZone(x, z, -1) ? 0 : magAt(x, z)) * 255; gm[o + 2] = zoneP(x, z) * 255; gm[o + 3] = sstep(0.42, 0.6, fbm(x * 0.04, 3, z * 0.04, 3)) * 255; // (no magenta ground in the anemone garden: it fought the anemones)
   }
 
   // --- fish schools + mantas

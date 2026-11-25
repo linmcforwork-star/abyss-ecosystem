@@ -43,9 +43,9 @@ function meshAnem(kind, lo) {
     }, [1, 0.88, 0.95, 1.25, 0.8], S);
   } else if (kind === 1) {
     // carpet: a wide, folded oral disc covered in very short sticky tentacles
-    const R = 0.62; disc(R, 0.03, 0.1, 0.5, 5, 42);
+    const R = 0.62; disc(R, 0.03, 0.16, 0.9, 5, 42);
     tent(lo ? 140 : 640, (i, n) => {
-      const [a, r] = spiral(i, n, R * 1.02), f = r / R, rr0 = r * (1 + 0.5 * f * sin(a * 7) * 0.5), y = 0.03 + 0.1 * (1 - f * f) + 0.5 * f * f * 0.25 * cos(a * 7) * R;
+      const [a, r] = spiral(i, n, R * 1.02), f = r / R, rr0 = r * (1 + 0.9 * f * sin(a * 7) * 0.5), y = 0.03 + 0.16 * (1 - f * f) + 0.9 * f * f * 0.25 * cos(a * 7) * R;
       const L = rr(0.03, 0.05) * (lo ? 1.3 : 1), x = cos(a) * rr0, z = sin(a) * rr0;
       return { r: rr(0.011, 0.014) * (lo ? 2.2 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => [x + cos(a) * L * t * 0.4, y + L * t, z + sin(a) * L * t * 0.4]) };
     }, [1, 1, 0.95, 0.85, 0.6], lo ? 3 : 4);
@@ -69,9 +69,9 @@ function meshAnem(kind, lo) {
     const H = 0.55, Rt = 0.065, ns = lo ? 8 : 12;
     m.tube([[0, -0.05, 0], [0.01, H * 0.4, 0], [-0.01, H * 0.8, 0.01], [0, H, 0]], (k) => Rt * [1.15, 1, 1, 1.05][k], ns, false, () => -0.5);
     disc(Rt * 1.05, H, 0.02, 0, 1, ns);
-    tent(lo ? 24 : 90, (i, n) => {
+    tent(lo ? 30 : 120, (i, n) => {
       const a = i / n * TAU * 3.1 + rr(-0.05, 0.05), inner = i % 3 === 0, r = Rt * (inner ? 0.5 : 0.95), L = inner ? rr(0.1, 0.14) : rr(0.28, 0.4), up = inner ? 1 : rr(0.35, 0.6);
-      return { r: (inner ? 0.01 : 0.014) * (lo ? 1.8 : 1), pts: [0, 0.25, 0.5, 0.75, 1].map((t) => [cos(a) * (r + L * t * (inner ? 0.25 : 0.9)), H + L * t * up - (inner ? 0 : L * t * t * 0.55), sin(a) * (r + L * t * (inner ? 0.25 : 0.9))]) };
+      return { r: (inner ? 0.01 : 0.014) * (lo ? 1.8 : 1), pts: [0, 0.25, 0.5, 0.75, 1].map((t) => [cos(a) * (r + L * t * (inner ? 0.25 : 0.9)), H + L * t * up - (inner ? 0 : L * t * t * 0.9), sin(a) * (r + L * t * (inner ? 0.25 : 0.9))]) };
     }, [1, 0.85, 0.7, 0.55, 0.3], 3);
   }
   return m;

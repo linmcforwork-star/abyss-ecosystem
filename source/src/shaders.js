@@ -683,10 +683,10 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   var alb = vec3f(.5); var spec = .5; var iri = 0.;
   switch k {
     case 0 { // clownfish: orange, three white bands edged in black, black-rimmed fins
-      alb = vec3f(1., .30, .02);
+      alb = vec3f(1., .34, .0);
       let b1 = abs(x - .29 + y * .15); let b2 = abs(x - .02 - y * .25); let b3 = abs(x + .3);
       let bd = min(min(b1 - .035, b2 - .045), b3 - .025);
-      alb = mix(alb, vec3f(.02), ss(.018, .008, bd) * f32(!isF));
+      alb = mix(alb, vec3f(.01), ss(.026, .012, bd) * f32(!isF));
       alb = mix(alb, vec3f(.95, .95, .9), ss(.004, -.004, bd) * f32(!isF));
       if (isF) { alb = mix(alb, vec3f(.02), ss(.55, .85, edge) + select(0., ss(-.44, -.48, x), tail)); }
     }
@@ -721,8 +721,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
       if (isF && !tail && i.op.y > .3) { alb = vec3f(.95, .95, .9); }
     }
     case 5 { // coral trout: red-orange with small bright blue spots
-      alb = vec3f(.78, .16, .06) * (.8 + .3 * ss(.1, -.1, y));
-      alb = mix(alb, vec3f(.25, .55, 1.), spots(vec2f(x, y), 38., .28));
+      alb = vec3f(.95, .14, .05) * (.8 + .3 * ss(.1, -.1, y));
+      alb = mix(alb, vec3f(.3, .7, 1.), spots(vec2f(x, y), 38., .28));
       spec = .6;
     }
     case 6 { // blue tang: royal blue, a black "palette" mark, yellow tail
@@ -764,7 +764,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let E = sunE(i.wp.y, z) * i.lt;
   let ndv = sat(dot(n, V));
   let ndl = dot(n, L);
-  var c = alb * (E * (.22 + .78 * sat(ndl)) + amb(i.wp, n, vv.g, z) * 1.25);
+  alb = pow(alb, vec3f(1.2)); // a touch more contrast: blacks stay black, colours stay rich in the blue light
+  var c = alb * (E * (.22 + .78 * sat(ndl)) + amb(i.wp, n, vv.g, z) * .95);
   c += alb * torch(i.wp, n) * 1.3;
   if (isF) { c += alb * E * sat(-ndl) * .5; }                                   // light through the fins
   c += E * pow(sat(dot(n, normalize(V + L))), 30.) * spec * .9;
@@ -808,31 +809,31 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   var n = normalize(i.n); if (!ff) { n = -n; }
   let L = g.sun.xyz; let V = normalize(g.cam.xyz - i.wp);
   let z = zone(i.wp); let vv = vol(i.wp);
-  // magnificent sea anemone: sandy-green tentacles with paler tips over a coloured column
-  // six colour forms (real ones vary): pale tentacles with brighter, slightly fluorescent tips, a coloured column/disc
-  let k = u32(i.sp.x * 6.) % 6u;
-  var PD = array<vec3f, 6>(vec3f(.85, .2, .5), vec3f(.9, .25, .2), vec3f(.55, .3, .9), vec3f(.95, .55, .2), vec3f(.3, .45, .95), vec3f(.9, .3, .7));
-  var PT = array<vec3f, 6>(vec3f(.95, .68, .5), vec3f(.95, .55, .6), vec3f(.7, .6, .9), vec3f(.95, .75, .4), vec3f(.55, .85, .7), vec3f(.9, .6, .75));
-  var PX = array<vec3f, 6>(vec3f(.55, .6, 1.), vec3f(.7, 1., .35), vec3f(1., .5, .85), vec3f(.45, 1., .5), vec3f(.4, .95, 1.), vec3f(1., .95, .4));
-  let tip = ss(.7, .95, i.aux);
-  // saturated, so a patch still reads as its colour through 40 m of blue water
-  var alb = mix(mix(PD[k] * .8, mix(PD[k], PT[k], .45), ss(0., .6, i.aux)) * (.75 + .25 * i.aux), PX[k], tip * .3);
-  let kind = floor(i.sp.x);
-  // carpet: one strong colour all over (green, teal, yellow, blue, purple, pink forms)
-  var PC = array<vec3f, 6>(vec3f(.15, .85, .3), vec3f(.05, .75, .7), vec3f(.95, .85, .1), vec3f(.2, .4, 1.), vec3f(.6, .2, 1.), vec3f(1., .3, .6));
-  if (kind == 1.) { alb = mix(PC[k], PX[k], .25 * tip) * (.8 + .2 * i.aux); }           // carpet: one strong colour all over
-  if (kind == 3.) { alb = mix(vec3f(.85, .8, .65), PX[k], tip * .9 + .1); }                     // long-tentacle: pale with coloured tips
-  if (kind == 4.) { alb = mix(PT[k], PX[k], step(.5, fract(i.aux * 3.5))) * (.8 + .2 * i.aux); } // tube: banded tentacles
-  if (i.aux < 0.) { alb = select(select(PD[k], PC[k] * .75, kind == 1.), vec3f(.18, .13, .1), kind == 4.); }
-  alb *= 1. + .3 * (vec3f(fract(i.sp.y * 3.1), fract(i.sp.y * 5.3), fract(i.sp.y * 7.7)) - .5); // each one a little different
-  alb = alb * alb * 1.15; // deeper, more saturated: pale colours wash out to cyan-white in the blue light
+  // colour like the reference photos (anemones under blue reef light): each tentacle runs from a deep base through a
+  // strongly saturated middle to a pale, glowing tip; the tips carry a little light of their own (fluorescence), so the
+  // anemone stays vivid and high-contrast in the blue water. Six colour forms per kind; colours are for looks, the card
+  // shows the real animal.
+  let k = u32(i.sp.x * 6.) % 6u; let kind = floor(i.sp.x);
+  //                              blue                  peach-orange           violet-pink           golden                green                 rose-red
+  var CB = array<vec3f, 6>(vec3f(.02, .04, .25), vec3f(.30, .08, .03), vec3f(.20, .03, .25), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
+  var CM = array<vec3f, 6>(vec3f(.10, .28, 1.), vec3f(1., .42, .2), vec3f(.75, .25, .85), vec3f(1., .62, .08), vec3f(.12, .85, .35), vec3f(1., .15, .3));
+  var CT = array<vec3f, 6>(vec3f(.55, .85, 1.), vec3f(.85, .75, 1.), vec3f(.8, .75, 1.), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
+  var B = CB[k]; var M = CM[k]; var T = CT[k];
+  if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
+  let tip = ss(.72, .98, i.aux);
+  var alb = mix(B, M, ss(0., .55, i.aux));
+  if (kind == 4.) { alb = mix(alb, M * .35, step(.5, fract(i.aux * 3.5)) * .6); }  // tube: banded tentacles
+  if (kind == 1.) { alb = mix(B, M, .4 + .6 * ss(0., .5, i.aux)); }              // carpet: one strong colour all over
+  alb = mix(alb, T, tip * .7);
+  if (i.aux < 0.) { alb = select(select(B * 1.6, M * .6, kind == 1.), vec3f(.12, .09, .07), kind == 4.); } // disc / column
+  alb *= 1. + .25 * (vec3f(fract(i.sp.y * 3.1), fract(i.sp.y * 5.3), fract(i.sp.y * 7.7)) - .5); // each one a little different
   let E = sunE(i.wp.y, z) * i.lt;
-  var c = alb * (E * (.4 + .6 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * 1.15) + alb * E * .15;
+  var c = alb * (E * (.35 + .65 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * .8);
   c += alb * torch(i.wp, n) * .6;
-  c += E * pow(sat(dot(n, normalize(V + L))), 20.) * .3;
-  // a touch of their own colour that the blue water can't take away (like the fluorescence divers see): keeps a patch readable from afar
-  c += select(mix(PD[k], PX[k], tip * .3), PC[k], kind == 1.) * select(.32, .1, i.aux < 0.) * (.5 + .5 * g.mis.w);
-  c += (PX[k] * tip * .35 + alb * E * .2) * (.4 + .6 * g.mis.w) * select(1., 0., i.aux < 0.) + PX[k] * tip * .15 * (1. - g.mis.w); // a soft glow at the tips, stronger at night
+  c += E * pow(sat(dot(n, normalize(V + L))), 24.) * .25;
+  // their own light: a little in the saturated body, much more at the tips; stronger at night
+  let gl = .5 + .5 * g.mis.w;
+  if (i.aux >= 0.) { c += M * ss(.2, .7, i.aux) * .14 * gl + T * tip * (.55 + .35 * (1. - g.mis.w)) * gl; }
   return fin(fog(c, i.wp, z));
 }
 `;
