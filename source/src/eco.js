@@ -691,12 +691,13 @@ function cvRender() {
 }
 
 // ---------------------------------------------------------------- developer mode (hidden): the 0 key (or ` / ^ left of 1) turns it on and off
-// K: day <-> night at once; click the mini map: jump there
+// K: day <-> night at once; U: free the mouse (no menu), then click the mini map to jump there (a click on the scene takes it back)
 let devOn = false;
-const devEl = document.createElement('div'); devEl.id = 'dev'; devEl.textContent = '开发者模式 · K 白天/黑夜 · 点小地图瞬移'; document.body.appendChild(devEl);
+const devEl = document.createElement('div'); devEl.id = 'dev'; devEl.textContent = '开发者模式 · K 白天/黑夜 · U 放开鼠标，点小地图瞬移'; document.body.appendChild(devEl);
 addEventListener('keydown', (e) => {
   if (menu || e.repeat) return;
   if (e.code === 'Digit0' || e.code === 'Backquote' || e.code === 'IntlBackslash') { devOn = !devOn; devEl.className = devOn ? 'on' : ''; mc.style.cursor = devOn ? 'crosshair' : 'default'; }
+  else if (devOn && e.code === 'KeyU' && document.pointerLockElement) { freeMouse = true; document.exitPointerLock(); }
   else if (devOn && e.code === 'KeyK') { HOUR = DAY > 0.5 ? 22 : 10; frameN = frameN - (frameN % 20); }
 });
 mc.addEventListener('click', (e) => {

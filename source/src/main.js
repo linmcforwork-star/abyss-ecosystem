@@ -657,7 +657,8 @@ const go = () => {
 bDive.onclick = go;
 // detail buttons: the current level is lit, the others reload the page with theirs
 $('q').querySelectorAll('button').forEach((b, i) => { if (i === 2 - LV) b.className = 'on'; else b.onclick = () => { keep('abyssal', 2 - i); location.reload(); }; });
-document.addEventListener('pointerlockchange', () => ui(!document.pointerLockElement));
+let freeMouse = false; // developer mode: let go of the mouse without opening the menu (eco.js)
+document.addEventListener('pointerlockchange', () => { if (!document.pointerLockElement && freeMouse) { freeMouse = false; ui(false); return; } ui(!document.pointerLockElement); });
 
 // draw the first frame and wait for the GPU to finish it (pipelines get compiled on first use) before the reveal
 lookAt(...POSES[0]);
