@@ -495,7 +495,7 @@ function render() {
   r = e.beginRenderPass(passScene);
   r.setBindGroup(0, bg0);
   r.setPipeline(pTerrain); r.setVertexBuffer(0, vbTerrain); r.setVertexBuffer(1, ibSolids); r.setIndexBuffer(ibTerrain, 'uint32');
-  drawCells(r, T.start, T.lo, T.hi, 1.5, 1, 0, 0, TANK ? 30 : 240);
+  drawCells(r, T.start, T.lo, T.hi, 1.5, 1, 0, 0, TANK ? 70 : 240);
   r.setVertexBuffer(0, vbMesh); r.setIndexBuffer(ibMesh, 'uint32');
   if (!TANK) {
   r.setPipeline(pSolid);

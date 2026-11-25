@@ -831,44 +831,50 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   // strongly saturated middle to a pale, glowing tip; the tips carry a little light of their own (fluorescence), so the
   // anemone stays vivid and high-contrast in the blue water. Six colour forms per kind; colours are for looks, the card
   // shows the real animal.
-  let k = u32(i.sp.x * 6.) % 6u; let kind = floor(i.sp.x);
+  let k = u32(fract(i.sp.x) * 6.) % 6u; let kind = floor(i.sp.x);
   //                              blue                  peach-orange           violet-pink           golden                green                 rose-red
-  var CB = array<vec3f, 6>(vec3f(.02, .06, .3), vec3f(.35, .12, .05), vec3f(.15, .04, .40), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
-  var CM = array<vec3f, 6>(vec3f(.06, .35, 1.), vec3f(.85, .4, .16), vec3f(1., .42, .32), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
-  var CT = array<vec3f, 6>(vec3f(.6, .95, 1.), vec3f(.95, .8, .55), vec3f(1., .62, .5), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
+  var CB = array<vec3f, 6>(vec3f(.03, .05, .35), vec3f(.30, .12, .12), vec3f(.35, .08, .12), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
+  var CM = array<vec3f, 6>(vec3f(.05, .30, 1.), vec3f(.9, .42, .18), vec3f(1., .38, .36), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
+  var CT = array<vec3f, 6>(vec3f(.75, .90, 1.), vec3f(1., .78, .6), vec3f(1., .70, .66), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
   var B = CB[k]; var M = CM[k]; var T = CT[k];
-  if (kind == 1.) { T = mix(M, T, .9); } // carpet: small tinted dots, not white blobs
-  if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
+    if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
   var tip = ss(.72, .98, i.aux);
-  if (kind == 1.) { tip = ss(.93, 1., i.aux); }
+  if (kind == 1.) { tip = ss(.85, 1., i.aux); }
   if (kind == 2.) { tip = ss(.88, 1., i.aux); } // bubble-tip: only the bulb end is pale // carpet: only the very tip is a pale dot // the violet form fades into coral over half its length
-  var alb = mix(B, M, ss(0., select(.55, .4, k == 2u), i.aux));
+  var alb = mix(B, M, ss(0., .55, i.aux));
   if (kind == 4.) { alb = mix(alb, M * .35, step(.5, fract(i.aux * 3.5)) * .6); }  // tube: banded tentacles
   if (kind == 1.) { alb = mix(B, M, .4 + .6 * ss(0., .5, i.aux)); }              // carpet: one strong colour all over
   alb = mix(alb, T, tip * .7);
-  if (i.aux < 0.) { alb = select(select(B * 1.6, M * .6, kind == 1.), vec3f(.12, .09, .07), kind == 4.); } // disc / column
+  if (k == 1u) { alb = mix(alb, vec3f(.55, .45, .75), .08); } // peach: a cool lavender cast from the blue light
+  if (i.aux < 0.) { alb = select(select(B * 1.2, B * 1.6 + M * .2, kind == 1.), vec3f(.12, .09, .07), kind == 4.); } // disc / column
   alb *= 1. + .25 * (vec3f(fract(i.sp.y * 3.1), fract(i.sp.y * 5.3), fract(i.sp.y * 7.7)) - .5); // each one a little different
   let E = sunE(i.wp.y, z) * i.lt;
   var c = alb * (E * (.35 + .65 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * .8);
   c += alb * torch(i.wp, n) * .6 * (1. - nite()); // at night the blue light itself mostly turns into the glow below
   // night (blue reef light, like the reference photos): each tentacle shows its own colour where the light hits it, turns
   // blue-violet on its shadow side and rim, and the roots and gaps between tentacles fall dark. High contrast, real volume.
-  if (i.aux >= 0.) {
-    let tI = torchI(i.wp, n); let ld = normalize(i.wp - g.lmp.xyz);
-    let dif = sat(dot(n, normalize(vec3f(.25, 1., .15) - ld * .6)) * 1.2 - .15);   // reef lights shine from above: tops lit, sides and undersides in shadow
-    let rim = pow(1. - sat(dot(n, V)), 2.);
-    let occ = mix(.12, 1., ss(0., .75, i.aux));                       // deep inside the crown it is dark
-    let VI = vec3f(.30, .16, 1.);                                       // the blue-violet of the reef light
-    let vk = select(select(1., .4, k == 1u), 2.4, k == 2u);           // how much of the reef light's blue shows: peach little, violet a lot
-    let lit = alb * dif * dif * 7. + VI * (1. - dif) * (1. - dif) * .1 * vk + VI * rim * .22 * vk + T * tip * (.2 + dif) * .45;
-    c += lit * occ * (.25 + tI) * nite();
+  {
+    let a0 = max(i.aux, 0.);
+    let ld = normalize(i.wp - g.lmp.xyz); let tI = torchI(i.wp, n);
+    let Ld = normalize(vec3f(.25, 1., .15) * .55 + V * .85 - ld * .3);  // reef lights from above and in front (like the photos): faces toward us show their colour, edges turn blue
+    let ndl = dot(n, Ld); let key = sat(ndl); let wrap = sat((ndl + .6) / 1.6);
+    let rim = pow(1. - sat(dot(n, V)), 3.);
+    let occ = mix(.22, 1., ss(0., .6, a0));                           // deep inside the crown it is darker
+    let VI = vec3f(.20, .26, 1.);                                       // the blue of the reef light
+    let vk = array<f32, 6>(1., .5, 1.1, 1., 1., 1.)[k];
+    let kb = array<f32, 6>(1., .3, .45, 1., 1., 1.)[k];             // warm colours sit much closer to white on screen: less light
+    let body = alb * kb * (.04 + 1.3 * key * key);               // own colour where the light hits, soft falloff
+    let term = alb * vec3f(1., .55, .65) * pow(1. - abs(ndl), 3.) * .35; // light through the tissue at the edge: richer colour
+    let blue = VI * vk * (wrap * (1. - key) * .45 + rim * .30 * (1. - .7 * key)); // blue only where the key light is absent
+    let lit = (body + term * kb + blue) * occ + T * tip * kb * (.25 + .45 * key);
+    c += lit * (.35 + tI) * nite();
   }
   c += E * pow(sat(dot(n, normalize(V + L))), 24.) * .25;
   // their own light: a little in the saturated body, much more at the tips; stronger at night
   let gl = (.5 + .5 * g.mis.w) * (1. - .85 * nite());
   if (i.aux >= 0.) { c += M * ss(.2, .7, i.aux) * .14 * gl + T * tip * (.55 + .35 * (1. - g.mis.w)) * gl; }
-  { let m0 = max(max(c.r, max(c.g, c.b)), 1e-4); c = mix(c, m0 * pow(c / m0, vec3f(1.7)), nite()); } // night: richer colour (the screen's gamma washes thin colours to pastel)
-  { let mx = max(c.r, max(c.g, c.b)); c *= mix(1. / (1. + 2. * max(mx - .3, 0.)), 1. / (1. + 2. * mx), nite()); } // a soft roll-off that keeps light and dark apart // never burn out to white (night exposure is ~2.6x)
+  { let m0 = max(max(c.r, max(c.g, c.b)), 1e-4); c = mix(c, m0 * pow(c / m0, vec3f(select(1.5, 2.1, k == 1u || k == 2u))), nite()); } // night: richer colour (the screen's gamma washes thin colours to pastel)
+  { let mx = max(c.r, max(c.g, c.b)); c *= mix(1. / (1. + 2. * max(mx - .3, 0.)), 1. / (1. + .8 * max(mx - .5, 0.)), nite()); } // a soft roll-off that keeps light and dark apart // never burn out to white (night exposure is ~2.6x)
   return fin(fog(c, i.wp, z));
 }
 `;
@@ -1068,16 +1074,16 @@ fn sat3(x: vec3f) -> vec3f { return clamp(x, vec3f(0.), vec3f(1.)); }
   c = mix(c, bl, .06) + bl * .03;
   c *= g.mis.x;
   let q = uv - .5;
-  c *= 1. - dot(q, q) * .55;
-  c = tmap(c);
+  let nt = nite();
+  c *= 1. - dot(q, q) * mix(.55, .3, nt);
+  { let mc = max(c.r, max(c.g, c.b)); let hp = c * (tmap(vec3f(mc)).x / max(mc, 1e-4)); c = mix(tmap(c), hp, .7 * nt); } // night: keep each colour's hue (peach must not drift to yellow)
   let l0 = dot(c, vec3f(.2126, .7152, .0722));
-  let l = mix(l0, l0 * l0 * (3. - 2. * l0), .55);
+  let l = mix(l0, l0 * l0 * (3. - 2. * l0), .55 * (1. - .6 * nt));
   c *= l / max(l0, 1e-4);
   // the original's film look (soft highlights, a touch less colour, a lifted black) suits the day; the night garden's
   // reef-light look needs the opposite: true blacks and full colour, like the aquarium photos it copies
-  let nt = nite();
   c = mix(c, vec3f(l), ss(.55, 1., l) * .1 * (1. - nt));
-  c = max(mix(vec3f(l), c, mix(.93, 1.25, nt)) + vec3f(.008, .002, 0.) * (1. - nt) - .012 * nt, vec3f(0.));
+  c = max(mix(vec3f(l), c, mix(.93, 1.12, nt)) + vec3f(.008, .002, 0.) * (1. - nt) - .012 * nt, vec3f(0.));
   c = pow(max(c, vec3f(0.)), vec3f(1. / 2.2));
   let n = ign(fc.xy) + ign(fc.xy + 37.) - 1.;
   return vec4f(c + n / 255., 1.);
