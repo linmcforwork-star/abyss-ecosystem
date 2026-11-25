@@ -775,7 +775,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let ndl = dot(n, L);
   alb = pow(alb, vec3f(1.2)); // a touch more contrast: blacks stay black, colours stay rich in the blue light
   var c = alb * (E * (.22 + .78 * sat(ndl)) + amb(i.wp, n, vv.g, z) * .95);
-  c += alb * torch(i.wp, n) * 1.3 + alb * torchI(i.wp, n) * nite() * vec3f(1.6, 1.1, .5); // seen through a yellow filter, like fluorescence photos
+  c += alb * torch(i.wp, n) * 1.3 + alb * torchI(i.wp, n) * nite() * vec3f(4., 2.8, 1.4); // seen through a yellow filter, like fluorescence photos
   if (isF) { c += alb * E * sat(-ndl) * .5; }                                   // light through the fins
   c += E * pow(sat(dot(n, normalize(V + L))), 30.) * spec * .9;
   c += (.5 + .5 * cos(TAU * (vec3f(0., .33, .67) + ndv * 1.3 + .45))) * iri * .25 * E * pow(1. - ndv, 2.);
@@ -825,7 +825,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let k = u32(i.sp.x * 6.) % 6u; let kind = floor(i.sp.x);
   //                              blue                  peach-orange           violet-pink           golden                green                 rose-red
   var CB = array<vec3f, 6>(vec3f(.02, .04, .25), vec3f(.30, .08, .03), vec3f(.20, .03, .25), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
-  var CM = array<vec3f, 6>(vec3f(.10, .28, 1.), vec3f(1., .42, .2), vec3f(.75, .25, .85), vec3f(1., .62, .08), vec3f(.12, .85, .35), vec3f(1., .15, .3));
+  var CM = array<vec3f, 6>(vec3f(.10, .28, 1.), vec3f(1., .42, .2), vec3f(.75, .25, .85), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
   var CT = array<vec3f, 6>(vec3f(.55, .85, 1.), vec3f(.85, .75, 1.), vec3f(.8, .75, 1.), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
   var B = CB[k]; var M = CM[k]; var T = CT[k];
   if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
@@ -839,8 +839,10 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let E = sunE(i.wp.y, z) * i.lt;
   var c = alb * (E * (.35 + .65 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * .8);
   c += alb * torch(i.wp, n) * .6;
-  T = mix(T, M * 1.3, .6 * nite()); // at night the glow keeps its colour instead of burning white
-  if (i.aux >= 0.) { c += (M * ss(0., .6, i.aux) * .6 + T * tip * .8) * nite() * torchI(i.wp, n); } // fluorescence under the blue torch
+  T = mix(T, M * M * 1.3 + .04, .85 * nite()); // at night the tips glow in the body's own, deeply saturated colour (pale colours turn pastel on screen)
+  // fluorescence under the blue torch: a deep saturated body rising to bright tips
+  if (i.aux >= 0.) { c += (M * M * ss(0., .7, i.aux) * .8 + T * tip * 1.2) * nite() * torchI(i.wp, n) * (.35 + .65 * sat(dot(n, V))); }
+  { let mx = max(c.r, max(c.g, c.b)); c *= 1. / (1. + 2. * max(mx - .3, 0.)); } // never burn out to white (night exposure is ~2.6x)
   c += E * pow(sat(dot(n, normalize(V + L))), 24.) * .25;
   // their own light: a little in the saturated body, much more at the tips; stronger at night
   let gl = .5 + .5 * g.mis.w;

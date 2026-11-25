@@ -169,7 +169,8 @@ class Mesh {
     for (let k = 0; k < rings.length - 1; k++) for (let s = 0; s < sides; s++) {
       const s2 = (s + 1) % sides; this.quad(rings[k][s], rings[k][s2], rings[k + 1][s2], rings[k + 1][s]);
     }
-    if (capEnd) { const e = pts[pts.length - 1], c = this.v(e[0], e[1], e[2], auxFn ? auxFn(pts.length - 1) : 1); const r = rings[rings.length - 1]; for (let s = 0; s < sides; s++) this.tri(r[s], r[(s + 1) % sides], c); }
+    if (capEnd) { const e0 = pts[pts.length - 1], q = pts[pts.length - 2] || e0, el = hypot(e0[0] - q[0], e0[1] - q[1], e0[2] - q[2]) || 1, er = (typeof rad === 'function' ? rad(pts.length - 1) : rad) * 0.9 / el;
+      const e = [e0[0] + (e0[0] - q[0]) * er, e0[1] + (e0[1] - q[1]) * er, e0[2] + (e0[2] - q[2]) * er], c = this.v(e[0], e[1], e[2], auxFn ? auxFn(pts.length - 1) : 1); const r = rings[rings.length - 1]; for (let s = 0; s < sides; s++) this.tri(r[s], r[(s + 1) % sides], c); }
   }
   // returns {vb: ArrayBuffer, ib: Uint32Array}; normals area-weighted; aux -> normal.w
   build(nrmFn) {

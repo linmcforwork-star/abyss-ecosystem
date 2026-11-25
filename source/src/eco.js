@@ -226,7 +226,7 @@ function clown(i, dt) {
   else ST[i] = S_HOVER;
   if ((TM[i] -= dt) < 0 || ST[i] === S_GUARD) {
     TM[i] = rr(0.6, 2);
-    if (ST[i] === S_HOVER) { const r = rr(0, 0.45) * a[3], t = rnd() * TAU; { const o = rr(0.15, 0.6) * a[3]; setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny + sin(t) * r * (1 - ny), az + sin(t) * r * ny + nz * o); } }
+    if (ST[i] === S_HOVER) { const r = rr(0, 0.45) * a[3], t = rnd() * TAU; { const o = rr(0.3, 0.65) * a[3]; setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny + sin(t) * r * (1 - ny), az + sin(t) * r * ny + nz * o); } }
     else if (ST[i] === S_GUARD) { const k = 0.8 / camD; setT(i, ax + (F[CX] - ax) * k, ay + (F[CY] - ay) * k, az + (F[CZ] - az) * k); }
     else { const r = rr(0, 0.2) * a[3], t = rnd() * TAU, o = rr(0.02, 0.1); setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny, az + sin(t) * r * ny + nz * o); }
   }
