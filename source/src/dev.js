@@ -40,7 +40,7 @@
 // test hook: lets automated screenshot scripts move the camera, set the time and frame an animal (dev.html only)
 // test tank (dev only): three hero anemones side by side on bare sand, two clownfish each; everything else is hidden,
 // so a close-up renders fast. Same meshes and shaders as the garden.
-function tank(x = -6, z = 36, cols = [[1, 0, 0.9], [2, 1, 1.4], [0, 2, 1.3]], s = 1) { // [kind, colour, size]
+function tank(x = -6, z = 36, cols = [[1, 0, 1.6], [2, 1, 1.4], [0, 2, 1.3]], s = 1) { // [kind, colour, size]
   if (!TANK) TANK = nAnem;
   nAnem = TANK; let c = 0;
   cols.forEach(([kd, col, sz], j) => {

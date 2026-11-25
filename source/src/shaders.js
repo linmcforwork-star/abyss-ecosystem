@@ -214,7 +214,7 @@ fn torchI(p: vec3f, n: vec3f) -> f32 {
   let dc = distance(p, g.cam.xyz);
   return g.lmp.w * spot(l) * (.25 + .75 * sat(-dot(n, l))) * exp(-.06 * (d + dc)) / (1. + .05 * d * d);
 }
-fn torch(p: vec3f, n: vec3f) -> vec3f { return mix(vec3f(1.6, 1.05, .6), vec3f(.08, .2, 1.), nite()) * torchI(p, n); }
+fn torch(p: vec3f, n: vec3f) -> vec3f { return mix(vec3f(1.6, 1.05, .6), vec3f(.05, .12, .6), nite()) * torchI(p, n); }
 // the glow a fluorescent surface of colour a gives back under the blue light
 fn fluo(a: vec3f, p: vec3f, n: vec3f) -> vec3f { let m = max(max(a.r, a.g), a.b); return a / max(m, .05) * m * nite() * torchI(p, n); }
 // the light the beam scatters toward you on its way through the water (the visible cone)
@@ -293,7 +293,7 @@ fn side(p: vec3f, n: vec3f, open: f32, z: f32) -> vec3f { return mix(WCOL, PCOL,
 fn gard(p: vec3f) -> f32 { return ss(-19., -11., p.x) * ss(24., 16., p.x) * ss(-14., -6., p.z) * ss(50., 42., p.z); }
 fn fog(c: vec3f, wp: vec3f, z: f32) -> vec3f {
   let v = wp - g.cam.xyz; let d = length(v); let rd = v / d; let gf = gard(g.cam.xyz);
-  return c * exp(-sg(z) * d * (1. - .45 * gf)) * ss(230., 185., d) + fogIn(g.cam.xyz, rd, d, z, g.sun.xyz) * (.58 + .42 * vol(g.cam.xyz + rd * min(d, 150.)).g) * (1. - .55 * gf);
+  return c * exp(-sg(z) * d * (1. - .45 * gf)) * ss(230., 185., d) + fogIn(g.cam.xyz, rd, d, z, g.sun.xyz) * (.58 + .42 * vol(g.cam.xyz + rd * min(d, 150.)).g) * (1. - .75 * gf);
 }
 fn qrot(q: vec4f, v: vec3f) -> vec3f { return v + 2. * cross(q.xyz, cross(q.xyz, v) + q.w * v); }
 `;
@@ -775,8 +775,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let ndl = dot(n, L);
   alb = pow(alb, vec3f(1.2)); // a touch more contrast: blacks stay black, colours stay rich in the blue light
   var c = alb * (E * (.22 + .78 * sat(ndl)) + amb(i.wp, n, vv.g, z) * .95);
-  c += alb * torch(i.wp, n) * 1.3 + alb * torchI(i.wp, n) * nite() * vec3f(4., 1.7, .7);
-  { let dc = distance(i.wp, g.cam.xyz); c += alb * nite() * vec3f(1., .85, .7) * .35 * (.4 + .6 * sat(dot(n, V))) / (1. + .2 * dc * dc); } // a soft fill light from the camera (like a photographer's strobe), so the fish read at night // seen through a yellow filter, like fluorescence photos
+  c += alb * torch(i.wp, n) * 1.3 + alb * torchI(i.wp, n) * nite() * vec3f(5.5, 2.2, .6);
+  { let dc = distance(i.wp, g.cam.xyz); c += alb * nite() * vec3f(1., .85, .7) * .5 * (.4 + .6 * sat(dot(n, V))) / (1. + .2 * dc * dc); } // a soft fill light from the camera (like a photographer's strobe), so the fish read at night // seen through a yellow filter, like fluorescence photos
   if (isF) { c += alb * E * sat(-ndl) * .5; }                                   // light through the fins
   c += E * pow(sat(dot(n, normalize(V + L))), 30.) * spec * .9;
   c += (.5 + .5 * cos(TAU * (vec3f(0., .33, .67) + ndv * 1.3 + .45))) * iri * .25 * E * pow(1. - ndv, 2.);
@@ -833,11 +833,11 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   // shows the real animal.
   let k = u32(i.sp.x * 6.) % 6u; let kind = floor(i.sp.x);
   //                              blue                  peach-orange           violet-pink           golden                green                 rose-red
-  var CB = array<vec3f, 6>(vec3f(.02, .04, .25), vec3f(.35, .12, .05), vec3f(.15, .04, .40), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
-  var CM = array<vec3f, 6>(vec3f(.10, .28, 1.), vec3f(.62, .3, .12), vec3f(1., .26, .2), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
-  var CT = array<vec3f, 6>(vec3f(.55, .85, 1.), vec3f(.9, .7, .45), vec3f(1., .55, .6), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
+  var CB = array<vec3f, 6>(vec3f(.02, .06, .3), vec3f(.35, .12, .05), vec3f(.15, .04, .40), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
+  var CM = array<vec3f, 6>(vec3f(.06, .35, 1.), vec3f(1., .36, .2), vec3f(1., .42, .32), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
+  var CT = array<vec3f, 6>(vec3f(.6, .95, 1.), vec3f(1., .6, .5), vec3f(1., .62, .5), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
   var B = CB[k]; var M = CM[k]; var T = CT[k];
-  if (kind == 1.) { T = mix(M, T, .8); } // carpet: small tinted dots, not white blobs
+  if (kind == 1.) { T = mix(M, T, .9); } // carpet: small tinted dots, not white blobs
   if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
   var tip = ss(.72, .98, i.aux);
   if (kind == 1.) { tip = ss(.93, 1., i.aux); } // carpet: only the very tip is a pale dot // the violet form fades into coral over half its length
@@ -858,7 +858,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     let rim = pow(1. - sat(dot(n, V)), 2.);
     let occ = mix(.12, 1., ss(0., .75, i.aux));                       // deep inside the crown it is dark
     let VI = vec3f(.30, .16, 1.);                                       // the blue-violet of the reef light
-    let lit = alb * dif * dif * 4.5 + VI * (1. - dif) * (1. - dif) * .1 + VI * rim * .22 + T * tip * dif * .3;
+    let lit = alb * dif * dif * 7. + VI * (1. - dif) * (1. - dif) * .1 + VI * rim * (.22 - .12 * f32(k == 2u)) + T * tip * (.2 + dif) * .45;
     c += lit * occ * (.25 + tI) * nite();
   }
   c += E * pow(sat(dot(n, normalize(V + L))), 24.) * .25;

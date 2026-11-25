@@ -37,16 +37,17 @@ function meshAnem(kind, lo) {
   if (kind === 0) {
     // magnificent (the violet hero): a short column whose rim carries thick, soft tentacles that rise and open outward
     // like a vase, with an open hollow in the middle where the clownfish sit
-    const R = 0.42, H = 0.14;
-    m.tube([[0, -0.03, 0], [0, H * 0.5, 0], [0, H, 0]], (k) => R * [0.95, 0.9, 1][k], lo ? 10 : 18, false, () => -0.5);
+    const R = 0.42, H = 0.06; // a low column, hidden under the tentacles
+    m.tube([[0, -0.08, 0], [0, H * 0.5, 0], [0, H, 0]], (k) => R * [0.95, 0.9, 1][k], lo ? 10 : 18, false, () => -0.5);
     disc(R, H, 0.03, 0, 2, lo ? 10 : 18);
-    tent(lo ? 120 : 560, (i, n) => {
-      const a = i * 2.39996 + rr(-0.1, 0.1), f = sqrt((i + 0.5) / n), r = 0.1 + 0.32 * f, tilt = 0.05 + 0.22 * f, L = rr(0.42, 0.6) * (1.05 - 0.2 * f), ph = rr(0, 6.3), w = rr(0.035, 0.07);
+    tent(lo ? 80 : 320, (i, n) => {
+      // tentacles grow in loose clumps (lobes around the rim), each leaning its own way, some curling over the others
+      const a = i * 2.39996 + rr(-0.1, 0.1), f = sqrt((i + 0.5) / n), r = 0.08 + 0.34 * f, tilt = 0.08 + 0.25 * f + 0.22 * sin(a * 3 + 1.3) + rr(-0.25, 0.25), L = rr(0.55, 0.85) * (1.05 - 0.25 * f), ph = rr(0, 6.3), w = rr(0.04, 0.1);
       const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
       // rise steeply, then flare outward near the top (a vase), each with its own gentle wave
-      return { r: rr(0.013, 0.017) * (lo ? 2 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => { const o = sin(tilt) * L * t + 0.08 * L * t * t * (0.4 + f), h = cos(tilt) * L * t - 0.05 * L * t * t * t, c = w * sin(t * 4 + ph) * t;
+      return { r: rr(0.022, 0.028) * (lo ? 1.7 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => { const o = sin(tilt) * L * t + 0.08 * L * t * t * (0.4 + f), h = cos(tilt) * L * t - 0.05 * L * t * t * t, c = w * sin(t * 4 + ph) * t;
         return [ox * (r + o) + tx * c, H + h, oz * (r + o) + tz * c]; }) };
-    }, [1.1, 0.85, 0.72, 0.68, 0.6], lo ? 4 : 6);
+    }, [1.05, 1, 0.95, 0.9, 0.8], lo ? 4 : 8); // finger-like, round ends
   } else if (kind === 1) {
     // carpet (the blue hero): a broad, gently waved mat packed with short tentacles that end in small round beads
     const R = 0.62; disc(R, 0.03, 0.12, 0.45, 5, 64);
@@ -60,12 +61,12 @@ function meshAnem(kind, lo) {
     // into a bulb just below its tip
     const R = 0.2; disc(R, 0.02, 0.06, 0, 2, 16);
     tent(lo ? 100 : 420, (i, n) => {
-      const a = i * 2.39996 + rr(-0.1, 0.1), f = sqrt((i + 0.5) / n), r = 0.03 + 0.17 * f, L = rr(0.4, 0.55), sp = 0.3 + 0.5 * f, ph = rr(0, 6.3);
+      const a = i * 2.39996 + rr(-0.1, 0.1), f = sqrt((i + 0.5) / n), r = 0.03 + 0.17 * f, L = rr(0.4, 0.55), sp = 0.08 + 0.9 * f, ph = rr(0, 6.3);
       const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
       // rise from the mouth, arch over; the whole crown flops a little toward +x, as if in a current
-      return { r: rr(0.009, 0.012) * (lo ? 2 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => { const q = t * 1.3, o = L * sp * (1 - cos(q)) * 0.9, h = L * sin(q) * 0.85, c = 0.03 * sin(ph + t * 3) * t, fl = 0.12 * L * t * t;
+      return { r: rr(0.012, 0.015) * (lo ? 2 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => { const q = t * (1 + 0.5 * f), o = L * sp * (1 - cos(q)) * 0.9, h = L * sin(q) * 0.85, c = 0.03 * sin(ph + t * 3) * t, fl = 0.06 * L * t * t;
         return [ox * (r + o) + tx * c + fl, 0.05 + h - 0.3 * fl, oz * (r + o) + tz * c]; }) };
-    }, [1, 0.8, 0.85, 1.45, 0.9], lo ? 4 : 6);
+    }, [1, 0.85, 0.9, 1.5, 0.95], lo ? 4 : 6);
   } else if (kind === 3) {
     // long-tentacle: the column buried in sand, long thin tentacles arching out and lying over the sand
     const R = 0.22; disc(R, 0.01, 0.05, 0, 2, 18);
