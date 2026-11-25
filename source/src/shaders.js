@@ -775,7 +775,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let ndl = dot(n, L);
   alb = pow(alb, vec3f(1.2)); // a touch more contrast: blacks stay black, colours stay rich in the blue light
   var c = alb * (E * (.22 + .78 * sat(ndl)) + amb(i.wp, n, vv.g, z) * .95);
-  c += alb * torch(i.wp, n) * 1.3 + alb * torchI(i.wp, n) * nite() * vec3f(4., 2.8, 1.4); // seen through a yellow filter, like fluorescence photos
+  c += alb * torch(i.wp, n) * 1.3 + alb * torchI(i.wp, n) * nite() * vec3f(4., 2.8, 1.4);
+  { let dc = distance(i.wp, g.cam.xyz); c += alb * nite() * vec3f(1., .85, .7) * .35 * (.4 + .6 * sat(dot(n, V))) / (1. + .2 * dc * dc); } // a soft fill light from the camera (like a photographer's strobe), so the fish read at night // seen through a yellow filter, like fluorescence photos
   if (isF) { c += alb * E * sat(-ndl) * .5; }                                   // light through the fins
   c += E * pow(sat(dot(n, normalize(V + L))), 30.) * spec * .9;
   c += (.5 + .5 * cos(TAU * (vec3f(0., .33, .67) + ndv * 1.3 + .45))) * iri * .25 * E * pow(1. - ndv, 2.);
