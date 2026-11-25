@@ -170,7 +170,8 @@ function steer(i, speed, dt, acc = 2.5, minAlt = 0.05, avoid = true) {
 function face(i, dt, hx = 0, hy = 0, hz = 0, rate = 4) {
   const o = i * 3; let x = hx, y = hy, z = hz;
   if (!x && !y && !z) { const sp = sqrt(Vv[o] * Vv[o] + Vv[o + 1] * Vv[o + 1] + Vv[o + 2] * Vv[o + 2]); if (sp < 0.03) return; x = Vv[o] / sp; y = Vv[o + 1] / sp; z = Vv[o + 2] / sp; }
-  const lim = hy ? 0.95 : 0.6; y = y > lim ? lim : y < -lim ? -lim : y;
+  const lim = hy ? 0.95 : 0.45; y = y > lim ? lim : y < -lim ? -lim : y;
+  { let h = sqrt(x * x + z * z); if (h < 1e-3) { x = Hd[o]; z = Hd[o + 2]; h = sqrt(x * x + z * z) || 1; } const q = sqrt(1 - y * y) / h; x *= q; z *= q; } // keep a level-ish heading even when moving straight up or down
   const k = min(1, dt * rate); let a = Hd[o] + (x - Hd[o]) * k, b = Hd[o + 1] + (y - Hd[o + 1]) * k, c = Hd[o + 2] + (z - Hd[o + 2]) * k;
   const l = sqrt(a * a + b * b + c * c) || 1; Hd[o] = a / l; Hd[o + 1] = b / l; Hd[o + 2] = c / l;
 }

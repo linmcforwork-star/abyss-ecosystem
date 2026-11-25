@@ -47,7 +47,7 @@ function meshAnem(kind, lo) {
       // tentacles grow in clumps (lobes around the rim); each is a soft, tapered finger with two or three gentle bends,
       // and they all bow downstream together (+x), more toward the tips
       const a = i * 2.39996 + rr(-0.1, 0.1), f = sqrt((i + 0.5) / n), r = 0.06 + 0.28 * f, cl = 0.5 + 0.5 * sin(a * 5 + 0.8);
-      const tilt = min(0.4, 0.03 + 0.25 * f + 0.1 * cl + rr(-0.08, 0.08)), L = rr(0.55, 0.85) * (1.05 - 0.2 * f) * (0.85 + 0.3 * cl), ph = rr(0, 6.3), w = rr(0.04, 0.07), nb = rr(1.3, 2.0);
+      const tilt = min(0.3, 0.02 + 0.2 * f + 0.1 * cl + rr(-0.08, 0.08)), L = rr(0.45, 0.7) * (1.05 - 0.2 * f) * (0.85 + 0.3 * cl), ph = rr(0, 6.3), w = rr(0.04, 0.07), nb = rr(1.3, 2.0);
       const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
       return { r: rr(0.008, 0.0105) * (lo ? 1.6 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t + 0.06 * L * t * t * (0.3 + f), h = cos(tilt) * L * t - 0.12 * L * t * t * t, c = w * sin(t * nb * 3.1416 + ph) * t, ld = 0.15 * L * t * t;
         return [ox * (r + o) + tx * c + ld, H + h - 0.25 * ld, oz * (r + o) + tz * c + 0.4 * ld]; }) };
