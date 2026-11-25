@@ -131,6 +131,7 @@ function makeWorld(D, T, flyPts, POSES) {
   const tangent = (n) => { let t = abs(n[1]) < 0.9 ? [n[2], 0, -n[0]] : [1, 0, 0]; const l = hypot(...t); t = t.map((v) => v / l); return [t, [n[1] * t[2] - n[2] * t[1], n[2] * t[0] - n[0] * t[2], n[0] * t[1] - n[1] * t[0]]]; };
   const nearFly = (x, y, z, r) => { for (const p of flyPts) if (hypot(x - p[0], z - p[2]) < r && y < p[1] + 3 && y > p[1] - 13) return true; return false; };
   // the exhibits: small themed areas on open sand, kept clear of the generic scatter and dressed by hand below
+  const DRAFT = true; // the start-basin draft below (false = back to the merged version)
   const ZONES = [{ zh: '海葵花园', sub: '小丑鱼和它们的海葵', x: 4, z: 2, r: 7.5 }];
   const inZone = (x, z, pad = 0) => { for (const g of ZONES) if (hypot(x - g.x, z - g.z) < g.r + pad) return true; return false; };
   const nearPose = (x, z, r = 3) => { for (const p of POSES) if (hypot(x - p[0], z - p[2]) < r) return true; return false; };
@@ -319,6 +320,46 @@ function makeWorld(D, T, flyPts, POSES) {
     put(8, -5.8, -1.8, 1.4, 5, 0.05); put(8, -5.6, 2.2, 1.1, 5, 0.05);                                    // sea fans
     for (const [f, r] of [[-4, -1], [-3, 2.4], [-4.8, 5.2], [-2, -3.4]]) put(4 + (rnd() * 3 | 0), f, r, rr(0.4, 0.7), 4, 0.1); // sponges
     for (let j = 0; j < 14; j++) { const [x, z] = at(rr(-7, -2.5), rr(-6, 6)), y = top(x, z), sc = rr(0.1, 0.3); solid(rnd() * 4 | 0, x, y + sc * 0.1, z, sc, qRand(), 1, rnd(), 1, 0); } // rubble
+
+    // --- DRAFT (2026-11-25): fill the start basin in size layers so it doesn't read as empty. Set to false to undo.
+    // tall: a coral pinnacle behind the garden (a landmark); mid: islands of big sponges, sea fans, table and branching
+    // corals (1-3 m) with sand between; more anemone islands; growth on the basin walls
+    if (DRAFT) {
+      const R = 32, cy = top(g.x, g.z);
+      // the pinnacle: stacked boulder corals, ~7 m, anemones on top
+      { const [x, z] = at(-9, 1), y = top(x, z); let h = y;
+        for (const [sc, dx, dz] of [[4.2, 0, 0], [3.4, 0.6, -0.4], [2.6, -0.4, 0.5], [1.8, 0.2, 0.1]]) { solid(26, x + dx, h - sc * 0.15, z + dz, sc, q(x, h, z, 0.15), 6, rnd(), 1, 0); h += sc * 0.62; }
+        for (let j = 0; j < 3; j++) anemones.push([x + rr(-0.9, 0.9), h - 0.25, z + rr(-0.9, 0.9), rr(1.1, 1.4), (j * 2 + 1.5) / 6]);
+        for (let j = 0; j < 6; j++) { const a = j / 6 * TAU, rr0 = rr(2.2, 3.4); solid(8, x + cos(a) * rr0, y + rr(0.5, 3), z + sin(a) * rr0, rr(1.6, 2.6), qMul(qFromY(cos(a) * 0.6, 1, sin(a) * 0.6), qAxis(0, 1, 0, a)), 5, rnd(), 1, 0); }
+        heads.push([x + 2.5, y + 2, z, 1.2]);
+      }
+      // islands across the basin floor
+      const isl = [];
+      for (let i = 0; i < 4000 && isl.length < 9; i++) {
+        const a = rnd() * TAU, r = rr(10, R), x = g.x + cos(a) * r, z = g.z + sin(a) * r, y = top(x, z);
+        if (y > cy + 8 || Dw(x, y + 2, z) > -1 || isl.some((p) => hypot(p[0] - x, p[1] - z) < 8) || hypot(x - POSES[0][0], z - POSES[0][2]) < 4) continue;
+        isl.push([x, z]);
+      }
+      isl.forEach(([cx, cz], n) => {
+        const kind = n % 3; // 0 sponges + fans, 1 table + branching corals, 2 anemones
+        for (let j = 0; j < (kind === 2 ? 4 : 9); j++) {
+          const x = cx + rr(-2.6, 2.6), z = cz + rr(-2.6, 2.6), y = top(x, z);
+          if (y > cy + 10) continue;
+          if (kind === 2) anemones.push([x, y - 0.03, z, rr(1, 1.4), (n * 3 + j) % 6 / 6 + 0.08]);
+          else if (kind === 0) { const u = rnd(); if (u < 0.45) solid(9, x, y - 0.1, z, rr(1.6, 2.6), q(x, y, z), 4, rnd(), 1, 0); else if (u < 0.75) solid(8, x, y - 0.05, z, rr(1.8, 3), q(x, y, z, 0.1), 5, rnd(), 1, 0); else solid(4 + (rnd() * 3 | 0), x, y - 0.1, z, rr(1, 1.8), q(x, y, z), 4, rnd(), 1, 0); }
+          else { const u = rnd(); if (u < 0.35) solid(27, x, y - 0.1, z, rr(2, 3.2), q(x, y, z, 0.1), 7, rnd(), 1, 0); else { const sc = rr(1.2, 2); solid(7, x, y - 0.1, z, sc, q(x, y, z), 5, rnd(), 1, 0); if (sc > 1.6) heads.push([x, y + sc * 0.6, z, sc]); } }
+        }
+        for (let j = 0; j < 25; j++) { const x = cx + rr(-3.5, 3.5), z = cz + rr(-3.5, 3.5), y = top(x, z); if (y < cy + 10) solid(rnd() < 0.5 ? 7 : 4 + (rnd() * 3 | 0), x, y - 0.05, z, rr(0.3, 0.7), q(x, y, z), rnd() < 0.5 ? 5 : 4, rnd(), 1, 0); } // ground cover
+      });
+      // the basin walls: fans and sponges on the steep rock around it
+      for (let i = 0, made = 0; i < 300000 && made < 260; i++) {
+        const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
+        if (hypot(x - g.x, z - g.z) > R + 12 || abs(ny) > 0.6 || y > -6 || y < cy - 2) continue;
+        made++;
+        const nx = T.wn[k], nz = T.wn[k + 2], l = hypot(nx, ny + 0.4, nz), fan = rnd() < 0.5;
+        solid(fan ? 8 : 4 + (rnd() * 3 | 0), x - nx * 0.1, y, z - nz * 0.1, fan ? rr(1.2, 2.4) : rr(0.6, 1.3), qMul(qFromY(nx / l, (ny + 0.4) / l, nz / l), qAxis(0, 1, 0, rnd() * TAU)), fan ? 5 : 4, rnd(), 1, 0);
+      }
+    }
   }
   for (let i = 0; i < 400000 && holes.length < 18; i++) {
     const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
