@@ -834,8 +834,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let k = u32(i.sp.x * 6.) % 6u; let kind = floor(i.sp.x);
   //                              blue                  peach-orange           violet-pink           golden                green                 rose-red
   var CB = array<vec3f, 6>(vec3f(.02, .04, .25), vec3f(.35, .12, .05), vec3f(.15, .04, .40), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
-  var CM = array<vec3f, 6>(vec3f(.10, .28, 1.), vec3f(1., .45, .22), vec3f(1., .4, .3), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
-  var CT = array<vec3f, 6>(vec3f(.55, .85, 1.), vec3f(1., .72, .5), vec3f(1., .78, .9), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
+  var CM = array<vec3f, 6>(vec3f(.10, .28, 1.), vec3f(.62, .3, .12), vec3f(1., .26, .2), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
+  var CT = array<vec3f, 6>(vec3f(.55, .85, 1.), vec3f(.9, .7, .45), vec3f(1., .55, .6), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
   var B = CB[k]; var M = CM[k]; var T = CT[k];
   if (kind == 1.) { T = mix(M, T, .8); } // carpet: small tinted dots, not white blobs
   if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
@@ -849,16 +849,24 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   alb *= 1. + .25 * (vec3f(fract(i.sp.y * 3.1), fract(i.sp.y * 5.3), fract(i.sp.y * 7.7)) - .5); // each one a little different
   let E = sunE(i.wp.y, z) * i.lt;
   var c = alb * (E * (.35 + .65 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * .8);
-  c += alb * torch(i.wp, n) * .6 * (1. - .75 * nite()); // at night the blue light itself mostly turns into the glow below
-  // fluorescence under the blue torch: a deep saturated body rising to bright tips
-  if (i.aux >= 0.) { c += (mix(M, M * M, .5) * ss(0., .7, i.aux) * .5 * (1. - tip) + T * tip * 1.3) * nite() * torchI(i.wp, n) * (.35 + .65 * sat(dot(n, V)));
-    c += M * M * pow(1. - sat(dot(n, V)), 2.) * .25 * nite() * (.3 + torchI(i.wp, n)) * ss(.1, .6, i.aux); } // a translucent rim
+  c += alb * torch(i.wp, n) * .6 * (1. - nite()); // at night the blue light itself mostly turns into the glow below
+  // night (blue reef light, like the reference photos): each tentacle shows its own colour where the light hits it, turns
+  // blue-violet on its shadow side and rim, and the roots and gaps between tentacles fall dark. High contrast, real volume.
+  if (i.aux >= 0.) {
+    let tI = torchI(i.wp, n); let ld = normalize(i.wp - g.lmp.xyz);
+    let dif = sat(dot(n, normalize(vec3f(.25, 1., .15) - ld * .6)) * 1.2 - .15);   // reef lights shine from above: tops lit, sides and undersides in shadow
+    let rim = pow(1. - sat(dot(n, V)), 2.);
+    let occ = mix(.12, 1., ss(0., .75, i.aux));                       // deep inside the crown it is dark
+    let VI = vec3f(.30, .16, 1.);                                       // the blue-violet of the reef light
+    let lit = alb * dif * dif * 4.5 + VI * (1. - dif) * (1. - dif) * .1 + VI * rim * .22 + T * tip * dif * .3;
+    c += lit * occ * (.25 + tI) * nite();
+  }
   c += E * pow(sat(dot(n, normalize(V + L))), 24.) * .25;
   // their own light: a little in the saturated body, much more at the tips; stronger at night
-  let gl = .5 + .5 * g.mis.w;
+  let gl = (.5 + .5 * g.mis.w) * (1. - .85 * nite());
   if (i.aux >= 0.) { c += M * ss(.2, .7, i.aux) * .14 * gl + T * tip * (.55 + .35 * (1. - g.mis.w)) * gl; }
-  { let m0 = max(max(c.r, max(c.g, c.b)), 1e-4); c = mix(c, m0 * pow(c / m0, vec3f(1.8)), nite()); } // night: richer colour (the screen's gamma washes thin colours to pastel)
-  { let mx = max(c.r, max(c.g, c.b)); c *= mix(1. / (1. + 2. * max(mx - .3, 0.)), min(1., .26 / max(mx, 1e-4)), nite()); } // never burn out to white (night exposure is ~2.6x)
+  { let m0 = max(max(c.r, max(c.g, c.b)), 1e-4); c = mix(c, m0 * pow(c / m0, vec3f(1.7)), nite()); } // night: richer colour (the screen's gamma washes thin colours to pastel)
+  { let mx = max(c.r, max(c.g, c.b)); c *= mix(1. / (1. + 2. * max(mx - .3, 0.)), 1. / (1. + 2. * mx), nite()); } // a soft roll-off that keeps light and dark apart // never burn out to white (night exposure is ~2.6x)
   return fin(fog(c, i.wp, z));
 }
 `;

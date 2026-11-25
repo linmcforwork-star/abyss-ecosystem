@@ -59,11 +59,11 @@ function meshAnem(kind, lo) {
     // bubble-tip (the peach hero): a crown of long tentacles rising from the mouth, then bending over, each swollen
     // into a bulb just below its tip
     const R = 0.2; disc(R, 0.02, 0.06, 0, 2, 16);
-    tent(lo ? 80 : 340, (i, n) => {
-      const a = i * 2.39996 + rr(-0.1, 0.1), f = sqrt((i + 0.5) / n), r = 0.03 + 0.17 * f, L = rr(0.28, 0.38), sp = 0.3 + 0.5 * f, ph = rr(0, 6.3);
+    tent(lo ? 100 : 420, (i, n) => {
+      const a = i * 2.39996 + rr(-0.1, 0.1), f = sqrt((i + 0.5) / n), r = 0.03 + 0.17 * f, L = rr(0.4, 0.55), sp = 0.3 + 0.5 * f, ph = rr(0, 6.3);
       const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
       // rise from the mouth, arch over; the whole crown flops a little toward +x, as if in a current
-      return { r: rr(0.012, 0.015) * (lo ? 2 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => { const q = t * 1.3, o = L * sp * (1 - cos(q)) * 0.9, h = L * sin(q) * 0.85, c = 0.03 * sin(ph + t * 3) * t, fl = 0.12 * L * t * t;
+      return { r: rr(0.009, 0.012) * (lo ? 2 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => { const q = t * 1.3, o = L * sp * (1 - cos(q)) * 0.9, h = L * sin(q) * 0.85, c = 0.03 * sin(ph + t * 3) * t, fl = 0.12 * L * t * t;
         return [ox * (r + o) + tx * c + fl, 0.05 + h - 0.3 * fl, oz * (r + o) + tz * c]; }) };
     }, [1, 0.8, 0.85, 1.45, 0.9], lo ? 4 : 6);
   } else if (kind === 3) {
