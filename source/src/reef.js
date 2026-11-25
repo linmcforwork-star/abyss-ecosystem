@@ -39,19 +39,23 @@ function meshAnem(kind, lo) {
   if (kind === 0) {
     // magnificent (the violet hero): a short column whose rim carries thick, soft tentacles that rise and open outward
     // like a vase, with an open hollow in the middle where the clownfish sit
-    // a wide oral disc with folded, wavy edges on a short column, packed with short, thick finger tentacles that mostly
-    // point up (the rim ones open outward) and bow together downstream, like a dense pile, not a broom
-    const R = 0.44, H = 0.12, WV = 0.55;
-    m.tube([[0, -0.08, 0], [0, H * 0.5, 0], [0, H, 0]], (k) => R * [0.6, 0.62, 0.75][k], lo ? 10 : 18, false, () => -0.5);
-    disc(R, H, 0.12, WV, 4, lo ? 24 : 48);
-    const TP = lo ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.7, 0.86, 1];
-    tent(lo ? 160 : 600, (i, n) => {
-      const [a, r] = spiral(i, n, R * 0.97), f = r / R, lb = lobe(a * 1.8), rr0 = r * (1 + WV * f * lb * 0.5), y = H + 0.12 * (1 - f * f) + WV * f * f * 0.25 * lobe(a * 1.8 + 0.4) * R;
-      const x = cos(a) * rr0, z = sin(a) * rr0, tilt = 0.06 + 0.45 * f * f + rr(-0.06, 0.06), L = rr(0.36, 0.55) * (1 - 0.2 * f), ph = rr(0, 6.3), w = rr(0.02, 0.04);
+    // magnificent anemone (refs: anatomy/heteractis-magnifica): a smooth, satiny, strongly coloured column like a
+    // rounded drum, about half as tall as wide; on top a disc with a few broad waves whose rim turns up; finger tentacles
+    // cover the disc, the inner ones stand up, the rim ones lean out and droop over the column's edge
+    const R = 0.4, H = 0.38, WV = 0.35;
+    m.tube([[0, -0.04, 0], [0, H * 0.3, 0], [0, H * 0.65, 0], [0, H * 0.9, 0], [0, H, 0]], (k) => R * [0.8, 0.9, 0.97, 1.02, 0.98][k], lo ? 14 : 28, false, () => -0.5);
+    const top = (a, f) => H + 0.02 + 0.05 * f * f * f * (1 + sin(a * 5 + 0.6)) ;   // the rim turns up in 5 broad waves
+    { const nr = 6, ns = lo ? 28 : 56, rows = [];
+      for (let r = 0; r <= nr; r++) { const row = [], f = r / nr; for (let k = 0; k < ns; k++) { const a = k / ns * TAU, rq = R * 0.95 * f; row.push(m.v(cos(a) * rq, top(a, f), sin(a) * rq, -0.4)); } rows.push(row); }
+      for (let r = 0; r < nr; r++) for (let k = 0; k < ns; k++) { const k2 = (k + 1) % ns; m.quad(rows[r][k2], rows[r][k], rows[r + 1][k], rows[r + 1][k2]); } }
+    const TP = lo ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1];
+    tent(lo ? 220 : 950, (i, n) => {
+      const a = i * 2.39996 + rr(-0.1, 0.1), f = min(1, 0.15 + 0.85 * sqrt((i + 0.5) / n)), rq = R * 0.95 * f, x = cos(a) * rq, z = sin(a) * rq, y = top(a, f);
+      const tilt = 0.05 + 1.1 * Math.pow(f, 2) + rr(-0.1, 0.1), L = rr(0.18, 0.26) * (1.35 - 0.45 * f), ph = rr(0, 6.3), w = rr(0.02, 0.04), droop = 0.9 * Math.pow(f, 3);
       const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
-      return { r: rr(0.012, 0.016) * (lo ? 1.5 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t, h = cos(tilt) * L * t - 0.1 * L * t * t * t, c = w * sin(t * 3.5 + ph) * t, ld = 0.32 * L * t * t;
-        return [x + ox * o + tx * c + ld, y + h - 0.2 * ld, z + oz * o + tz * c + 0.4 * ld]; }) };
-    }, (t) => 1 - 0.25 * t + 0.1 * Math.exp(-(((t - 0.9) / 0.08) ** 2)), lo ? 5 : 7); // thick fingers, round ends
+      return { r: rr(0.012, 0.016) * (lo ? 1.5 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t, h = cos(tilt) * L * t - droop * L * t * t, c = w * sin(t * 3.5 + ph) * t, ld = 0.1 * L * t * t;
+        return [x + ox * o + tx * c + ld, y + h, z + oz * o + tz * c + 0.4 * ld]; }) };
+    }, (t) => 1 - 0.12 * t + 0.08 * Math.exp(-(((t - 0.9) / 0.08) ** 2)), lo ? 5 : 7); // fingers of even thickness, blunt round ends
   } else if (kind === 1) {
     // carpet (the blue hero): a broad, gently waved mat packed with short tentacles that end in small round beads
     // giant carpet anemone (refs: anatomy/stichodactyla-gigantea): a broad saucer whose rim rises and is thrown into
