@@ -854,7 +854,12 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   if (kind == 4.) { alb = mix(alb, M * .35, step(.5, fract(i.aux * 3.5)) * .6); }  // tube: banded tentacles
   if (kind == 1.) { alb = mix(B, M, .25 + .75 * ss(0., .6, i.aux)); // carpet: violet roots, blue body; patches drift from cyan to violet
     let pj = sin(i.op.x * 9. + 1.3) * sin(i.op.z * 7. + .4) + .5 * sin(i.op.x * 23. - i.op.z * 17.);
-    alb = mix(alb, select(vec3f(.25, .12, 1.), vec3f(.02, .55, 1.), pj > 0.), min(abs(pj), 1.) * .45); }              // carpet: one strong colour all over
+    alb = mix(alb, select(vec3f(.25, .12, 1.), vec3f(.02, .55, 1.), pj > 0.), min(abs(pj), 1.) * .45); }
+  if (kind == 1.) { // the folds: troughs between them darker and redder-violet, crests brighter; the centre a pale mouth
+    let ang = atan2(i.op.z, i.op.x); let rf = length(i.op.xz) / .62;
+    let vf = (1. - pow(abs(cos((ang * 9. + .7 + .35 * sin(ang * 3.)) * .5)), .5)) * ss(.35, .9, rf);
+    alb = mix(alb * (1. - .5 * vf), vec3f(.28, .08, .45) * .6, .35 * vf);
+    if (i.aux < 0. && rf < .12) { alb = vec3f(.55, .6, .35) * .5; } }              // carpet: one strong colour all over
   alb = mix(alb, T, tip * .7);
   if (i.aux < 0.) { alb = select(select(B * 1.2, B * .6 + M * .3, kind == 1.), vec3f(.12, .09, .07), kind == 4.); } // disc / column
   // tissue pattern: darker stripes along the bubble-tip's tentacles, soft mottling on the magnificent's

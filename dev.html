@@ -1296,7 +1296,12 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   if (kind == 4.) { alb = mix(alb, M * .35, step(.5, fract(i.aux * 3.5)) * .6); }  // tube: banded tentacles
   if (kind == 1.) { alb = mix(B, M, .25 + .75 * ss(0., .6, i.aux)); // carpet: violet roots, blue body; patches drift from cyan to violet
     let pj = sin(i.op.x * 9. + 1.3) * sin(i.op.z * 7. + .4) + .5 * sin(i.op.x * 23. - i.op.z * 17.);
-    alb = mix(alb, select(vec3f(.25, .12, 1.), vec3f(.02, .55, 1.), pj > 0.), min(abs(pj), 1.) * .45); }              // carpet: one strong colour all over
+    alb = mix(alb, select(vec3f(.25, .12, 1.), vec3f(.02, .55, 1.), pj > 0.), min(abs(pj), 1.) * .45); }
+  if (kind == 1.) { // the folds: troughs between them darker and redder-violet, crests brighter; the centre a pale mouth
+    let ang = atan2(i.op.z, i.op.x); let rf = length(i.op.xz) / .62;
+    let vf = (1. - pow(abs(cos((ang * 9. + .7 + .35 * sin(ang * 3.)) * .5)), .5)) * ss(.35, .9, rf);
+    alb = mix(alb * (1. - .5 * vf), vec3f(.28, .08, .45) * .6, .35 * vf);
+    if (i.aux < 0. && rf < .12) { alb = vec3f(.55, .6, .35) * .5; } }              // carpet: one strong colour all over
   alb = mix(alb, T, tip * .7);
   if (i.aux < 0.) { alb = select(select(B * 1.2, B * .6 + M * .3, kind == 1.), vec3f(.12, .09, .07), kind == 4.); } // disc / column
   // tissue pattern: darker stripes along the bubble-tip's tentacles, soft mottling on the magnificent's
@@ -2362,18 +2367,33 @@ function meshAnem(kind, lo) {
     }, (t) => 1 - 0.25 * t + 0.1 * Math.exp(-(((t - 0.9) / 0.08) ** 2)), lo ? 5 : 7); // thick fingers, round ends
   } else if (kind === 1) {
     // carpet (the blue hero): a broad, gently waved mat packed with short tentacles that end in small round beads
-    // the carpet heaves up in several rounded mounds and folds (like the giant carpet anemone's oral disc), packed so
-    // densely with short tentacles that no gap shows; each tentacle stands out from the surface where it grows
-    const R = 0.62, WV = 0.3, BU = [[0.12, 0.1, 0.24, 0.17], [-0.28, 0.2, 0.2, 0.13], [0.3, -0.25, 0.2, 0.14], [-0.15, -0.32, 0.18, 0.12], [-0.38, -0.08, 0.16, 0.1], [0.4, 0.22, 0.15, 0.1], [0.02, 0.42, 0.16, 0.11]];
-    const hf = (x, z) => { let h = 0; for (const [bx, bz, br, bh] of BU) { const d = ((x - bx) ** 2 + (z - bz) ** 2) / (br * br); h += bh * Math.exp(-d * 1.6); } return h; };
-    disc(R, 0.02, 0.05, WV, 10, lo ? 48 : 96, hf);
-    tent(lo ? 520 : 1100, (i, n) => {
-      const [a, r] = spiral(i, n, R * 1.02), f = r / R, rr0 = r * (1 + WV * f * lobe(a * 1.8) * 0.5), x = cos(a) * rr0, z = sin(a) * rr0;
-      const y = 0.02 + 0.05 * (1 - f * f) + WV * f * f * 0.25 * lobe(a * 1.8 + 0.4) * R + hf(x, z) - 0.005;
-      const gx = (hf(x + 0.01, z) - hf(x - 0.01, z)) / 0.02, gz = (hf(x, z + 0.01) - hf(x, z - 0.01)) / 0.02, gl = Math.hypot(gx, 1, gz), nx = -gx / gl, ny = 1 / gl, nz = -gz / gl; // surface normal
-      const L = rr(0.07, 0.1) * (1 - 0.3 * f * f) * (lo ? 1.25 : 1), sw = sin(x * 6 + 1) + cos(z * 5), sx = cos(sw * 1.6) * 0.3 + cos(a) * 0.12 * f + 0.12, sz = sin(sw * 1.6) * 0.3 + sin(a) * 0.12 * f; // tentacles lie over in sweeps
-      return { r: rr(0.0048, 0.006) * (lo ? 2 : 1), pts: (lo ? [0, 0.5, 1] : [0, 0.35, 0.65, 0.86, 1]).map((t) => [x + (nx + sx) * L * t, y + ny * L * t * (1 - 0.3 * t), z + (nz + sz) * L * t]) };
-    }, (t) => 1 - 0.22 * t + 0.6 * Math.exp(-(((t - 0.93) / 0.07) ** 2)), lo ? 4 : 6);
+    // giant carpet anemone (refs: anatomy/stichodactyla-gigantea): a broad saucer whose rim rises and is thrown into
+    // 9 deep folds that roll up and over like waves; the centre dips to a pale mouth; the whole disc, rim included, is
+    // a dense pile of very short tentacles standing out from the surface
+    const R = 0.62, NF = 9, PH = 0.7;
+    // folds: broad rounded crests, narrow deep troughs (|cos|^0.5), a fold every 40 degrees, slightly irregular
+    const surf = (a, f) => { const w = 2 * Math.pow(Math.abs(cos((a * NF + PH + 0.35 * sin(a * 3)) * 0.5)), 0.5) - 1, rim = f * f * f;
+      return [R * f * (1 + 0.14 * rim * w), 0.04 + 0.08 * f * f + 0.17 * rim * w]; };          // [radius, height]
+    { const nr = 12, ns = lo ? 72 : 144, rows = [];
+      for (let r = 0; r <= nr; r++) { const row = [], f = r / nr; for (let k = 0; k < ns; k++) { const a = k / ns * TAU, [rq, h] = surf(a, f); row.push(m.v(cos(a) * rq, h, sin(a) * rq, -0.5)); } rows.push(row); }
+      for (let r = 0; r < nr; r++) for (let k = 0; k < ns; k++) { const k2 = (k + 1) % ns; m.quad(rows[r][k2], rows[r][k], rows[r + 1][k], rows[r + 1][k2]); }
+      // the rim's underside down to the sand, so the folds read as solid, not a floating sheet
+      const lip = []; for (let k = 0; k < ns; k++) { const a = k / ns * TAU, [rq] = surf(a, 1); lip.push(m.v(cos(a) * rq * 0.93, -0.02, sin(a) * rq * 0.93, -0.5)); }
+      for (let k = 0; k < ns; k++) { const k2 = (k + 1) % ns; m.quad(rows[nr][k], rows[nr][k2], lip[k2], lip[k]); } }
+    tent(lo ? 520 : 1050, (i, n) => {
+      const a = i * 2.39996 + rr(-0.15, 0.15);
+      if (i % 6 === 0) { // the outer wall of the rolled-over rim is covered too: tentacles point outward and down
+        const [rq, y] = surf(a, 1), u = rr(0.1, 0.9), x = cos(a) * rq * (1 - 0.07 * u), z = sin(a) * rq * (1 - 0.07 * u), yy = mix(y, -0.02, u), L = rr(0.045, 0.07) * (lo ? 1.3 : 1);
+        return { r: rr(0.005, 0.0062) * (lo ? 2 : 1), pts: (lo ? [0, 0.5, 1] : [0, 0.35, 0.65, 0.86, 1]).map((t) => [x + cos(a) * L * t, yy + L * t * (0.3 - 0.2 * u), z + sin(a) * L * t]) };
+      }
+      const f = min(1, 0.12 + 0.9 * sqrt((i + 0.5) / n)), [rq, y] = surf(a, f), x = cos(a) * rq, z = sin(a) * rq;
+      const [r2, y2] = surf(a, min(1, f + 0.02)), [r3, y3] = surf(a + 0.02, f);                     // surface normal from two tangents
+      const t1 = [cos(a) * r2 - x, y2 - y, sin(a) * r2 - z], t2 = [cos(a + 0.02) * r3 - x, y3 - y, sin(a + 0.02) * r3 - z];
+      let nx = t1[1] * t2[2] - t1[2] * t2[1], ny = t1[2] * t2[0] - t1[0] * t2[2], nz = t1[0] * t2[1] - t1[1] * t2[0]; if (ny < 0) { nx = -nx; ny = -ny; nz = -nz; }
+      const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
+      const L = rr(0.045, 0.07) * (lo ? 1.3 : 1), sw = sin(x * 9 + 1) + cos(z * 7);
+      return { r: rr(0.005, 0.0062) * (lo ? 2 : 1), pts: (lo ? [0, 0.5, 1] : [0, 0.35, 0.65, 0.86, 1]).map((t) => [x + (nx + cos(sw) * 0.25) * L * t, y - 0.004 + ny * L * t, z + (nz + sin(sw) * 0.25) * L * t]) };
+    }, (t) => 1 - 0.2 * t + 0.5 * Math.exp(-(((t - 0.93) / 0.07) ** 2)), lo ? 4 : 6);
   } else if (kind === 2) {
     // bubble-tip (the peach hero): a crown of long tentacles rising from the mouth, then bending over, each swollen
     // into a bulb just below its tip
