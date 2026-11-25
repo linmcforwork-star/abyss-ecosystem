@@ -312,13 +312,14 @@ function anemSort() {
     ANC[j] = o;
     for (let k = 0; k < nAnem; k++) {
       const b = k * 8, kind = AN[b + 4] | 0, d = hypot(AN[b] - F[CX], AN[b + 1] - F[CY], AN[b + 2] - F[CZ]);
-      if (kind * 2 + (d > 11 + 3 * AN[b + 3]) !== j || d > 75) continue;
+      if (kind * 2 + (d > 11 + 3 * AN[b + 3]) !== j || d > 75 || k < TANK) continue;
       for (let q = 0; q < 8; q++) ANd[o * 8 + q] = AN[b + q];
       o++;
     }
   }
   ANC[10] = o;
 }
+let TANK = 0; // dev test tank: > 0 draws only the anemones from this index on and a bare floor (dev.js tank())
 let nEcoF = 0, nEcoS = 0, nEcoE = 0, nAnem = 0, DAY = 1, GNITE = 1; // GNITE: how far the garden's night has faded in
 Q.writeTexture({ texture: tVol }, Wd.volD, { bytesPerRow: NX, rowsPerImage: NY / 2 }, [NX / 2, NY / 2, NZ / 2]);
 Q.writeTexture({ texture: tMap }, Wd.gm, { bytesPerRow: 2048 }, [512, 512]);
@@ -493,8 +494,10 @@ function render() {
   r = e.beginRenderPass(passScene);
   r.setBindGroup(0, bg0);
   r.setPipeline(pTerrain); r.setVertexBuffer(0, vbTerrain); r.setVertexBuffer(1, ibSolids); r.setIndexBuffer(ibTerrain, 'uint32');
-  drawCells(r, T.start, T.lo, T.hi, 1.5, 1, 0, 0, 240);
-  r.setPipeline(pSolid); r.setVertexBuffer(0, vbMesh); r.setIndexBuffer(ibMesh, 'uint32');
+  drawCells(r, T.start, T.lo, T.hi, 1.5, 1, 0, 0, TANK ? 30 : 240);
+  r.setVertexBuffer(0, vbMesh); r.setIndexBuffer(ibMesh, 'uint32');
+  if (!TANK) {
+  r.setPipeline(pSolid);
   for (let i = 0; i < 12; i++) { const g = Wd.solids.ranges[i]; if (g[1]) r.drawIndexed(meshes[i].ib.length, g[1], meshes[i].i0, meshes[i].v0, g[0]); }
   for (let i = 0; i < NCHUNK; i++) {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
@@ -508,22 +511,25 @@ function render() {
   }
   r.setPipeline(pManta); r.setVertexBuffer(1, ibManta); r.drawIndexed(MANTA.ib.length, nManta, MANTA.i0, MANTA.v0, 0);
   r.setPipeline(pFish); r.setVertexBuffer(1, ibFish); r.drawIndexed(FISH.ib.length, nFish, FISH.i0, FISH.v0, 0);
+  }
   if (nEcoF + nEcoS + nEcoE) {
     Q.writeBuffer(ibEco, 0, EB, 0, (nEcoF + nEcoS + nEcoE) * 8);
     r.setPipeline(pReef); r.setVertexBuffer(1, ibEco);
     if (nEcoF) r.drawIndexed(meshes[28].ib.length, nEcoF, meshes[28].i0, meshes[28].v0, 0);
-    if (nEcoS) r.drawIndexed(meshes[29].ib.length, nEcoS, meshes[29].i0, meshes[29].v0, nEcoF);
-    if (nEcoE) r.drawIndexed(meshes[30].ib.length, nEcoE, meshes[30].i0, meshes[30].v0, nEcoF + nEcoS);
+    if (nEcoS && !TANK) r.drawIndexed(meshes[29].ib.length, nEcoS, meshes[29].i0, meshes[29].v0, nEcoF);
+    if (nEcoE && !TANK) r.drawIndexed(meshes[30].ib.length, nEcoE, meshes[30].i0, meshes[30].v0, nEcoF + nEcoS);
   }
   if (nAnem) {
     anemSort(); Q.writeBuffer(ibAnem, 0, ANd, 0, ANC[10] * 8); r.setPipeline(pAnem); r.setVertexBuffer(1, ibAnem);
     for (let j = 0; j < 10; j++) { const n = (j < 9 ? ANC[j + 1] : ANC[10]) - ANC[j], M = meshes[31 + j]; if (n) r.drawIndexed(M.ib.length, n, M.i0, M.v0, ANC[j]); }
   }
   // kelp and plants: 9-row blades up close, 5 rows mid-range, a decimated set far away
+  if (!TANK) {
   r.setPipeline(pLeaf); r.setVertexBuffer(0, ibBig); drawCells(r, Wd.big.start, Wd.big.lo, Wd.big.hi, 5, false, 18, 0, 24);
   r.setPipeline(pLeaf5); drawCells(r, Wd.big.start, Wd.big.lo, Wd.big.hi, 5, false, 10, 24, 58);
   r.setPipeline(pLeafF); r.setVertexBuffer(0, ibBigF); drawCells(r, Wd.bigF.start, Wd.bigF.lo, Wd.bigF.hi, 5, false, 6, 58, 150);
   r.setPipeline(pLeafS); r.setVertexBuffer(0, ibSmall); drawCells(r, Wd.small.start, Wd.small.lo, Wd.small.hi, 1.5, false, 6, 0, 70);
+  }
   r.setPipeline(pSurf); r.draw(4);
   r.setPipeline(pBack); r.draw(4);
   r.setPipeline(pBub); r.setVertexBuffer(0, ibBubbles); r.draw(4, nBub);

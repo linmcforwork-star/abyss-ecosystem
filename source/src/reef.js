@@ -38,7 +38,7 @@ function meshAnem(kind, lo) {
     const R = 0.55, top = (r) => 0.03 + 0.13 * (1 - (r / R) ** 2);
     disc(R, 0.02, 0.14, 0, 1, 20);
     tent(720 / F, (i, n) => {
-      const [a, r] = spiral(i, n, R), y0 = top(r) - 0.02, out = 0.25 + 0.95 * r / R, L = rr(0.13, 0.2) * (1 - 0.2 * r / R), bend = rr(-0.3, 0.3);
+      const [a, r] = spiral(i, n, R), y0 = top(r) - 0.02, out = 0.08 + 0.55 * r / R, L = rr(0.15, 0.24) * (1 - 0.15 * r / R), bend = rr(-0.3, 0.3);
       let dx = cos(a + bend) * out, dz = sin(a + bend) * out, dy = 1; const dl = hypot(dx, dy, dz); dx /= dl; dy /= dl; dz /= dl;
       return { r: rr(0.008, 0.0105) * (lo ? 3.4 : 1), pts: [0, 0.35, 0.7, 0.9, 1].map((t) => [cos(a) * r + dx * L * t + cos(a) * 0.06 * t * t, y0 + dy * L * t - 0.05 * t * t * r / R, sin(a) * r + dz * L * t + sin(a) * 0.06 * t * t]) };
     }, [1.25, 0.95, 0.8, 1.15, 0.9], S);
