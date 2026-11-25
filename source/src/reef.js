@@ -14,19 +14,65 @@ function meshTable() {
 }
 // sea anemone (Heteractis magnifica): a low mound packed with ~420 short, fat tentacles with rounded tips, like a thick carpet;
 // aux = (tentacle seed * 5 + ring along it) / 127, -0.5 the oral disc
-function meshAnemone() {
-  rseed(232);
-  const m = new Mesh(), R = 0.55, top = (r) => 0.03 + 0.13 * (1 - (r / R) ** 2);
-  const disc = []; for (let s = 0; s < 20; s++) { const a = s / 20 * TAU; disc.push(m.v(cos(a) * R, 0.02, sin(a) * R, -0.5)); }
-  const c = m.v(0, top(0), 0, -0.5); for (let s = 0; s < 20; s++) m.tri(disc[(s + 1) % 20], disc[s], c);
-  for (let i = 0; i < 420; i++) {
-    const a = i * 2.39996 + rr(-0.15, 0.15), r = R * 0.98 * sqrt((i + 0.5) / 420), y0 = top(r) - 0.02;
-    const out = 0.25 + 0.95 * r / R, L = rr(0.2, 0.3) * (1 - 0.25 * r / R), bend = rr(-0.3, 0.3);
-    let dx = cos(a + bend) * out, dz = sin(a + bend) * out, dy = 1; const dl = hypot(dx, dy, dz); dx /= dl; dy /= dl; dz /= dl;
-    const pts = []; for (const t of [0, 0.35, 0.7, 0.9, 1]) pts.push([cos(a) * r + dx * L * t + cos(a) * 0.04 * t * t, y0 + dy * L * t - 0.03 * t * t * r / R, sin(a) * r + dz * L * t + sin(a) * 0.04 * t * t]);
-    const r0 = rr(0.018, 0.023);
-    const sd = i % 25; // each tentacle's own sway: packed with the ring index into the aux byte, (seed * 5 + ring) / 127
-    m.tube(pts, (k) => r0 * [1, 0.88, 0.95, 1.25, 0.8][k], 6, true, (k) => (sd * 5 + k) / 127);
+// sea anemones, five kinds, each a near (lo = 0) and a far (lo = 1, few fat tentacles) version.
+// aux: -0.5 for the disc / column, tentacles (seed * 5 + ring) / 127 so each sways on its own (vsAnem). Every tentacle has
+// 5 points (ring 0 at the base .. 4 at the tip). Kinds: 0 magnificent (Heteractis), 1 carpet (Stichodactyla), 2 bubble-tip
+// (Entacmaea), 3 long-tentacle sand anemone (Macrodactyla), 4 tube-dwelling anemone (Cerianthus, a tall tube)
+function meshAnem(kind, lo) {
+  rseed(232 + kind * 7);
+  const m = new Mesh();
+  const tent = (n, place, rad, sides) => {
+    for (let i = 0; i < n; i++) { const t = place(i, n); if (t) m.tube(t.pts, (k) => t.r * rad[k], sides, true, ((sd) => (k) => (sd * 5 + k) / 127)(i % 25)); }
+  };
+  // a flat disc of rings (wavy rim for the carpet)
+  const disc = (R, y0, h, wav, nr = 4, ns = 24) => {
+    const rows = [];
+    for (let r = 0; r <= nr; r++) { const row = [], f = r / nr; for (let s = 0; s < ns; s++) { const a = s / ns * TAU, rr0 = R * f * (1 + wav * f * sin(a * 7) * 0.5);
+      row.push(m.v(cos(a) * rr0, y0 + h * (1 - f * f) + wav * f * f * 0.25 * cos(a * 7) * R, sin(a) * rr0, -0.5)); } rows.push(row); }
+    for (let r = 0; r < nr; r++) for (let s = 0; s < ns; s++) { const s2 = (s + 1) % ns; m.quad(rows[r][s2], rows[r][s], rows[r + 1][s], rows[r + 1][s2]); }
+  };
+  const spiral = (i, n, R) => [i * 2.39996 + rr(-0.15, 0.15), R * 0.98 * sqrt((i + 0.5) / n)];
+  const F = lo ? 4 : 1, S = lo ? 4 : 6; // far: a quarter of the tentacles, fatter
+  if (kind === 0) {
+    const R = 0.55, top = (r) => 0.03 + 0.13 * (1 - (r / R) ** 2);
+    disc(R, 0.02, 0.14, 0, 1, 20);
+    tent(420 / F, (i, n) => {
+      const [a, r] = spiral(i, n, R), y0 = top(r) - 0.02, out = 0.25 + 0.95 * r / R, L = rr(0.2, 0.3) * (1 - 0.25 * r / R), bend = rr(-0.3, 0.3);
+      let dx = cos(a + bend) * out, dz = sin(a + bend) * out, dy = 1; const dl = hypot(dx, dy, dz); dx /= dl; dy /= dl; dz /= dl;
+      return { r: rr(0.018, 0.023) * (lo ? 2.4 : 1), pts: [0, 0.35, 0.7, 0.9, 1].map((t) => [cos(a) * r + dx * L * t + cos(a) * 0.04 * t * t, y0 + dy * L * t - 0.03 * t * t * r / R, sin(a) * r + dz * L * t + sin(a) * 0.04 * t * t]) };
+    }, [1, 0.88, 0.95, 1.25, 0.8], S);
+  } else if (kind === 1) {
+    // carpet: a wide, folded oral disc covered in very short sticky tentacles
+    const R = 0.62; disc(R, 0.03, 0.1, 0.5, 5, 42);
+    tent(lo ? 140 : 640, (i, n) => {
+      const [a, r] = spiral(i, n, R * 1.02), f = r / R, rr0 = r * (1 + 0.5 * f * sin(a * 7) * 0.5), y = 0.03 + 0.1 * (1 - f * f) + 0.5 * f * f * 0.25 * cos(a * 7) * R;
+      const L = rr(0.03, 0.05) * (lo ? 1.3 : 1), x = cos(a) * rr0, z = sin(a) * rr0;
+      return { r: rr(0.011, 0.014) * (lo ? 2.2 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => [x + cos(a) * L * t * 0.4, y + L * t, z + sin(a) * L * t * 0.4]) };
+    }, [1, 1, 0.95, 0.85, 0.6], lo ? 3 : 4);
+  } else if (kind === 2) {
+    // bubble-tip: a small column hidden in rock, tentacles swollen into a bulb just below the tip
+    const R = 0.3; disc(R, 0.02, 0.1, 0, 2, 20);
+    tent(180 / F, (i, n) => {
+      const [a, r] = spiral(i, n, R), out = 0.3 + 0.8 * r / R, L = rr(0.15, 0.2), bend = rr(-0.25, 0.25), y0 = 0.1 * (1 - (r / R) ** 2);
+      let dx = cos(a + bend) * out, dz = sin(a + bend) * out, dy = 1; const dl = hypot(dx, dy, dz); dx /= dl; dy /= dl; dz /= dl;
+      return { r: rr(0.016, 0.02) * (lo ? 2.2 : 1), pts: [0, 0.35, 0.65, 0.85, 1].map((t) => [cos(a) * r + dx * L * t, y0 + dy * L * t, sin(a) * r + dz * L * t]) };
+    }, [1, 0.8, 1.5, 1.9, 0.9], S);
+  } else if (kind === 3) {
+    // long-tentacle: the column buried in sand, long thin tentacles arching out and lying over the sand
+    const R = 0.22; disc(R, 0.01, 0.05, 0, 2, 18);
+    tent(lo ? 30 : 110, (i, n) => {
+      const [a, r] = spiral(i, n, R), L = rr(0.45, 0.65), up = rr(0.6, 1.1);
+      return { r: rr(0.011, 0.014) * (lo ? 1.7 : 1), pts: [0, 0.25, 0.5, 0.75, 1].map((t) => [cos(a) * (r + L * t * 0.9), 0.04 + up * L * t * (1 - t) * 0.9 + 0.02 * t, sin(a) * (r + L * t * 0.9)]) };
+    }, [1, 0.85, 0.7, 0.55, 0.35], lo ? 3 : 4);
+  } else {
+    // tube-dwelling: a tall leathery tube, an outer crown of long drooping tentacles and an inner ring of short ones
+    const H = 0.55, Rt = 0.065, ns = lo ? 8 : 12;
+    m.tube([[0, -0.05, 0], [0.01, H * 0.4, 0], [-0.01, H * 0.8, 0.01], [0, H, 0]], (k) => Rt * [1.15, 1, 1, 1.05][k], ns, false, () => -0.5);
+    disc(Rt * 1.05, H, 0.02, 0, 1, ns);
+    tent(lo ? 24 : 90, (i, n) => {
+      const a = i / n * TAU * 3.1 + rr(-0.05, 0.05), inner = i % 3 === 0, r = Rt * (inner ? 0.5 : 0.95), L = inner ? rr(0.1, 0.14) : rr(0.28, 0.4), up = inner ? 1 : rr(0.35, 0.6);
+      return { r: (inner ? 0.01 : 0.014) * (lo ? 1.8 : 1), pts: [0, 0.25, 0.5, 0.75, 1].map((t) => [cos(a) * (r + L * t * (inner ? 0.25 : 0.9)), H + L * t * up - (inner ? 0 : L * t * t * 0.55), sin(a) * (r + L * t * (inner ? 0.25 : 0.9))]) };
+    }, [1, 0.85, 0.7, 0.55, 0.3], 3);
   }
   return m;
 }

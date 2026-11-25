@@ -29,6 +29,16 @@ const SPC = [
   { zh: '华丽海葵', la: 'Heteractis magnifica', len: [0.8, 0.8],
     facts: ['小丑鱼的家。触手里有成千上万个刺细胞，能蜇伤靠近的小鱼。', '体内住着能光合作用的共生藻，所以喜欢阳光充足的浅水。'] },
 ];
+// the five kinds of anemone in the garden (kind = integer part of the anemone's colour value, see meshAnem in reef.js)
+const ANSP = [SPC[10],
+  { zh: '巨型地毯海葵', la: 'Stichodactyla gigantea', short: '地毯海葵',
+    facts: ['口盘可宽达 80 厘米，像一张起伏的毯子铺在浅水沙地上，上面密密麻麻全是很短、很黏的触手。', '小丑鱼也会住在它里面，碰到它时触手会黏住手指。'] },
+  { zh: '奶嘴海葵（气泡海葵）', la: 'Entacmaea quadricolor', short: '气泡海葵',
+    facts: ['触手末端常常鼓成一个个小泡泡，为什么会鼓起来，科学家还没有完全弄清楚。', '身子常藏在礁石缝里，只露出触手。会一分为二地繁殖，所以常常一小片挨在一起。'] },
+  { zh: '长须海葵', la: 'Macrodactyla doreensis', short: '长须海葵',
+    facts: ['身体埋在沙里，只把细长的触手铺在沙面上。', '受惊时会一下子整个缩进沙里，看上去什么都没有了。'] },
+  { zh: '管海葵', la: 'Cerianthidae', short: '管海葵',
+    facts: ['住在自己用黏液和刺丝做成的管子里，管子可以深深插进沙里。受惊时一下子缩回管中。', '有两圈触手：外圈长的用来捕捉漂过的食物，内圈短的把食物送进嘴里。它其实不是真正的海葵，是海葵的远亲。'] }];
 // states
 const S_HOVER = 0, S_HIDE = 1, S_TRAVEL = 2, S_GRAZE = 3, S_POSE = 4, S_CLEAN = 5, S_STALK = 6, S_BURST = 7, S_SLEEP = 8, S_PATROL = 9,
   S_GUARD = 10, S_FORAGE = 11, S_HOLE = 12, S_GONE = 13, S_ATE = 14;
@@ -103,7 +113,7 @@ let nG = 0;
   for (const h of all) if (HEADS.length < 16 && !HEADS.some((q) => hypot(q[0] - h[0], q[2] - h[2]) < 9)) HEADS.push(h);
   if (!HEADS.length) HEADS.push([0, floorAt(0, 0) + 1, 0, 1]);
   // clownfish: a big female, a smaller male, sometimes a juvenile, in every anemone
-  ANE.forEach((a, k) => { if (k > 3 && rnd() > 0.45) return; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) LEN[i] = [0.26, 0.2, 0.15][j]; } }); // ~2.5x life size, so you can see them
+  ANE.forEach((a, k) => { if ((a[4] | 0) > 1 || (k > 3 && rnd() > 0.45)) return; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) LEN[i] = [0.26, 0.2, 0.15][j]; } }); // ~2.5x life size, so you can see them
   // chromis: a cloud over each coral head
   HEADS.forEach((h, k) => { const n = 10 + (rnd() * 10 | 0); for (let j = 0; j < n; j++) add(1, h[0] + rr(-0.5, 0.5), h[1] + rr(0.2, 0.9), h[2] + rr(-0.5, 0.5), k); });
   // cleaner wrasse at every station
@@ -128,8 +138,8 @@ let nG = 0;
 }
 // anemone instances (static apart from closing at night)
 // (instance: position, size, colour seed, night closing, and the tilt for the ones on rock walls: normal x, z)
-for (let k = 0; k < ANE.length && k < 128; k++) { const a = ANE[k]; AN.set([a[0], a[1], a[2], a[3], a[4], 0, a[5] || 0, a[6] || 0], k * 8); }
-nAnem = min(ANE.length, 128);
+for (let k = 0; k < ANE.length && k < 256; k++) { const a = ANE[k]; AN.set([a[0], a[1], a[2], a[3], a[4], 0, a[5] || 0, a[6] || 0], k * 8); }
+nAnem = min(ANE.length, 256);
 
 // ---------------------------------------------------------------- movement helpers
 const PRED = [];                // indices of the predators (trout, sharks) for the prey's threat checks
@@ -413,7 +423,7 @@ function lookPick() {
 const spOf = (id) => id >= ANEB ? 10 : SP[id];
 const stOf = (id) => id >= ANEB ? S_HOVER : ST[id];
 function showCard(id) {
-  const sp = spOf(id), s = SPC[sp];
+  const sp = spOf(id), s = id >= ANEB ? ANSP[AN[(id - ANEB) * 8 + 4] | 0] : SPC[sp];
   cN.textContent = s.zh; cL.textContent = s.la; cvShow(sp, id); cF.textContent = s.facts.join(' ');
   card.className = 'on'; cardI = id; lastDo = '';
 }
@@ -614,7 +624,7 @@ function tagStep() {
       const x = an ? AN[(id - ANEB) * 8] : P[o] + Hd[o] * h, y = an ? AN[(id - ANEB) * 8 + 1] + 0.2 : P[o + 1] + Hd[o + 1] * h, z = an ? AN[(id - ANEB) * 8 + 2] : P[o + 2] + Hd[o + 2] * h;
       if (!tagPos(x, y, z, TP)) continue;
       const t = tags[n++], r = max(14, L / (TP[2] * TANH) * canvas.clientHeight * 0.5) | 0, a = min(1, (TAGR - TP[3]) / 1.2);
-      if (t.txt !== TAGNAME[sp]) { t.txt = TAGNAME[sp]; t.name.textContent = t.txt; }
+      const nm = an ? ANSP[AN[(id - ANEB) * 8 + 4] | 0].short || '海葵' : TAGNAME[sp]; if (t.txt !== nm) { t.txt = nm; t.name.textContent = nm; }
       if (t.rr !== r) { t.rr = r; t.ring.style.cssText = `width:${2 * r}px;height:${2 * r}px;transform:translate(${-r}px,${-r}px)`; t.name.style.top = `${r + 4}px`; }
       t.d.style.transform = `translate(${TP[0].toFixed(1)}px,${TP[1].toFixed(1)}px)`; t.d.style.opacity = a.toFixed(2);
       if (!t.on) { t.on = true; t.d.style.display = 'block'; }
@@ -684,7 +694,7 @@ function cvRender() {
   let r = e.beginRenderPass({ colorAttachments: [{ view: (AA > 1 ? cvMS : cvRes).createView(), resolveTarget: AA > 1 ? cvRes.createView() : undefined, clearValue: [0.03, 0.16, 0.24, 1], loadOp: 'clear', storeOp: 'store' }],
     depthStencilAttachment: { view: cvDp.createView(), depthClearValue: 0, depthLoadOp: 'clear', depthStoreOp: 'discard' } });
   r.setBindGroup(0, bgC); r.setVertexBuffer(0, vbMesh); r.setIndexBuffer(ibMesh, 'uint32'); r.setVertexBuffer(1, ibCard);
-  const M = meshes[an ? 31 : sp === 7 ? 29 : sp === 8 ? 30 : 28];
+  const M = meshes[an ? 31 + (cvSeed | 0) * 2 : sp === 7 ? 29 : sp === 8 ? 30 : 28];
   r.setPipeline(an ? pAnem : pReef); r.drawIndexed(M.ib.length, 1, M.i0, M.v0, 0); r.end();
   r = e.beginRenderPass({ colorAttachments: [{ view: cvCtx.getCurrentTexture().createView(), loadOp: 'clear', clearValue: [0, 0, 0, 1], storeOp: 'store' }] });
   r.setPipeline(pCard); r.setBindGroup(0, bgCard); r.draw(3); r.end();

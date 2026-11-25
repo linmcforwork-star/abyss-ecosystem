@@ -778,13 +778,19 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
 @vertex fn vsAnem(i: VI) -> VO {
   var o: VO;
   let t = g.cam.w; let sz = i.a.w; var l = i.p; var a = -.5;
+  // b.x: kind (integer part, see meshAnem) + colour; each one also gets its own turn and stretch from where it sits
+  let kind = floor(i.b.x); let hsh = fract(sin(dot(i.a.xz, vec2f(12.9898, 78.233))) * 43758.55);
+  let yaw = hsh * 6.2832; let cs = cos(yaw); let sn = sin(yaw);
+  l = vec3f(l.x * cs - l.z * sn, l.y, l.x * sn + l.z * cs) * vec3f(.88 + .24 * fract(hsh * 7.), .8 + .4 * fract(hsh * 13.), .88 + .24 * fract(hsh * 7.));
   if (i.n.w > -.1) {
     // a tentacle: each sways on its own (own phase and pace), the base stays put, plus a gentle shared push of the current
-    let v = round(i.n.w * 127.); let ring = v - 5. * floor(v / 5.); let sd = floor(v / 5.) + i.b.x * 7.;
+    let v = round(i.n.w * 127.); let ring = v - 5. * floor(v / 5.); let sd = floor(v / 5.) + i.b.x * 7. + hsh * 31.;
     a = select(select(select(select(1., .9, ring < 3.5), .7, ring < 2.5), .35, ring < 1.5), 0., ring < .5);
-    let sw = a * a; let ph = sd * 2.39996;
+    // sway and pivot by kind: carpet barely moves, long thin tentacles swing more; a tube anemone closes toward its tube top
+    let amp = array<f32, 5>(1., .35, .8, 2.2, 1.8)[u32(kind)]; let py = select(.06, .5, kind > 3.5);
+    let sw = a * a * amp; let ph = sd * 2.39996;
     let shrink = 1. - i.b.y * .4 * a;
-    l = vec3f(l.x * mix(1., .9, i.b.y * a), (l.y - .06) * shrink + .06, l.z * mix(1., .9, i.b.y * a));
+    l = vec3f(l.x * mix(1., .9, i.b.y * a), (l.y - py) * shrink + py, l.z * mix(1., .9, i.b.y * a));
     let cur = .03 * sin(t * .55 + l.x * 1.5) + .02;
     l.x += sw * (.045 * sin(t * (1.1 + fract(sd * .37) * .9) + ph) + cur);
     l.z += sw * (.045 * cos(t * (1. + fract(sd * .61) * .8) + ph * 1.3) + .4 * cur);
@@ -794,7 +800,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let Tx = normalize(select(vec3f(1., 0., 0.), cross(vec3f(0., 0., 1.), N), length(i.b.zw) > .05) * select(1., -1., length(i.b.zw) > .05));
   let Tz = cross(Tx, N);
   let w = i.a.xyz + (Tx * l.x + N * l.y + Tz * l.z) * sz;
-  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = Tx * i.n.x + N * i.n.y + Tz * i.n.z; o.op = i.p; o.sp = vec2f(i.b.x, 0.); o.aux = a; o.lt = shadow1(w);
+  let nr = vec3f(i.n.x * cs - i.n.z * sn, i.n.y, i.n.x * sn + i.n.z * cs);
+  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = Tx * nr.x + N * nr.y + Tz * nr.z; o.op = i.p; o.sp = vec2f(i.b.x, hsh); o.aux = a; o.lt = shadow1(w);
   return o;
 }
 @fragment fn fsAnem(i: VO, @builtin(front_facing) ff: bool) -> @location(0) vec4f {
@@ -808,12 +815,23 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   var PT = array<vec3f, 6>(vec3f(.95, .68, .5), vec3f(.95, .55, .6), vec3f(.7, .6, .9), vec3f(.95, .75, .4), vec3f(.55, .85, .7), vec3f(.9, .6, .75));
   var PX = array<vec3f, 6>(vec3f(.55, .6, 1.), vec3f(.7, 1., .35), vec3f(1., .5, .85), vec3f(.45, 1., .5), vec3f(.4, .95, 1.), vec3f(1., .95, .4));
   let tip = ss(.7, .95, i.aux);
-  var alb = mix(mix(PD[k] * .7, PT[k], ss(0., .6, i.aux)) * (.7 + .3 * i.aux), PX[k], tip * .8);
-  if (i.aux < 0.) { alb = PD[k]; }
+  // saturated, so a patch still reads as its colour through 40 m of blue water
+  var alb = mix(mix(PD[k] * .8, mix(PD[k], PT[k], .45), ss(0., .6, i.aux)) * (.75 + .25 * i.aux), PX[k], tip * .3);
+  let kind = floor(i.sp.x);
+  // carpet: one strong colour all over (green, teal, yellow, blue, purple, pink forms)
+  var PC = array<vec3f, 6>(vec3f(.15, .85, .3), vec3f(.05, .75, .7), vec3f(.95, .85, .1), vec3f(.2, .4, 1.), vec3f(.6, .2, 1.), vec3f(1., .3, .6));
+  if (kind == 1.) { alb = mix(PC[k], PX[k], .25 * tip) * (.8 + .2 * i.aux); }           // carpet: one strong colour all over
+  if (kind == 3.) { alb = mix(vec3f(.85, .8, .65), PX[k], tip * .9 + .1); }                     // long-tentacle: pale with coloured tips
+  if (kind == 4.) { alb = mix(PT[k], PX[k], step(.5, fract(i.aux * 3.5))) * (.8 + .2 * i.aux); } // tube: banded tentacles
+  if (i.aux < 0.) { alb = select(select(PD[k], PC[k] * .75, kind == 1.), vec3f(.18, .13, .1), kind == 4.); }
+  alb *= 1. + .3 * (vec3f(fract(i.sp.y * 3.1), fract(i.sp.y * 5.3), fract(i.sp.y * 7.7)) - .5); // each one a little different
+  alb = alb * alb * 1.15; // deeper, more saturated: pale colours wash out to cyan-white in the blue light
   let E = sunE(i.wp.y, z) * i.lt;
   var c = alb * (E * (.4 + .6 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * 1.15) + alb * E * .15;
   c += alb * torch(i.wp, n) * .6;
   c += E * pow(sat(dot(n, normalize(V + L))), 20.) * .3;
+  // a touch of their own colour that the blue water can't take away (like the fluorescence divers see): keeps a patch readable from afar
+  c += select(mix(PD[k], PX[k], tip * .3), PC[k], kind == 1.) * select(.32, .1, i.aux < 0.) * (.5 + .5 * g.mis.w);
   c += (PX[k] * tip * .35 + alb * E * .2) * (.4 + .6 * g.mis.w) * select(1., 0., i.aux < 0.) + PX[k] * tip * .15 * (1. - g.mis.w); // a soft glow at the tips, stronger at night
   return fin(fog(c, i.wp, z));
 }

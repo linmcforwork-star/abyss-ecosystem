@@ -285,7 +285,8 @@ const meshes = [meshChunk(1, 3), meshChunk(7, 3), meshChunk(13, 3), meshChunk(22
   meshCoral(0), meshCoral(1), meshTubes()].map((m) => m.build());
 meshes.push(meshFluke(), meshShip().build(), meshManta().build(), meshFish().build(),
   meshChunk(3).build(), meshChunk(11).build(), meshChunk(29).build(), meshChunk(5, 3).build(), meshChunk(17, 3).build(), meshChunk(41, 3).build(), meshChunk(9, 1).build(), meshCoral(0, 1).build(), meshCoral(1, 1).build(), meshChunk(5, 2, 1).build(), meshChunk(17, 2, 1).build(), meshChunk(41, 2, 1).build(),
-  meshBrain().build(), meshTable().build(), meshReefFish().build(), meshShark().build(), meshEel().build(), meshAnemone().build());
+  meshBrain().build(), meshTable().build(), meshReefFish().build(), meshShark().build(), meshEel().build(), meshAnem(0, 0).build());
+for (let j = 1; j < 10; j++) meshes.push(meshAnem(j >> 1, j & 1).build()); // anemone kind k, far f: mesh 31 + k * 2 + f
 let nV = 0, nI = 0;
 for (const m of meshes) { m.v0 = nV; m.i0 = nI; nV += m.nv; nI += m.ib.length; }
 const allV = new Uint8Array(nV * 16), allI = new Uint32Array(nI);
@@ -303,7 +304,21 @@ const nFish = Wd.fish.length / 8, nManta = Wd.mantas.length / 8, nBub = Wd.bubbl
 const MANTA = meshes[12], FISH = meshes[13];
 // the reef animals (eco.js) write their instances here every frame: fish, then sharks, then eels; 8 floats each
 const NA = 420, EB = new Float32Array(8 * NA), ibEco = device.createBuffer({ size: EB.byteLength, usage: BU.VERTEX | BU.COPY_DST });
-const AN = new Float32Array(8 * 128), ibAnem = device.createBuffer({ size: AN.byteLength, usage: BU.VERTEX | BU.COPY_DST });
+const AN = new Float32Array(8 * 256), ANd = new Float32Array(8 * 256), ANC = new Int32Array(11), ibAnem = device.createBuffer({ size: AN.byteLength, usage: BU.VERTEX | BU.COPY_DST });
+// anemones sorted for drawing: by kind, the near ones (full tentacles) then the far ones (a quarter, fatter); none past the fog
+function anemSort() {
+  let o = 0;
+  for (let j = 0; j < 10; j++) {
+    ANC[j] = o;
+    for (let k = 0; k < nAnem; k++) {
+      const b = k * 8, kind = AN[b + 4] | 0, d = hypot(AN[b] - F[CX], AN[b + 1] - F[CY], AN[b + 2] - F[CZ]);
+      if (kind * 2 + (d > 11 + 3 * AN[b + 3]) !== j || d > 75) continue;
+      for (let q = 0; q < 8; q++) ANd[o * 8 + q] = AN[b + q];
+      o++;
+    }
+  }
+  ANC[10] = o;
+}
 let nEcoF = 0, nEcoS = 0, nEcoE = 0, nAnem = 0, DAY = 1;
 Q.writeTexture({ texture: tVol }, Wd.volD, { bytesPerRow: NX, rowsPerImage: NY / 2 }, [NX / 2, NY / 2, NZ / 2]);
 Q.writeTexture({ texture: tMap }, Wd.gm, { bytesPerRow: 2048 }, [512, 512]);
@@ -494,7 +509,10 @@ function render() {
     if (nEcoS) r.drawIndexed(meshes[29].ib.length, nEcoS, meshes[29].i0, meshes[29].v0, nEcoF);
     if (nEcoE) r.drawIndexed(meshes[30].ib.length, nEcoE, meshes[30].i0, meshes[30].v0, nEcoF + nEcoS);
   }
-  if (nAnem) { Q.writeBuffer(ibAnem, 0, AN, 0, nAnem * 8); r.setPipeline(pAnem); r.setVertexBuffer(1, ibAnem); r.drawIndexed(meshes[31].ib.length, nAnem, meshes[31].i0, meshes[31].v0, 0); }
+  if (nAnem) {
+    anemSort(); Q.writeBuffer(ibAnem, 0, ANd, 0, ANC[10] * 8); r.setPipeline(pAnem); r.setVertexBuffer(1, ibAnem);
+    for (let j = 0; j < 10; j++) { const n = (j < 9 ? ANC[j + 1] : ANC[10]) - ANC[j], M = meshes[31 + j]; if (n) r.drawIndexed(M.ib.length, n, M.i0, M.v0, ANC[j]); }
+  }
   // kelp and plants: 9-row blades up close, 5 rows mid-range, a decimated set far away
   r.setPipeline(pLeaf); r.setVertexBuffer(0, ibBig); drawCells(r, Wd.big.start, Wd.big.lo, Wd.big.hi, 5, false, 18, 0, 24);
   r.setPipeline(pLeaf5); drawCells(r, Wd.big.start, Wd.big.lo, Wd.big.hi, 5, false, 10, 24, 58);
