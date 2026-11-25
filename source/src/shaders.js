@@ -206,11 +206,17 @@ fn hs(x: f32) -> f32 { return fract(sin(x * 127.1) * 43758.5453); }
 // the diver's lamp (L key): a hand torch held low on the right (g.lmp: position, on/off; g.lmd: direction). A bright round spot
 // with a soft edge and a little spill; inside it things show their true colours, like the lights in underwater films
 fn spot(v: vec3f) -> f32 { let c = dot(v, g.lmd.xyz); return .03 + ss(.925, .935, c) * (.8 + .4 * ss(.94, .99, c)); }
-fn torch(p: vec3f, n: vec3f) -> vec3f {
+// at night the torch is a blue fluorescence light (as divers use on fluorescence night dives): anemones and corals answer
+// with their own glowing colours (fluo), while rock and sand stay dark. g.mis.w: 1 day .. 0 night
+fn nite() -> f32 { return 1. - ss(.25, .6, g.mis.w); }
+fn torchI(p: vec3f, n: vec3f) -> f32 {
   let v = p - g.lmp.xyz; let d = length(v); let l = v / max(d, 1e-3);
   let dc = distance(p, g.cam.xyz);
-  return vec3f(1.6, 1.05, .6) * g.lmp.w * spot(l) * (.25 + .75 * sat(-dot(n, l))) * exp(-SIG * (d + dc)) / (1. + .05 * d * d);
+  return g.lmp.w * spot(l) * (.25 + .75 * sat(-dot(n, l))) * exp(-.06 * (d + dc)) / (1. + .05 * d * d);
 }
+fn torch(p: vec3f, n: vec3f) -> vec3f { return mix(vec3f(1.6, 1.05, .6), vec3f(.12, .3, 1.5), nite()) * torchI(p, n); }
+// the glow a fluorescent surface of colour a gives back under the blue light
+fn fluo(a: vec3f, p: vec3f, n: vec3f) -> vec3f { let m = max(max(a.r, a.g), a.b); return a / max(m, .05) * m * nite() * torchI(p, n); }
 // the light the beam scatters toward you on its way through the water (the visible cone)
 fn beam(rd: vec3f, tmax: f32) -> vec3f {
   if (g.lmp.w < .5) { return vec3f(0.); }
@@ -219,7 +225,7 @@ fn beam(rd: vec3f, tmax: f32) -> vec3f {
     let t = (f32(k) + .5) * dt; let q = g.cam.xyz + rd * t; let v = q - g.lmp.xyz; let d = max(length(v), .05);
     s += ss(.9, .94, dot(v / d, g.lmd.xyz)) * exp(-.06 * (d + t)) / (1. + .12 * d * d) * dt;
   }
-  return vec3f(.9, .85, .75) * s * .07;
+  return mix(vec3f(.9, .85, .75), vec3f(.2, .35, 1.), nite()) * s * mix(.07, .035, nite());
 }
 fn kd(z: f32) -> vec3f { return mix(KD, KDZ, z); }
 fn sg(z: f32) -> vec3f { return mix(SIG, vec3f(.034, .026, .022), z); }
@@ -278,14 +284,16 @@ fn sunE(y: f32, z: f32) -> vec3f { return SUNC * dayL() * exp(kd(z) * (min(y, 0.
 fn vol(p: vec3f) -> vec4f { return textureSampleLevel(tV, sC, (p - vec3f(-192., -56., -192.)) / vec3f(384., 60., 384.), 0.); }
 fn amb(p: vec3f, n: vec3f, sky: f32, z: f32) -> vec3f {
   let up = n.y * .5 + .5;
-  return mix(vec3f(.22, .60, .80), vec3f(.34, .56, .82), z) * exp(kd(z) * min(p.y, 0.) * 1.2) * (.3 + .7 * sky) * (.24 + .76 * up * up) * 1.3 * (.55 + .45 * sat(-p.y / 30.)) * dayL() + vec3f(.003, .010, .016);
+  return mix(vec3f(.22, .60, .80), vec3f(.34, .56, .82), z) * exp(kd(z) * min(p.y, 0.) * 1.2) * (.3 + .7 * sky) * (.24 + .76 * up * up) * 1.3 * (.55 + .45 * sat(-p.y / 30.)) * dayL() * (1. - .4 * gard(p)) + vec3f(.003, .010, .016);
 }
 fn zone(p: vec3f) -> f32 { return mix(g.sun.w, textureSampleLevel(tM, sC, p.xz / 384. + .5, 0.).b, .2); }
 fn side(p: vec3f, n: vec3f, open: f32, z: f32) -> vec3f { return mix(WCOL, PCOL, z) * exp(kd(z) * min(p.y, 0.)) * open * (1. - abs(n.y)) * .7 * dayL(); }
 // skylight at most 150 m along the ray: past that, terrain and the background behind it (vsB) get the same haze
+// the anemone garden (start basin): clearer, darker water so the fluorescent anemones stand out
+fn gard(p: vec3f) -> f32 { return ss(-19., -11., p.x) * ss(24., 16., p.x) * ss(-14., -6., p.z) * ss(50., 42., p.z); }
 fn fog(c: vec3f, wp: vec3f, z: f32) -> vec3f {
-  let v = wp - g.cam.xyz; let d = length(v); let rd = v / d;
-  return c * exp(-sg(z) * d) * ss(230., 185., d) + fogIn(g.cam.xyz, rd, d, z, g.sun.xyz) * (.58 + .42 * vol(g.cam.xyz + rd * min(d, 150.)).g);
+  let v = wp - g.cam.xyz; let d = length(v); let rd = v / d; let gf = gard(g.cam.xyz);
+  return c * exp(-sg(z) * d * (1. - .45 * gf)) * ss(230., 185., d) + fogIn(g.cam.xyz, rd, d, z, g.sun.xyz) * (.58 + .42 * vol(g.cam.xyz + rd * min(d, 150.)).g) * (1. - .55 * gf);
 }
 fn qrot(q: vec4f, v: vec3f) -> vec3f { return v + 2. * cross(q.xyz, cross(q.xyz, v) + q.w * v); }
 `;
@@ -415,7 +423,7 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
   let am = (amb(i.wp, N, v1.g, z) + side(i.wp, N, sat((v2.r - .5) * 2.7), z)) * ao;
   let dl = E * ndl * (.10 + mix(vec3f(.33), ca, ss(.1, .45, dot(n0, L))) * 2.5);
   var c = alb * (dl + am) + emi + alb * flu * dot(dl + am, vec3f(.1, .5, .5));
-  c += alb * torch(i.wp, N);
+  c += alb * torch(i.wp, N) + fluo(alb, i.wp, N) * flu * 2.;
   let H = normalize(V + L);
   c += E * (.25 + ca) * pow(sat(dot(N, H)), mix(10., 70., gloss)) * gloss * ndl * 1.8;
   c += (amb(i.wp, reflect(-V, N), v1.g, z) + side(i.wp, reflect(-V, N), sat((v2.r - .5) * 2.7), z)) * ao * (.08 + gloss) * .6 * pow(1. - sat(dot(N, V)), 2.5);
@@ -767,7 +775,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let ndl = dot(n, L);
   alb = pow(alb, vec3f(1.2)); // a touch more contrast: blacks stay black, colours stay rich in the blue light
   var c = alb * (E * (.22 + .78 * sat(ndl)) + amb(i.wp, n, vv.g, z) * .95);
-  c += alb * torch(i.wp, n) * 1.3;
+  c += alb * torch(i.wp, n) * 1.3 + alb * torchI(i.wp, n) * nite() * vec3f(1.6, 1.1, .5); // seen through a yellow filter, like fluorescence photos
   if (isF) { c += alb * E * sat(-ndl) * .5; }                                   // light through the fins
   c += E * pow(sat(dot(n, normalize(V + L))), 30.) * spec * .9;
   c += (.5 + .5 * cos(TAU * (vec3f(0., .33, .67) + ndv * 1.3 + .45))) * iri * .25 * E * pow(1. - ndv, 2.);
@@ -831,6 +839,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let E = sunE(i.wp.y, z) * i.lt;
   var c = alb * (E * (.35 + .65 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * .8);
   c += alb * torch(i.wp, n) * .6;
+  T = mix(T, M * 1.3, .6 * nite()); // at night the glow keeps its colour instead of burning white
+  if (i.aux >= 0.) { c += (M * ss(0., .6, i.aux) * .6 + T * tip * .8) * nite() * torchI(i.wp, n); } // fluorescence under the blue torch
   c += E * pow(sat(dot(n, normalize(V + L))), 24.) * .25;
   // their own light: a little in the saturated body, much more at the tips; stronger at night
   let gl = .5 + .5 * g.mis.w;
