@@ -354,6 +354,7 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
       alb = mix(alb, vec3f(.20, .02, .12) * (.4 + .9 * B.h), mg * .8);
       flu = mg * .35;
       alb = mix(alb, alb * vec3f(.85, .8, 1.4) + vec3f(.015, .0, .05), gm.b * .8);
+      alb *= 1. - .6 * gm.g * flt;
     }
   } else if (mat == 2) {
     // whale fluke: smooth pale stone with dark streaks running along its length

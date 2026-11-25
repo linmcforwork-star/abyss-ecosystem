@@ -538,7 +538,8 @@ function makeWorld(D, T, flyPts, POSES) {
   const gm = new Uint8Array(512 * 512 * 4);
   for (let j = 0; j < 512; j++) for (let i = 0; i < 512; i++) {
     const x = (i + 0.5) / 512 * 384 - 192, z = (j + 0.5) / 512 * 384 - 192, o = (i + 512 * j) * 4;
-    gm[o] = (inZone(x, z, -1) ? 0 : magAt(x, z)) * 255; gm[o + 2] = zoneP(x, z) * 255; gm[o + 3] = sstep(0.42, 0.6, fbm(x * 0.04, 3, z * 0.04, 3)) * 255; // (no magenta ground in the anemone garden: it fought the anemones)
+    gm[o] = (inZone(x, z, -1) ? 0 : magAt(x, z)) * 255; gm[o + 1] = sstep(-17, -11, x) * sstep(22, 16, x) * sstep(-12, -6, z) * sstep(48, 42, z) * 255; // g: darker garden floor so anemones glow against it
+    gm[o + 2] = zoneP(x, z) * 255; gm[o + 3] = sstep(0.42, 0.6, fbm(x * 0.04, 3, z * 0.04, 3)) * 255; // (no magenta ground in the anemone garden: it fought the anemones)
   }
 
   // --- fish schools + mantas

@@ -24,11 +24,12 @@ function meshAnem(kind, lo) {
   const tent = (n, place, rad, sides) => {
     for (let i = 0; i < n; i++) { const t = place(i, n); if (t) m.tube(t.pts, (k) => t.r * rad[k], sides, true, ((sd) => (k) => (sd * 5 + k) / 127)(i % 25)); }
   };
+  const lobe = (a) => 0.6 * sin(a * 9 + 0.7) + 0.4 * sin(a * 13 + 2.1) + 0.3 * sin(a * 4);
   // a flat disc of rings (wavy rim for the carpet)
   const disc = (R, y0, h, wav, nr = 4, ns = 24) => {
     const rows = [];
-    for (let r = 0; r <= nr; r++) { const row = [], f = r / nr; for (let s = 0; s < ns; s++) { const a = s / ns * TAU, rr0 = R * f * (1 + wav * f * sin(a * 7) * 0.5);
-      row.push(m.v(cos(a) * rr0, y0 + h * (1 - f * f) + wav * f * f * 0.25 * cos(a * 7) * R, sin(a) * rr0, -0.5)); } rows.push(row); }
+    for (let r = 0; r <= nr; r++) { const row = [], f = r / nr; for (let s = 0; s < ns; s++) { const a = s / ns * TAU, rr0 = R * f * (1 + wav * f * lobe(a) * 0.5);
+      row.push(m.v(cos(a) * rr0, y0 + h * (1 - f * f) + wav * f * f * 0.25 * lobe(a + 0.4) * R, sin(a) * rr0, -0.5)); } rows.push(row); }
     for (let r = 0; r < nr; r++) for (let s = 0; s < ns; s++) { const s2 = (s + 1) % ns; m.quad(rows[r][s2], rows[r][s], rows[r + 1][s], rows[r + 1][s2]); }
   };
   const spiral = (i, n, R) => [i * 2.39996 + rr(-0.15, 0.15), R * 0.98 * sqrt((i + 0.5) / n)];
@@ -43,9 +44,9 @@ function meshAnem(kind, lo) {
     }, [1, 0.88, 0.95, 1.25, 0.8], S);
   } else if (kind === 1) {
     // carpet: a wide, folded oral disc covered in very short sticky tentacles
-    const R = 0.62; disc(R, 0.03, 0.16, 0.9, 5, 42);
+    const R = 0.62; disc(R, 0.03, 0.16, 0.9, 5, 64);
     tent(lo ? 140 : 640, (i, n) => {
-      const [a, r] = spiral(i, n, R * 1.02), f = r / R, rr0 = r * (1 + 0.9 * f * sin(a * 7) * 0.5), y = 0.03 + 0.16 * (1 - f * f) + 0.9 * f * f * 0.25 * cos(a * 7) * R;
+      const [a, r] = spiral(i, n, R * 1.02), f = r / R, rr0 = r * (1 + 0.9 * f * lobe(a) * 0.5), y = 0.03 + 0.16 * (1 - f * f) + 0.9 * f * f * 0.25 * lobe(a + 0.4) * R;
       const L = rr(0.03, 0.05) * (lo ? 1.3 : 1), x = cos(a) * rr0, z = sin(a) * rr0;
       return { r: rr(0.011, 0.014) * (lo ? 2.2 : 1), pts: [0, 0.3, 0.6, 0.85, 1].map((t) => [x + cos(a) * L * t * 0.4, y + L * t, z + sin(a) * L * t * 0.4]) };
     }, [1, 1, 0.95, 0.85, 0.6], lo ? 3 : 4);
