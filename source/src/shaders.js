@@ -871,7 +871,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     let a0 = max(i.aux, 0.);
     let ld = normalize(i.wp - g.lmp.xyz); let tI = torchI(i.wp, n);
     // a real surface, not a glow stick: fine ridges along the tube (and faint rings on the magnificent) bend the light
-    let NS = select(select(6., 8., kind == 2.), 0., kind == 1.); let aS = select(select(.18, .25, kind == 2.), 0., kind == 1.);
+    let NS = select(select(6., 8., kind == 2.), 0., kind == 1.); let aS = select(select(.3, .4, kind == 2.), 0., kind == 1.);
     let NR = select(0., 9., kind == 0.);
     let nb = normalize(n + (sdv * cos(phi * NS) * aS + Tg * cos(i.aux * NR * 6.2832) * .08) * f32(okT));
     let Ld = normalize(vec3f(.25, 1., .15) + V * .35 - ld * .2);   // reef lights shine from above (a little toward us): tops lit, undersides in shadow
@@ -887,13 +887,18 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     // wet sheen: a long thin highlight streak along each tube (hair-style), not a plastic dot
     let H = normalize(Ld + V); let th = dot(Tg, H);
     let ks = select(pow(sat(dot(nb, H)), 40.), pow(sqrt(max(0., 1. - th * th)), 90.), okT);
-    let sp = ks * sat(ndl * 2.) * select(.30, .15, kind == 1.) * vec3f(.85, .9, 1.) * (.5 + .5 * a0);
+    let sp = ks * sat(ndl * 2.) * select(.55, .25, kind == 1.) * vec3f(.85, .9, 1.) * (.5 + .5 * a0);
     // light through the thin edges and tips, on the side away from the key light
     let TR = select(select(vec3f(.25, .30, 1.), vec3f(1., .55, .25), kind == 2.), vec3f(.15, .55, 1.), kind == 1.);
     let thin = (1. - nv) * (.4 + .6 * a0);
     let trans = TR * thin * thin * (1. - key) * (.25 + .75 * sat(dot(-V, Ld) * .5 + .5)) * .35 * step(0., i.aux);
     let blue = VI * vk * wrap * (1. - key) * select(.45, .2, k == 1u); // blue only where the key light is absent
-    var lit = (body + term * kb + blue + sp) * occ + trans + T * tip * kb * .6 * key * key;
+    // sheen (like a stocking or velvet): the edges of each tentacle, seen at a grazing angle, turn pale; the middle keeps its colour
+    let shK = array<f32, 5>(.18, .12, .55, .2, .2)[u32(kind)] * step(0., i.aux);
+    let sheen = mix(alb, vec3f(1., .95, .9), .6) * kb * pow(1. - nv, 1.6) * (.25 + .75 * wrap) * shK * 2.2;
+    // the carpet's beads catch the reef light: a bright little highlight on each one makes them read as vivid, not grey
+    let bead = select(0., 1., kind == 1.) * tip * pow(sat(dot(nb, normalize(Ld + V))), 12.) * 1.6 * vec3f(.85, .95, 1.);
+    var lit = (body * mix(1., 1. / (.55 + .45 * nv), shK * 1.6) + term * kb + blue + sp + sheen) * occ + trans + T * tip * kb * .6 * key * key + bead;
     if (kind == 0.) { // magnificent: salmon where the light lands, clean blue-violet on the shadow side, side by side (never mixed)
       let PK = alb; let PS = vec3f(.22, .24, .85);
       lit = mix(PS * (.06 + .3 * wrap), PK * kb * (.08 + 1.4 * key), ss(-.2, .3, ndl)) * occ + sp * occ + trans + T * tip * kb * .6 * key * key;
@@ -905,7 +910,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let gl = (.5 + .5 * g.mis.w) * (1. - .85 * nite());
   if (i.aux >= 0.) { c += M * ss(.2, .7, i.aux) * .14 * gl + T * tip * (.55 + .35 * (1. - g.mis.w)) * gl; }
   if (kind == 1. && i.aux >= 0.) { c += T * tip * .12 * nite(); } // carpet beads: a faint fluorescence
-  { c = max(c, vec3f(0.)); let m0 = max(max(c.r, max(c.g, c.b)), 1e-4); c = mix(c, m0 * pow(c / m0, vec3f(select(1.5, 2.1, k == 1u || k == 2u))), nite()); } // night: richer colour (the screen's gamma washes thin colours to pastel)
+  { c = max(c, vec3f(0.)); let m0 = max(max(c.r, max(c.g, c.b)), 1e-4); c = mix(c, m0 * pow(c / m0, vec3f(select(1.5, 2.1, k == 1u))), nite()); } // night: richer colour (the screen's gamma washes thin colours to pastel)
   { let mx = max(c.r, max(c.g, c.b)); c *= mix(1. / (1. + 2. * max(mx - .3, 0.)), 1. / (1. + .8 * max(mx - .5, 0.)), nite()); } // a soft roll-off that keeps light and dark apart // never burn out to white (night exposure is ~2.6x)
   return fin(fog(c, i.wp, z));
 }

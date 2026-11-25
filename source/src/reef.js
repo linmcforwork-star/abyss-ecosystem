@@ -55,11 +55,11 @@ function meshAnem(kind, lo) {
   } else if (kind === 1) {
     // carpet (the blue hero): a broad, gently waved mat packed with short tentacles that end in small round beads
     const R = 0.62; disc(R, 0.03, 0.10, 0.9, 8, lo ? 48 : 96);
-    tent(lo ? 260 : 1000, (i, n) => {
+    tent(lo ? 240 : 900, (i, n) => {
       const [a, r] = spiral(i, n, R * 1.02), f = r / R, rr0 = r * (1 + 0.9 * f * lobe(a * 1.8) * 0.5), y = 0.03 + 0.10 * (1 - f * f) + 0.9 * f * f * 0.25 * lobe(a * 1.8 + 0.4) * R;
       const L = rr(0.09, 0.14) * (1 - 0.35 * f * f) * (lo ? 1.2 : 1), x = cos(a) * rr0, z = sin(a) * rr0, sw = sin(x * 6 + 1) + cos(z * 5), sx = cos(sw * 1.6), sz = sin(sw * 1.6); // tentacles lie over in sweeps
-      return { r: rr(0.0048, 0.006) * (lo ? 1.8 : 1), pts: [0, 0.35, 0.65, 0.86, 1].map((t) => [x + (sx * 0.3 + cos(a) * 0.15 + 0.15) * L * t, y + L * t * (1 - 0.35 * t), z + (sz * 0.3 + sin(a) * 0.15) * L * t]) };
-    }, [1, 0.8, 0.78, 1.5, 1.45], lo ? 4 : 6);
+      return { r: rr(0.0048, 0.006) * (lo ? 1.8 : 1), pts: (lo ? [0, 0.4, 0.8, 1] : [0, 0.25, 0.5, 0.7, 0.86, 1]).map((t) => [x + (sx * 0.3 + cos(a) * 0.15 + 0.15) * L * t, y + L * t * (1 - 0.35 * t), z + (sz * 0.3 + sin(a) * 0.15) * L * t]) };
+    }, (t) => 1 - 0.22 * t + 0.6 * Math.exp(-(((t - 0.93) / 0.07) ** 2)), lo ? 4 : 6);
   } else if (kind === 2) {
     // bubble-tip (the peach hero): a crown of long tentacles rising from the mouth, then bending over, each swollen
     // into a bulb just below its tip

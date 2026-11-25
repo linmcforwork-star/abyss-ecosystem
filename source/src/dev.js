@@ -53,3 +53,8 @@ function tank(x = -6, z = 36, cols = [[1, 0, 1.6], [2, 1, 1.4], [0, 2, 1.3]], s 
 }
 tank.used = {};
 window.__dev = { lookAt, F, POSES, tank, set tankOff(v) { TANK = 0; }, set nearK(v) { NEARK = v; }, set gn(v) { GNITE = v; }, get menu() { return menu; }, go: () => ui(false), setHour: (h) => { HOUR = h; }, P, SP, ST, LEN, Hd, get nA() { return nA; }, follow, camTo, unfollow, get fol() { return fol; }, ANE, HEADS, STA, HOL, AN, get counts() { return [nEcoF, nEcoS, nEcoE, nAnem, nA]; }, floorAt, rockAt };
+// dev.html?tank opens straight at the three hero anemones (test tank), close up, for reviewing the look
+if (/tank/.test(location.search)) { const tw = setInterval(() => { if (!nAnem || !window.__dev) return; clearInterval(tw);
+  NEARK = 1; tank(-6, 36); const n = nAnem, h = [n - 3, n - 2, n - 1].map((k) => [AN[k * 8], AN[k * 8 + 1], AN[k * 8 + 2], AN[k * 8 + 3]])[1];
+  lookAt(h[0], h[1] + 1.6, h[2] - 3.6, h[0], h[1] + 0.3, h[2]);
+}, 500); }
