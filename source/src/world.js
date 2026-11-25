@@ -311,20 +311,21 @@ function makeWorld(D, T, flyPts, POSES) {
     { const x = g.x, z = g.z; let h = floorY; const ledges = [];
       // a reef-rock outcrop (rough rock chunks crusted with pink coralline algae), its foot sunk into the sand, with a few
       // boulder corals growing on its ledges; a lower spur beside it
-      for (const [m, sc, dx, dz] of [[3, 4.8, 0, 0], [2, 3.9, 1.1, -0.8], [1, 3.1, -0.9, 0.9], [0, 2.3, 0.5, 0.3]]) {
-        const y = h + sc * 0.3; solid(m, x + dx, y, z + dz, sc, q(0.5), 1, rnd(), 1, 0); h = y + sc * 0.55; ledges.push([x + dx, h, z + dz, sc]);
+      for (const [m, sc, dx, dz] of [[3, 5, 0, 0], [2, 4.2, 0.7, -0.5], [1, 3.4, -0.6, 0.6], [0, 2.6, 0.3, 0.2]]) {
+        const y = h + sc * 0.25; solid(m, x + dx, y, z + dz, sc, q(0.5), 1, rnd(), 1, 0); h = y + sc * 0.5; ledges.push([x + dx, h, z + dz, sc]);
       }
       let h2 = floorY;
       for (const [m, sc, dx, dz] of [[2, 3.2, 4.8, 2.6], [0, 2.2, 5.3, 3.1]]) { const y = h2 + sc * 0.3; solid(m, x + dx, y, z + dz, sc, q(0.5), 1, rnd(), 1, 0); h2 = y + sc * 0.5; }
       // growth over the rock: boulder and branching corals, sponges and sea fans round each tier's shoulder, so the landmark
       // reads as a living bommie, not bare stone
       ledges.forEach(([lx, ly, lz, sc]) => {
-        for (let k = 0; k < 7; k++) {
-          const a = k / 7 * TAU + rr(-0.3, 0.3), r0 = sc * rr(0.45, 0.75), px = lx + cos(a) * r0, pz = lz + sin(a) * r0, py = ly - sc * rr(0.15, 0.45), u = rnd();
+        for (let k = 0; k < 16; k++) {
+          const a = k / 16 * TAU * 2 + rr(-0.3, 0.3), dy = rr(-0.3, 0.55), r0 = sc * (0.95 - 0.5 * max(0, dy) ** 2), px = lx + cos(a) * r0, pz = lz + sin(a) * r0, py = ly - sc * 0.5 + sc * dy * 0.8, u = rnd();
           const up = qMul(qFromY(cos(a) * 0.35, 1, sin(a) * 0.35), qAxis(0, 1, 0, rnd() * TAU));
-          if (u < 0.3) solid(26, px, py, pz, rr(0.8, 1.5), q(0.4), 6, rnd(), 1, 0);
-          else if (u < 0.55) solid(7, px, py, pz, rr(0.8, 1.4), up, 5, rnd(), 1, 0);
-          else if (u < 0.8) solid(4 + (rnd() * 3 | 0), px, py, pz, rr(0.6, 1.1), up, 4, rnd(), 1, 0);
+          if (u < 0.25) solid(26, px, py, pz, rr(0.9, 1.6), q(0.4), 6, rnd(), 1, 0);
+          else if (u < 0.45) solid(7, px, py, pz, rr(0.8, 1.4), up, 5, rnd(), 1, 0);
+          else if (u < 0.6) solid(27, px, py, pz, rr(0.9, 1.5), q(0.15), 7, rnd(), 1, 0);
+          else if (u < 0.85) solid(4 + (rnd() * 3 | 0), px, py, pz, rr(0.6, 1.2), up, 4, rnd(), 1, 0);
           else solid(8, px, py, pz, rr(1.2, 2), up, 5, rnd(), 1, 0);
         }
       });
