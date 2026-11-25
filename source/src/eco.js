@@ -103,7 +103,7 @@ let nG = 0;
   for (const h of all) if (HEADS.length < 16 && !HEADS.some((q) => hypot(q[0] - h[0], q[2] - h[2]) < 9)) HEADS.push(h);
   if (!HEADS.length) HEADS.push([0, floorAt(0, 0) + 1, 0, 1]);
   // clownfish: a big female, a smaller male, sometimes a juvenile, in every anemone
-  ANE.forEach((a, k) => { const n = 2 + (rnd() < 0.5); for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) LEN[i] = [0.26, 0.2, 0.15][j]; } }); // ~2.5x life size, so you can see them
+  ANE.forEach((a, k) => { if (k > 3 && rnd() > 0.45) return; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) LEN[i] = [0.26, 0.2, 0.15][j]; } }); // ~2.5x life size, so you can see them
   // chromis: a cloud over each coral head
   HEADS.forEach((h, k) => { const n = 10 + (rnd() * 10 | 0); for (let j = 0; j < n; j++) add(1, h[0] + rr(-0.5, 0.5), h[1] + rr(0.2, 0.9), h[2] + rr(-0.5, 0.5), k); });
   // cleaner wrasse at every station
@@ -128,8 +128,8 @@ let nG = 0;
 }
 // anemone instances (static apart from closing at night)
 // (instance: position, size, colour seed, night closing, and the tilt for the ones on rock walls: normal x, z)
-for (let k = 0; k < ANE.length && k < 48; k++) { const a = ANE[k]; AN.set([a[0], a[1], a[2], a[3], a[4], 0, a[5] || 0, a[6] || 0], k * 8); }
-nAnem = min(ANE.length, 48);
+for (let k = 0; k < ANE.length && k < 128; k++) { const a = ANE[k]; AN.set([a[0], a[1], a[2], a[3], a[4], 0, a[5] || 0, a[6] || 0], k * 8); }
+nAnem = min(ANE.length, 128);
 
 // ---------------------------------------------------------------- movement helpers
 const PRED = [];                // indices of the predators (trout, sharks) for the prey's threat checks

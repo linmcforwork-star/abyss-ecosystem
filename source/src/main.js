@@ -196,7 +196,7 @@ const T = buildTerrain(D);
 
 // preset viewpoints (position, look-at), keys 1-6; the world generator dresses the scene around them
 const POSES = [
-  [7.4, 1.9, 4.9, 4, 0, 2], // looking at the anemone garden (look-at height set from the floor below)
+  [4, 17, 44, 4, 0, 18], // high on the south side of the start basin, looking over the anemone garden (look-at height set below)
   [50, 1.3, 34, 58, -23, 8],
   [-26, 2.2, -100, 0, -9, -108],
   [-55, 1.5, -18, -60, -30, 8],
@@ -270,7 +270,7 @@ for (const p of POSES) flyPts.push([p[0], -40, p[2]]);
 await say('正在种珊瑚…', 0.73, 2500);
 const Wd = makeWorld(D, T, flyPts, POSES);
 for (const p of POSES) p[1] += Wd.gy(p[0], p[2]);
-POSES[0][4] = Wd.gy(POSES[0][3], POSES[0][5]) + 0.5;
+POSES[0][4] = Wd.gy(POSES[0][3], POSES[0][5]) + 5;
 D = Wd.gy = T.smp = null; // with gy goes the generator's working memory (about 200 MB)
 
 await say('正在放鱼…', 0.94, 1200);
@@ -303,7 +303,7 @@ const nFish = Wd.fish.length / 8, nManta = Wd.mantas.length / 8, nBub = Wd.bubbl
 const MANTA = meshes[12], FISH = meshes[13];
 // the reef animals (eco.js) write their instances here every frame: fish, then sharks, then eels; 8 floats each
 const NA = 420, EB = new Float32Array(8 * NA), ibEco = device.createBuffer({ size: EB.byteLength, usage: BU.VERTEX | BU.COPY_DST });
-const AN = new Float32Array(8 * 48), ibAnem = device.createBuffer({ size: AN.byteLength, usage: BU.VERTEX | BU.COPY_DST });
+const AN = new Float32Array(8 * 128), ibAnem = device.createBuffer({ size: AN.byteLength, usage: BU.VERTEX | BU.COPY_DST });
 let nEcoF = 0, nEcoS = 0, nEcoE = 0, nAnem = 0, DAY = 1;
 Q.writeTexture({ texture: tVol }, Wd.volD, { bytesPerRow: NX, rowsPerImage: NY / 2 }, [NX / 2, NY / 2, NZ / 2]);
 Q.writeTexture({ texture: tMap }, Wd.gm, { bytesPerRow: 2048 }, [512, 512]);
