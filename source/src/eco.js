@@ -245,7 +245,7 @@ function ecoFrame(dtIn) {
   mapStep(); tagStep(); zoneStep(dtIn);
 }
 
-const CROWN = [0.55, 0.16, 0.42, 0.12, 0.45, 0.2, 0.12, 0.08]; // height of each anemone kind's tentacle crown above its base (x size)
+const CROWN = [0.55, 0.16, 0.42, 0.2, 0.45, 0.2, 0.12, 0.08]; // height of each anemone kind's tentacle crown above its base (x size)
 function clown(i, dt) {
   const a = ANE[HM[i]], nx = a[5] || 0, nz = a[6] || 0, ny = sqrt(max(0, 1 - nx * nx - nz * nz)), ax = a[0] + nx * 0.1 * a[3], ay = a[1] + ny * 0.1 * a[3], az = a[2] + nz * 0.1 * a[3], camD = hypot(F[CX] - ax, F[CY] - ay, F[CZ] - az);
   const big = LEN[i] > 0.33 && VR[i] !== 4, dsc = VR[i] === 4, thr = threat(i, 0);

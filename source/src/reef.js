@@ -103,12 +103,28 @@ function meshAnem(kind, lo) {
         return [bx + nx * sl - sin(a) * c, by + ny * sl - sag, bz + nz * sl + cos(a) * c]; }) };
     }, (t) => 1 - 0.2 * t + 0.35 * Math.exp(-(((t - 0.9) / 0.08) ** 2)), lo ? 4 : 6);
   } else if (kind === 3) {
-    // long-tentacle: the column buried in sand, long thin tentacles arching out and lying over the sand
-    const R = 0.22; disc(R, 0.01, 0.05, 0, 2, 18);
-    tent(lo ? 30 : 110, (i, n) => {
-      const [a, r] = spiral(i, n, R), L = rr(0.45, 0.65), up = rr(0.6, 1.1);
-      return { r: rr(0.011, 0.014) * (lo ? 1.7 : 1), pts: [0, 0.25, 0.5, 0.75, 1].map((t) => [cos(a) * (r + L * t * 0.9), 0.04 + up * L * t * (1 - t) * 0.9 + 0.02 * t, sin(a) * (r + L * t * 0.9)]) };
-    }, [1, 0.85, 0.7, 0.55, 0.35], lo ? 3 : 4);
+    // long-tentacle sand anemone (Radianthus/Macrodactyla doreensis; refs: scratchpad long/, Anilao photos): the column is
+    // buried, only a small disc shows; from it rises a dense round bouquet of smooth, glossy tentacles of even thickness.
+    // The inner ones stand up and curl over into loops at the end; the outer ring spreads flat like a skirt, then droops
+    // onto the sand and curls under. Yellow-green (fsAnem). ~22k triangles near
+    const R = 0.11, NP = lo ? 6 : 11;
+    disc(R, 0.005, 0.02, 0, 2, lo ? 10 : 20);
+    const rv = (v, k, a) => { const c = cos(a), s2 = sin(a), d = v[0] * k[0] + v[1] * k[1] + v[2] * k[2];
+      return [v[0] * c + (k[1] * v[2] - k[2] * v[1]) * s2 + k[0] * d * (1 - c), v[1] * c + (k[2] * v[0] - k[0] * v[2]) * s2 + k[1] * d * (1 - c), v[2] * c + (k[0] * v[1] - k[1] * v[0]) * s2 + k[2] * d * (1 - c)]; };
+    tent(lo ? 45 : 180, (i, n) => {
+      const [a, r] = spiral(i, n, R), f = r / R, ox = cos(a), oz = sin(a), sk = f > 0.7; // outer ring: the skirt
+      // core: a near-upright vase (height ~ width), only the last quarter curls into an open loop on about half of them;
+      // skirt: spreads flat and wide over the sand, the ends drooping down
+      const L = sk ? rr(0.2, 0.26) : rr(0.3, 0.38) * (1.05 - 0.15 * f), tilt = sk ? rr(0.7, 0.9) : 0.05 + 0.2 * f / 0.7;
+      const k0 = [-oz, 0, ox]; // curl axis: sideways, so every tentacle stays in its own radial plane (no crossing); loops roll outward and down
+      const curl = sk ? rr(1.3, 1.7) : (rr(0, 1) < 0.65 ? rr(2.7, 3.3) : rr(0.4, 0.9)), c0 = sk ? 0.35 : 0.7;
+      let p = [ox * r, 0.01, oz * r], d = [ox * sin(tilt), cos(tilt), oz * sin(tilt)]; const pts = [p.slice()];
+      const tt = (k) => 1 - Math.pow(1 - k / (NP - 1), 1.7); // points crowd toward the end, where the loop is
+      for (let k = 1; k < NP; k++) { const t0 = tt(k - 1), t1 = tt(k), st = L * (t1 - t0);
+        d = rv(d, k0, curl * max(0, t1 - max(t0, c0)) / (1 - c0) + (!sk && t1 > 0.55 && t0 < c0 ? 0.12 : 0));
+        p = [p[0] + d[0] * st, max(p[1] + d[1] * st, 0.008), p[2] + d[2] * st]; pts.push(p.slice()); }
+      return { r: rr(0.0045, 0.0055) * (lo ? 1.6 : 1), pts };
+    }, (u) => (1 - 0.25 * u) * (1 - 0.4 * sstep(0.8, 1, u)), lo ? 3 : 4); // even thickness, the tips narrowing to ~45%
   } else if (kind === 5) {
     // Mediterranean beadlet anemone, open (refs: new-anemone/LOOKS.md): a short, smooth, glossy wine-red column like a vase
     // on a wide foot that hugs the rock, a little waist, then a crown of ~190 pink tentacles in rings: inner ones long and

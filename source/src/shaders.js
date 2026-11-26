@@ -839,7 +839,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     let v = round(i.n.w * 127.); let q = v - 16. * floor(v / 16.); let sd = floor(v / 16.) + i.b.x * 7. + hsh * 31.;
     a = q / 15.;   // position along the tentacle, 0 root .. 1 tip
     // sway and pivot by kind: carpet barely moves, long thin tentacles swing more; a tube anemone closes toward its tube top
-    let amp = array<f32, 8>(1., .35, .8, 2.2, 1.8, .9, 0., .5)[u32(kind)]; let py = select(select(select(.06, .5, kind > 3.5), .13, kind > 4.5), .12, kind == 4.);
+    let amp = array<f32, 8>(1., .35, .8, 1.1, 1.8, .9, 0., .5)[u32(kind)]; let py = select(select(select(.06, .5, kind > 3.5), .13, kind > 4.5), .12, kind == 4.);
     let sw = a * a * amp; let ph = sd * 2.39996;
     let shrink = 1. - i.b.y * .4 * a;
     l = vec3f(l.x * mix(1., .9, i.b.y * a), (l.y - py) * shrink + py, l.z * mix(1., .9, i.b.y * a));
@@ -885,7 +885,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   var CM = array<vec3f, 6>(vec3f(.03, .22, 1.), vec3f(1., .5, .25), vec3f(1., .33, .33), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
   var CT = array<vec3f, 6>(vec3f(.43, .62, 1.), vec3f(1., .72, .55), vec3f(.7, .55, 1.), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
   var B = CB[k]; var M = CM[k]; var T = CT[k];
-    if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
+    if (kind == 3.) { B = vec3f(.18, .2, .06); M = vec3f(.56, .9, .1); T = vec3f(.88, 1., .58); }  // long-tentacle: olive root, yellow-green, pale lime tips
   let act = kind > 4.5 && kind < 6.5; let aur = kind > 6.5; // beadlet anemone (5 open, 6 shut): coral-red roots, pink shafts, pale pink-white tips
   if (act) { B = vec3f(.75, .1, .16); M = vec3f(1., .38, .55); T = vec3f(1., .82, .88); }
   var tip = ss(.72, .98, i.aux);
@@ -954,8 +954,9 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     let nv = sat(dot(nb, V));
     var occ = mix(select(.22, .08, kind == 1.), 1., ss(0., .6, a0));
     if (col0) { occ = .9; }                           // deep inside the crown it is darker
+    if (kind == 3. && i.aux >= 0.) { occ *= mix(.7, 1., ss(.04, .09, length(i.op.xz))); } // long-tentacle: inner rows a little darker
     if (kind == 4. && i.aux >= 0.) { occ *= mix(.15, 1., ss(.05, .28, length(i.op.xz))); } // tube: the crown's heart in its own shade
-    if (kind != 1. && !col0) { occ *= mix(.35, 1., ss(0., .8, i.op.y / select(select(select(.45, .5, kind == 2.), .3, act), .07, aur))); } // lower tentacles sit in the shade of the upper ones
+    if (kind != 1. && !col0) { occ *= mix(.35, 1., ss(0., .8, i.op.y / select(select(select(select(.45, .38, kind == 3.), .5, kind == 2.), .3, act), .07, aur))); } // lower tentacles sit in the shade of the upper ones
     let VI = vec3f(.20, .26, 1.);                                       // the blue of the reef light
     let vk = array<f32, 6>(1., .25, 1.4, 1., 1., 1.)[k];
     let kb = array<f32, 6>(1., .5, .6, 1., 1., 1.)[k];             // warm colours sit much closer to white on screen: less light
@@ -964,18 +965,19 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     // wet sheen: a long thin highlight streak along each tube (hair-style), not a plastic dot
     let H = normalize(Ld + V); let th = dot(Tg, H);
     let ks = select(pow(sat(dot(nb, H)), 40.), pow(sqrt(max(0., 1. - th * th)), 90.), okT);
-    let sp = ks * sat(ndl * 2.) * select(select(.55, .25, kind == 1.), 1.2, col0) * vec3f(.85, .9, 1.) * (.5 + .5 * a0);
+    let sp = ks * sat(ndl * 2.) * select(select(select(.55, .15, kind == 3.), .25, kind == 1.), 1.2, col0) * vec3f(.85, .9, 1.) * (.5 + .5 * a0);
     // light through the thin edges and tips, on the side away from the key light
     let TR = select(select(vec3f(.25, .30, 1.), vec3f(1., .55, .25), kind == 2.), vec3f(.15, .55, 1.), kind == 1.);
     let thin = (1. - nv) * (.4 + .6 * a0);
     let trans = TR * thin * thin * (1. - key) * (.25 + .75 * sat(dot(-V, Ld) * .5 + .5)) * .35 * step(0., i.aux);
     let blue = VI * vk * wrap * (1. - key) * select(select(select(.45, .2, k == 1u), .06, col0), .15, aur); // blue only where the key light is absent
     // sheen (like a stocking or velvet): the edges of each tentacle, seen at a grazing angle, turn pale; the middle keeps its colour
-    let shK = array<f32, 8>(.0, 0., .55, .2, .35, .3, 0., 0.)[u32(kind)] * step(0., i.aux);
+    let shK = array<f32, 8>(.0, 0., .55, .4, .35, .3, 0., 0.)[u32(kind)] * step(0., i.aux);
     let sheen = mix(alb, vec3f(1., .95, .9), .6) * kb * pow(1. - nv, 1.6) * (.25 + .75 * wrap) * shK * 2.2;
     // the carpet's beads catch the reef light: a bright little highlight on each one makes them read as vivid, not grey
     let bead = select(0., 1., kind == 1.) * tip * pow(sat(dot(nb, normalize(Ld + V))), 12.) * .9 * vec3f(.45, .85, 1.);
     var lit = (body * mix(1., 1. / (.55 + .45 * nv), shK * 1.6) + term * kb + blue + sp + sheen) * occ + trans + T * tip * kb * .6 * key * key + bead;
+    if (kind == 3.) { lit += mix(M, T, tip) * .24 * (.08 + .92 * key) * step(0., i.aux) * occ; } // its green fluorescence under the blue light
     if (kind == 4.) { lit += mix(M, T, tip) * .35 * (.08 + .92 * key) * step(0., i.aux) * occ; } // fluorescence: the blue light comes back cyan-green (lit, not self-lit)
     if (kind == 0. && i.aux >= 0.) { // magnificent: salmon where the light lands, clean blue-violet on the shadow side, side by side (never mixed)
       let PK = alb; let PS = vec3f(.40, .31, .85);   // the lavender-blue of the photo's shadow side
