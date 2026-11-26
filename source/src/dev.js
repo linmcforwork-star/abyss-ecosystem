@@ -64,7 +64,7 @@ function lineup(x, y, z, vrs = [0, 1, 2, 3], gap = 0.9) {
   for (let i = 0, k = 0; i < nA && k < vrs.length; i++) if (SP[i] === 0 && !FROZ[i] && !(i in tank.used)) { FROZ[i] = 1; VR[i] = vrs[k]; LEN[i] = vrs[k] === 4 ? 0.2 : 0.3 * (vrs[k] === 3 ? 1.2 : vrs[k] === 1 ? 0.92 : 1); P[i * 3] = x + (k - (vrs.length - 1) / 2) * gap; P[i * 3 + 1] = y; P[i * 3 + 2] = z; Hd[i * 3] = 1; Hd[i * 3 + 1] = 0; Hd[i * 3 + 2] = 0; ids.push(i); k++; }
   return ids;
 }
-window.__dev = { lookAt, F, POSES, tank, VR, lineup, TG, HM, set tankOff(v) { TANK = 0; }, set nearK(v) { NEARK = v; }, set gn(v) { GNITE = v; }, set clip(v) { CLIPD = v; }, get menu() { return menu; }, go: () => ui(false), setHour: (h) => { HOUR = h; }, P, SP, ST, LEN, Hd, get nA() { return nA; }, follow, camTo, unfollow, get fol() { return fol; }, ANE, HEADS, STA, HOL, AN, get counts() { return [nEcoF, nEcoS, nEcoE, nAnem, nA]; }, floorAt, rockAt };
+window.__dev = { lookAt, F, POSES, tank, VR, lineup, TG, HM, set tankOff(v) { TANK = 0; }, set nearK(v) { NEARK = v; }, set gn(v) { GNITE = v; }, set clip(v) { CLIPD = v; }, get T() { return T; }, get menu() { return menu; }, go: () => ui(false), setHour: (h) => { HOUR = h; }, P, SP, ST, LEN, Hd, get nA() { return nA; }, follow, camTo, unfollow, get fol() { return fol; }, ANE, HEADS, STA, HOL, AN, get counts() { return [nEcoF, nEcoS, nEcoE, nAnem, nA]; }, floorAt, rockAt };
 // dev.html?clip=30 draws only what lies within 30 m of the camera (fast review renders of one zone)
 { const m = /clip=(\d+)/.exec(location.search); if (m) CLIPD = +m[1]; }
 // dev.html?tank opens straight at the five clownfish-home anemones in a row (test tank), for reviewing the look

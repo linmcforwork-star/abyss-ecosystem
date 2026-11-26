@@ -352,7 +352,7 @@ Q.writeTexture({ texture: tMap }, Wd.gm, { bytesPerRow: 2048 }, [512, 512]);
 }
 // the GPU has its own copies now: let go of the generator's (about 300 MB)
 for (const o of [Wd.big, Wd.bigF, Wd.small, ...Wd.chunks, ...Wd.props]) o.buf = o.data = 0;
-Wd.glints = Wd.volD = Wd.gm = T.vb = T.ib = T.wp = T.wn = 0;
+Wd.glints = Wd.volD = Wd.gm = T.vb = T.ib = 0; if (!/keepT/.test(location.search)) T.wp = T.wn = 0; // (dev: ?keepT keeps the terrain points for probing)
 
 // ---------------------------------------------------------------- render targets (rebuilt on resize)
 // The scene is drawn at `pix` pixels and scaled up to the window. frame() tunes it and the draw distance scale `det`
@@ -472,7 +472,7 @@ function render() {
   { // the anemone garden (start basin) is shown as a night dive under blue light: swimming in, the light fades to night;
     // leaving, day comes back. Only the look changes; the animals keep the real time of day.
     const b = (a, c, x) => { const t = clamp((x - a) / (c - a), 0, 1); return t * t * (3 - 2 * t); };
-    GNITE += (b(21, 15, Math.hypot(cx - 3, cz - 18)) - GNITE) * 0.03; // night only near the clownfish home (the reef pinnacle)
+    GNITE += (b(21, 15, Math.hypot(cx - HOMEP[0], cz - HOMEP[1])) - GNITE) * 0.03; // night only near the clownfish home (the stone arch)
   }
   const DV = DAY * (1 - GNITE);
   m[56] = EXPO * (0.6 + 0.4 * ek) * (2.6 - 1.6 * DV); m[57] = RAYS * DV; m[58] = det; m[59] = DV;
