@@ -645,14 +645,14 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
 @vertex fn vsReef(i: VI) -> VO {
   var o: VO;
   let t = g.cam.w; let sz = i.a.w; let bw = floor(i.b.w); let ph = fract(i.b.w) * TAU;
-  let kv = i32(bw); let k = kv % 16; let asleep = (kv / 16) % 2 == 1; let vr = kv / 32; // vr: clownfish species (0 ocellaris, 1 pink, 2/3 Clark's)
+  let kv = i32(bw); let k = kv % 16; let asleep = (kv / 16) % 2 == 1; let vr = kv / 32; // vr: clownfish species (0 ocellaris, 1 pink, 2/3 Clark's), 4 three-spot dascyllus
   let bl = length(i.b.xyz); let T = i.b.xyz / max(bl, 1e-4);
   let c = cross(vec3f(0., 1., 0.), T); let S = select(vec3f(0., 0., 1.), normalize(c), length(c) > 1e-3); let Up = cross(T, S);
   var l = i.p; let aux = i.n.w;
   // body shape per species: height, width, extra fin height
   var hs = 1.; var ws = 1.; var fs = 1.; var fq = 9.; var amp = .1;
   switch k {
-    case 0 { hs = select(1.05, select(.97, 1.1, vr >= 2), vr >= 1); ws = 1.15; fs = .85; fq = 11.; }
+    case 0 { hs = select(select(1.05, select(.97, 1.1, vr >= 2), vr >= 1), 1.42, vr == 4); ws = select(1.15, .95, vr == 4); fs = select(.85, 1.55, vr == 4); fq = select(11., 14., vr == 4); } // vr 4: three-spot dascyllus, a deep round disc
     case 1 { hs = 1.2; ws = .9; fs = 1.1; fq = 12.; }
     case 2 { hs = .62; ws = .95; fs = .7; fq = 10.; }
     case 3 { hs = 1.; ws = 1.2; fs = .55; fq = 6.; }
@@ -666,8 +666,10 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
     let isF = aux > .5 && aux < .7;
     l.y *= hs; l.z *= ws;
     if (isF) { let e = sat((abs(i.p.y) - .14) / .08); l.y *= 1. + (fs - 1.) * e; }
+    // dascyllus: a rounder disc (shorter body), a bigger tail
+    if (k == 0 && vr == 4) { if (aux > .25 && aux < .35) { l.x = -.33 + (l.x + .33) * 1.25; l.y *= 1.2; l.x += .05; } else { l.x = (l.x - .05) * .88 + .05; } }
     // clownfish: a rounded tail, not a forked one (the notch filled out, the lobe tips pulled in)
-    if (k == 0 && aux > .25 && aux < .35 && i.p.x < -.4) { if (abs(i.p.y) < .01) { l.x = -.57; } else { l.x += .03; l.y *= .85; } }
+    if (k == 0 && vr != 4 && aux > .25 && aux < .35 && i.p.x < -.4) { if (abs(i.p.y) < .01) { l.x = -.57; } else { l.x += .03; l.y *= .85; } }
     // moorish idol: the dorsal fin's front edge streams back into a long white filament
     if (k == 4 && aux > .58 && aux < .62 && i.p.y > .2 && i.p.x > -.05) { l.y += .28; l.x -= .2; }
   }
@@ -691,7 +693,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let hb = .19 * sat(1. - pow((x - .02) / .52, 2.));            // body half-height along the fish
   let edge = sat((ay - hb) / .08);                               // 0 at the body, 1 at a fin's outer edge
   let tail = i.aux > .25 && i.aux < .35;
-  var alb = vec3f(.5); var spec = .5; var iri = 0.;
+  var alb = vec3f(.5); var spec = .5; var iri = 0.; var dsc = false;
   switch k {
     case 0 { // clownfish (refs: clownfish/LOOKS.md)
       let vr = i32(floor(i.sp.y * .5 + .01));
@@ -708,6 +710,12 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
         let hbar = ss(.016, .01, abs(x - .3 + y * .12)) * f32(!isF);
         alb = mix(alb, vec3f(.97, .95, .92), max(bk, hbar));
         if (isF) { alb = mix(vec3f(.95, .55, .55), vec3f(.97, .85, .82), select(.4 * edge, .7, tail)); spec = .25; } // fins pink, paler to the edge; the tail whitish
+      } else if (vr == 4) { // three-spot dascyllus juvenile (refs: garden-mood/da*.jpg): sooty black all over, one white spot high on each flank under the dorsal fin, one on the forehead
+        let yy = y / 1.42; // the body is drawn 1.42x deeper (vsReef), hb is for the plain shape
+        dsc = true; alb = vec3f(.1, .11, .14);                                       // sooty blue-black, so it still reads against a dark reef
+        let fl = length(vec2f((x + .03) * 1.05, yy - hb * .5)); let fh = length(vec3f(x - .3, (yy - hb) * 1.6, i.op.z * 1.2));
+        let spt = max(ss(.068, .056, fl), ss(.055, .044, fh)) * f32(!isF); alb = mix(alb, vec3f(.9, .9, .88), spt); spec = .5;
+        if (isF) { alb = mix(vec3f(.05, .055, .07), vec3f(.09, .1, .13), edge * f32(i.aux < .75)); spec = .2; if (i.aux > .75) { alb = vec3f(.1, .11, .14); spec = .5; } } // fins black (the clear pectorals show the black body through)
       } else { // Clark's: black back, yellow-orange face, chest and belly, two broad white bands, white tail stalk; male tail yellow, female white
         let face = max(ss(.26, .36, x), ss(-.01, -.1, y) * ss(-.3, .1, x));
         alb = mix(vec3f(.025, .018, .012), vec3f(1., .42, .02), face);
@@ -808,6 +816,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     let sc = spots(vec2f(x * 1.6, y), 70., .45); if (!isF) { c *= .92 + .08 * sc; }
     c += nite() * select(.9, .25, isF) * (.6 + .4 * sc) * .35 * pow(ndv, 48.) * vec3f(1., .95, .9);
     c += amb(i.wp, n, vv.g, z) * pow(1. - ndv, 3.) * .8;
+    if (dsc) { c += amb(i.wp, n, vv.g, z) * pow(1. - ndv, 2.5) * .6 + nite() * pow(ndv, 6.) * .05 * vec3f(.6, .75, 1.); } // dascyllus: a blue-grey sheen and a stronger rim, so the black fish stands off the dark reef
     if (isF) { c += alb * E * sat(-ndl) * .6 * mix(1., .5, edge); }
   }                                  // clownfish: keep their orange at depth (the showpiece)
   // asleep in a mucus cocoon (parrotfish): a milky film over the body

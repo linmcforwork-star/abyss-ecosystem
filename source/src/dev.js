@@ -47,6 +47,7 @@ function tank(x = 3, z = 31, cols = [[1, 0, 1.6], [2, 1, 1.4], [0, 2, 1.3]], s =
     const hx = x + (j - (cols.length - 1) / 2) * 1.9 * s, hz = z + (j % 2) * 0.4, a = [hx, floorAt(hx, hz), hz, s * sz, kd + (col + 0.5) / 6, 0, 0];
     ANE[nAnem] = a; AN.set([a[0], a[1], a[2], a[3], a[4], 0, 0, 0], nAnem * 8);
     for (let i = 0, m = 0; i < nA && m < 2; i++) if (SP[i] === 0 && !FROZ[i] && !(i in tank.used)) { tank.used[i] = 1; HM[i] = nAnem; setClown(i, a, m); P[i * 3] = hx; P[i * 3 + 1] = a[1] + 0.4 * s; P[i * 3 + 2] = hz; m++; c++; }
+    if (kd === 0) for (let i = 0, m = 0; i < nA && m < 5; i++) if (SP[i] === 0 && !FROZ[i] && !(i in tank.used)) { tank.used[i] = 1; HM[i] = nAnem; setDasc(i); P[i * 3] = TG[i * 3] = hx + rr(-0.45, 0.45) * a[3]; P[i * 3 + 1] = TG[i * 3 + 1] = a[1] + (0.6 + rr(0.05, 0.3)) * a[3]; P[i * 3 + 2] = TG[i * 3 + 2] = hz + rr(-0.45, 0.45) * a[3]; m++; } // already in place: the headless renders run too few frames for them to swim there
     nAnem++;
   });
   return 'tank at ' + [x, z] + ', ' + cols.length + ' anemones, ' + c + ' clownfish';
@@ -55,10 +56,10 @@ tank.used = {};
 // dev: a still line-up of fish for side-on portraits: one of each clownfish (VR 0-3) in a row, facing +x
 function lineup(x, y, z, vrs = [0, 1, 2, 3], gap = 0.9) {
   const ids = [];
-  for (let i = 0, k = 0; i < nA && k < vrs.length; i++) if (SP[i] === 0 && !FROZ[i] && !(i in tank.used)) { FROZ[i] = 1; VR[i] = vrs[k]; LEN[i] = 0.3 * (vrs[k] === 3 ? 1.2 : vrs[k] === 1 ? 0.92 : 1); P[i * 3] = x + (k - (vrs.length - 1) / 2) * gap; P[i * 3 + 1] = y; P[i * 3 + 2] = z; Hd[i * 3] = 1; Hd[i * 3 + 1] = 0; Hd[i * 3 + 2] = 0; ids.push(i); k++; }
+  for (let i = 0, k = 0; i < nA && k < vrs.length; i++) if (SP[i] === 0 && !FROZ[i] && !(i in tank.used)) { FROZ[i] = 1; VR[i] = vrs[k]; LEN[i] = vrs[k] === 4 ? 0.2 : 0.3 * (vrs[k] === 3 ? 1.2 : vrs[k] === 1 ? 0.92 : 1); P[i * 3] = x + (k - (vrs.length - 1) / 2) * gap; P[i * 3 + 1] = y; P[i * 3 + 2] = z; Hd[i * 3] = 1; Hd[i * 3 + 1] = 0; Hd[i * 3 + 2] = 0; ids.push(i); k++; }
   return ids;
 }
-window.__dev = { lookAt, F, POSES, tank, VR, lineup, set tankOff(v) { TANK = 0; }, set nearK(v) { NEARK = v; }, set gn(v) { GNITE = v; }, get menu() { return menu; }, go: () => ui(false), setHour: (h) => { HOUR = h; }, P, SP, ST, LEN, Hd, get nA() { return nA; }, follow, camTo, unfollow, get fol() { return fol; }, ANE, HEADS, STA, HOL, AN, get counts() { return [nEcoF, nEcoS, nEcoE, nAnem, nA]; }, floorAt, rockAt };
+window.__dev = { lookAt, F, POSES, tank, VR, lineup, TG, HM, set tankOff(v) { TANK = 0; }, set nearK(v) { NEARK = v; }, set gn(v) { GNITE = v; }, get menu() { return menu; }, go: () => ui(false), setHour: (h) => { HOUR = h; }, P, SP, ST, LEN, Hd, get nA() { return nA; }, follow, camTo, unfollow, get fol() { return fol; }, ANE, HEADS, STA, HOL, AN, get counts() { return [nEcoF, nEcoS, nEcoE, nAnem, nA]; }, floorAt, rockAt };
 // dev.html?tank opens straight at the three hero anemones (test tank), close up, for reviewing the look
 if (/tank/.test(location.search)) { const tw = setInterval(() => { if (!nAnem || !window.__dev) return; clearInterval(tw);
   NEARK = 1; tank(); const n = nAnem, h = [n - 3, n - 2, n - 1].map((k) => [AN[k * 8], AN[k * 8 + 1], AN[k * 8 + 2], AN[k * 8 + 3]])[1];

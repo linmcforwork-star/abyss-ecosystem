@@ -86,7 +86,7 @@ function rockGrad(x, y, z) {
 
 // ---------------------------------------------------------------- the animals
 const FROZ = new Uint8Array(NA); // dev only: animals held still for a portrait (dev.js lineup)
-const VR = new Int8Array(NA); // clownfish species: 0 ocellaris, 1 pink (perideraion), 2 Clark's male, 3 Clark's female (white tail)
+const VR = new Int8Array(NA); // clownfish species: 0 ocellaris, 1 pink (perideraion), 2 Clark's male, 3 Clark's female (white tail); 4 three-spot dascyllus (not a clownfish, shares the anemone)
 const SP = new Int8Array(NA), ST = new Int8Array(NA), HM = new Int16Array(NA), GR = new Int16Array(NA), XI = new Int16Array(NA);
 const P = new Float64Array(NA * 3), Vv = new Float64Array(NA * 3), Hd = new Float64Array(NA * 3), TG = new Float64Array(NA * 3), OF = new Float64Array(NA * 3);
 const LEN = new Float32Array(NA), PH = new Float32Array(NA), TM = new Float32Array(NA), T2 = new Float32Array(NA), BEAT = new Float32Array(NA);
@@ -101,6 +101,9 @@ const CLOWNS = [
   { zh: '克氏双锯鱼（克氏小丑）', short: '克氏小丑', la: 'Amphiprion clarkii', facts: ['背部黑色，脸、胸和鳍是黄橙色，两条宽白带。雄鱼尾巴黄色，雌鱼尾巴发白。', '最不挑的小丑鱼：十种能住的海葵它都住。', '雌鱼可长到 15 厘米，是这里最大、最大胆的小丑鱼。'] },
 ];
 CLOWNS[3] = CLOWNS[2];
+CLOWNS[4] = { zh: '三斑宅泥鱼（三点白）', short: '三点白', la: 'Dascyllus trimaculatus', facts: ['小鱼全身乌黑，身体两侧各有一个白点，额头上还有一个，所以叫"三点白"。', '小时候成群住在大海葵上方，和小丑鱼共用一个海葵；有危险就一起钻进触手里。', '长大后离开海葵，身体变成灰褐色，白点慢慢变淡，最长约 14 厘米。'] };
+// three-spot dascyllus juveniles: a little school hovering higher above a big magnificent anemone
+function setDasc(i) { VR[i] = 4; LEN[i] = rr(0.18, 0.23); }
 function setClown(i, a, j) {
   const kd = a[4] | 0, col = ((a[4] % 1) * 6) | 0;
   let v = kd === 2 ? 2 : kd === 0 ? (col === 2 ? 1 : 0) : ((abs(a[0] * 7 + a[2] * 3) | 0) % 2 ? 2 : 0);
@@ -130,6 +133,8 @@ let nG = 0;
   if (!HEADS.length) HEADS.push([0, floorAt(0, 0) + 1, 0, 1]);
   // clownfish: a big female, a smaller male, sometimes a juvenile, in every anemone
   ANE.forEach((a, k) => { if ((a[4] | 0) > 2 || (k > 3 && rnd() > 0.45)) return; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) { LEN[i] = [0.3, 0.27, 0.24][j]; setClown(i, a, j); } } }); // ~3.5x life size (the hosts are big too), so you can see them
+  // three-spot dascyllus: 4-6 juveniles over the bigger magnificent anemones (at most 7 anemones)
+  { let m = 0; ANE.forEach((a, k) => { if ((a[4] | 0) !== 0 || a[3] < 1.3 || m >= 7) return; m++; const n = 4 + (rnd() * 3 | 0); for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.4, 0.4), a[1] + 0.6, a[2] + rr(-0.4, 0.4), k); if (i >= 0) setDasc(i); } }); }
   // chromis: a cloud over each coral head
   HEADS.forEach((h, k) => { const n = 10 + (rnd() * 10 | 0); for (let j = 0; j < n; j++) add(1, h[0] + rr(-0.5, 0.5), h[1] + rr(0.2, 0.9), h[2] + rr(-0.5, 0.5), k); });
   // cleaner wrasse at every station
@@ -238,18 +243,18 @@ function ecoFrame(dtIn) {
 const CROWN = [0.55, 0.16, 0.42, 0.12, 0.45]; // height of each anemone kind's tentacle crown above its base (x size)
 function clown(i, dt) {
   const a = ANE[HM[i]], nx = a[5] || 0, nz = a[6] || 0, ny = sqrt(max(0, 1 - nx * nx - nz * nz)), ax = a[0] + nx * 0.1 * a[3], ay = a[1] + ny * 0.1 * a[3], az = a[2] + nz * 0.1 * a[3], camD = hypot(F[CX] - ax, F[CY] - ay, F[CZ] - az);
-  const big = LEN[i] > 0.33, thr = threat(i, 0);
+  const big = LEN[i] > 0.33 && VR[i] !== 4, dsc = VR[i] === 4, thr = threat(i, 0);
   if (night()) ST[i] = S_SLEEP;
   else if (thr < 4) ST[i] = S_HIDE;
   else if (big && camD < 2.2 && camD > 0.9) ST[i] = S_GUARD;
   else ST[i] = S_HOVER;
   if ((TM[i] -= dt) < 0 || ST[i] === S_GUARD) {
-    TM[i] = rr(0.6, 2);
-    if (ST[i] === S_HOVER) { const r = rr(0, 0.4) * a[3], t = rnd() * TAU; { const o = (CROWN[a[4] | 0] + rr(0.04, 0.22)) * a[3]; /* above the tentacle crown, never down among the column */ setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny + sin(t) * r * (1 - ny), az + sin(t) * r * ny + nz * o); } }
+    TM[i] = dsc ? rr(0.4, 1.4) : rr(0.6, 2);
+    if (ST[i] === S_HOVER) { const r = (dsc ? rr(0.05, 0.45) : rr(0, 0.4)) * a[3], t = rnd() * TAU; { const o = (CROWN[a[4] | 0] + (dsc ? rr(0.05, 0.3) : rr(0.04, 0.22))) * a[3]; /* dascyllus: a loose cloud higher up */ /* above the tentacle crown, never down among the column */ setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny + sin(t) * r * (1 - ny), az + sin(t) * r * ny + nz * o); } }
     else if (ST[i] === S_GUARD) { const k = 0.8 / camD; setT(i, ax + (F[CX] - ax) * k, ay + (F[CY] - ay) * k, az + (F[CZ] - az) * k); }
     else { const r = rr(0, 0.2) * a[3], t = rnd() * TAU, o = (CROWN[a[4] | 0] + rr(-0.06, 0.02)) * a[3]; /* hide or sleep: nestled into the top of the crown */ setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny, az + sin(t) * r * ny + nz * o); }
   }
-  steer(i, ST[i] === S_GUARD ? 1.2 : ST[i] === S_HIDE ? 0.8 : 0.35, dt, 3, 0, false);
+  steer(i, ST[i] === S_GUARD ? 1.2 : ST[i] === S_HIDE ? (dsc ? 1.2 : 0.8) : dsc ? 0.5 : 0.35, dt, 3, 0, false);
   face(i, dt, ST[i] === S_GUARD ? F[CX] - P[i * 3] : 0, ST[i] === S_GUARD ? F[CY] - P[i * 3 + 1] : 0, ST[i] === S_GUARD ? F[CZ] - P[i * 3 + 2] : 0);
 }
 function chromis(i, dt) {
@@ -665,13 +670,13 @@ function zoneStep(dt) {
 // ---------------------------------------------------------------- the card's picture: a real photo of the species
 // The 3D models are coloured for looks; the card shows what the animal really looks like. Photos from Wikimedia Commons
 // (free licences), stored next to the page in photos/ and loaded only when a card opens; the author is credited under it.
-const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "clown1": "Diego Delso · CC BY-SA 4.0", "clown2": "Diego Delso · CC BY-SA 4.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0"}; // photo credits (details and links: SPECIES.md)
+const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "clown1": "Diego Delso · CC BY-SA 4.0", "clown2": "Diego Delso · CC BY-SA 4.0", "dasc": "Diego Delso · CC BY-SA 4.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0"}; // photo credits (details and links: SPECIES.md)
 const PKEY = ['clown', 'chromis', 'cleaner', 'parrot', 'idol', 'grouper', 'tang', 'shark', 'moray', 'manta'];
 const cvImg = document.createElement('img'), cvCr = document.createElement('small');
 cvImg.alt = ''; cPic.appendChild(cvImg); cPic.appendChild(cvCr);
 let cvKey = '';
 function cvShow(sp, id) {
-  const k = sp === 10 ? 'an' + (AN[(id - ANEB) * 8 + 4] | 0) : sp === 0 && VR[id] ? 'clown' + min(VR[id], 2) : PKEY[sp], c = PHOTOS[k];
+  const k = sp === 10 ? 'an' + (AN[(id - ANEB) * 8 + 4] | 0) : sp === 0 && VR[id] ? (VR[id] === 4 ? 'dasc' : 'clown' + min(VR[id], 2)) : PKEY[sp], c = PHOTOS[k];
   cPic.style.display = c ? 'block' : 'none';
   if (!c || k === cvKey) return;
   cvKey = k; cvImg.src = 'photos/' + k + '.webp'; cvCr.textContent = '照片：' + c;
