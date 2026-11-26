@@ -312,7 +312,7 @@ function anemSort() {
     ANC[j] = o;
     for (let k = 0; k < nAnem; k++) {
       const b = k * 8, kind = AN[b + 4] | 0, d = hypot(AN[b] - F[CX], AN[b + 1] - F[CY], AN[b + 2] - F[CZ]);
-      if (kind * 2 + (d > (11 + 3 * AN[b + 3]) * NEARK) !== j || d > 75 || k < TANK) continue;
+      if (kind * 2 + (d > (11 + 3 * AN[b + 3]) * NEARK) !== j || d > min(75, CLIPD) || k < TANK) continue;
       for (let q = 0; q < 8; q++) ANd[o * 8 + q] = AN[b + q];
       o++;
     }
@@ -320,6 +320,7 @@ function anemSort() {
   ANC[16] = o;
 }
 let NEARK = [1, 0.6, 0.35][LV] ?? 1; // how far out anemones get their detailed mesh: shrinks with the quality setting
+let CLIPD = 1e9; // dev (dev.js clip): nothing farther than this from the camera is drawn
 let TANK = 0; // dev test tank: > 0 draws only the anemones from this index on and a bare floor (dev.js tank())
 let nEcoF = 0, nEcoS = 0, nEcoE = 0, nAnem = 0, DAY = 1, GNITE = 1; // GNITE: how far the garden's night has faded in
 Q.writeTexture({ texture: tVol }, Wd.volD, { bytesPerRow: NX, rowsPerImage: NY / 2 }, [NX / 2, NY / 2, NZ / 2]);
@@ -423,6 +424,7 @@ const rowOrd = new Uint8Array(CELLS);
 // Draws the cells of a cell-sorted buffer that are in view and within [minD, maxD) (scaled by `det`, but not for the
 // terrain) as merged runs, nearest rows first.
 function drawCells(r, start, lo, hi, mar, indexed, verts, minD, maxD) {
+  maxD = min(maxD, CLIPD); // dev: draw only what is near the camera (fast review renders of one zone)
   const cx = F[CX], cy = F[CY], cz = F[CZ], fx = F[FX], fy = F[FY], fz = F[FZ], rx = F[RX], rz = F[RZ], ux = F[UX], uy = F[UY], uz = F[UZ];
   const ds = indexed === 1 ? 1 : det * det;
   const tx = TANH * W / H, hw = CELLW * 0.5, ex = hw + mar, min2 = minD * minD * ds, max2 = maxD * maxD * ds;

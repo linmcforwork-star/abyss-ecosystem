@@ -818,7 +818,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     c += amb(i.wp, n, vv.g, z) * pow(1. - ndv, 3.) * .8;
     if (dsc) { c += amb(i.wp, n, vv.g, z) * pow(1. - ndv, 2.5) * .6 + nite() * pow(ndv, 6.) * .05 * vec3f(.6, .75, 1.); } // dascyllus: a blue-grey sheen and a stronger rim, so the black fish stands off the dark reef
     if (isF) { c += alb * E * sat(-ndl) * .6 * mix(1., .5, edge); }
-    { let lm = dot(c, vec3f(.3, .59, .11)); let cc = max((c - lm) * 1.3 + lm, vec3f(0.)); c = mix(c, max(cc - .025, vec3f(0.)) * 1.3, nite()); } // night: more saturation and contrast (owner: livelier, not a new colour)
+    { let lm = dot(c, vec3f(.3, .59, .11)); let cc = max((c - lm) * 1.15 + lm, vec3f(0.)); c = mix(c, max(cc - .02, vec3f(0.)) * 1.12, nite()); } // night: more saturation and contrast (owner: livelier, not a new colour)
   }                                  // clownfish: keep their orange at depth (the showpiece)
   // asleep in a mucus cocoon (parrotfish): a milky film over the body
   if (i.sp.y - 2. * floor(i.sp.y * .5) > .5) { c = mix(c, amb(i.wp, n, vv.g, z) * vec3f(1.6, 1.8, 1.9) + E * .1, .25 + .45 * pow(1. - ndv, 2.)); }

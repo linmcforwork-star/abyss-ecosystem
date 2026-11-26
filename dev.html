@@ -1260,7 +1260,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     c += amb(i.wp, n, vv.g, z) * pow(1. - ndv, 3.) * .8;
     if (dsc) { c += amb(i.wp, n, vv.g, z) * pow(1. - ndv, 2.5) * .6 + nite() * pow(ndv, 6.) * .05 * vec3f(.6, .75, 1.); } // dascyllus: a blue-grey sheen and a stronger rim, so the black fish stands off the dark reef
     if (isF) { c += alb * E * sat(-ndl) * .6 * mix(1., .5, edge); }
-    { let lm = dot(c, vec3f(.3, .59, .11)); let cc = max((c - lm) * 1.3 + lm, vec3f(0.)); c = mix(c, max(cc - .025, vec3f(0.)) * 1.3, nite()); } // night: more saturation and contrast (owner: livelier, not a new colour)
+    { let lm = dot(c, vec3f(.3, .59, .11)); let cc = max((c - lm) * 1.15 + lm, vec3f(0.)); c = mix(c, max(cc - .02, vec3f(0.)) * 1.12, nite()); } // night: more saturation and contrast (owner: livelier, not a new colour)
   }                                  // clownfish: keep their orange at depth (the showpiece)
   // asleep in a mucus cocoon (parrotfish): a milky film over the body
   if (i.sp.y - 2. * floor(i.sp.y * .5) > .5) { c = mix(c, amb(i.wp, n, vv.g, z) * vec3f(1.6, 1.8, 1.9) + E * .1, .25 + .45 * pow(1. - ndv, 2.)); }
@@ -1974,21 +1974,21 @@ function makeWorld(D, T, flyPts, POSES) {
       // growth over the rock: boulder and branching corals, sponges and sea fans round each tier's shoulder, so the landmark
       // reads as a living bommie, not bare stone
       ledges.forEach(([lx, ly, lz, sc]) => {
-        for (let k = 0; k < (HOME ? 7 : 16); k++) { // (fewer with the clownfish home, to leave the ledges to the anemones)
+        for (let k = 0; k < (HOME ? 4 : 16); k++) { // (fewer with the clownfish home, to leave the ledges to the anemones)
           const a = k / 16 * TAU * 2 + rr(-0.3, 0.3), dy = rr(-0.3, 0.55), r0 = sc * (0.95 - 0.5 * max(0, dy) ** 2), px = lx + cos(a) * r0, pz = lz + sin(a) * r0, py = ly - sc * 0.5 + sc * dy * 0.8, u = rnd();
           const up = qMul(qFromY(cos(a) * 0.35, 1, sin(a) * 0.35), qAxis(0, 1, 0, rnd() * TAU));
           if (u < 0.25) solid(26, px, py, pz, rr(0.9, 1.6), q(0.4), 6, rnd(), 1, 0);
           else if (u < 0.45) solid(7, px, py, pz, rr(0.8, 1.4), up, 5, rnd(), 1, 0);
-          else if (u < 0.6) solid(27, px, py, pz, rr(0.9, 1.5), q(0.15), 7, rnd(), 1, 0);
+          else if (u < 0.6) { if (!HOME || ly < floorY + 4) solid(27, px, py, pz, rr(0.9, 1.5), q(0.15), 7, rnd(), 1, 0); } // (home: no table corals roofing the anemones on the upper tiers)
           else if (u < 0.85) solid(4 + (rnd() * 3 | 0), px, py, pz, rr(0.6, 1.2), up, 4, rnd(), 1, 0);
           else solid(8, px, py, pz, rr(1.2, 2), up, 5, rnd(), 1, 0);
         }
       });
-      for (let j = 0; j < 9; j++) { const a = rnd() * TAU, r0 = rr(3.5, 6); solid(rnd() < 0.5 ? 26 : 7, x + cos(a) * r0, floorY - 0.3, z + sin(a) * r0, rr(1.2, 2.4), q(0.4), rnd() < 0.5 ? 6 : 5, rnd(), 1, 0); }
+      for (let j = 0; j < (HOME ? 4 : 9); j++) { const a = rnd() * TAU, r0 = rr(3.5, 6); solid(rnd() < 0.5 ? 26 : 7, x + cos(a) * r0, floorY - 0.3, z + sin(a) * r0, HOME ? rr(0.8, 1.4) : rr(1.2, 2.4), q(0.4), rnd() < 0.5 ? 6 : 5, rnd(), 1, 0); }
       if (!HOME) for (let j = 0; j < 3; j++) ane(x + rr(-0.8, 0.8), h - 0.3, z + rr(-0.8, 0.8), rr(1.4, 1.8), 0, 3);
       ane(x + 5, h2 - 0.25, z + 2.8, 1.6, 0, 5);
       if (!HOME) ledges.slice(0, 3).forEach(([lx, ly, lz, sc], j) => { const a = rnd() * TAU, r0 = sc * 0.3; for (let k = 0; k < 7; k++) ane(lx + cos(a) * r0 + rr(-0.5, 0.5), ly - 0.15 + rr(-0.1, 0.1), lz + sin(a) * r0 + rr(-0.5, 0.5), rr(1.1, 1.5), 2, [1, 4, 2][j], cos(a) * 0.3, sin(a) * 0.3); });
-      for (let j = 0; j < 6; j++) { const a = j / 6 * TAU + rr(-0.3, 0.3), r0 = rr(4.5, 6); solid(8, x + cos(a) * r0, floorY - 0.1, z + sin(a) * r0, rr(2, 3.2), qMul(qFromY(cos(a) * 0.25, 1, sin(a) * 0.25), qAxis(0, 1, 0, a)), 5, rnd(), 1, 0); }
+      for (let j = 0; j < (HOME ? 3 : 6); j++) { const a = j / (HOME ? 3 : 6) * TAU + rr(-0.3, 0.3), r0 = HOME ? rr(7, 8.5) : rr(4.5, 6); solid(8, x + cos(a) * r0, floorY - 0.1, z + sin(a) * r0, rr(2, 3.2), qMul(qFromY(cos(a) * 0.25, 1, sin(a) * 0.25), qAxis(0, 1, 0, a)), 5, rnd(), 1, 0); }
       heads.push([x + 4, floorY + 4, z, 1.3]);
       // clownfish home (user 2026-11-26): the anemones are gathered here instead of spread over the basin floor. A few
       // magnificent clumps on the ledges, carpet anemones in the sand pockets at the foot, bubble-tips in the crevices
@@ -2002,15 +2002,30 @@ function makeWorld(D, T, flyPts, POSES) {
             const a = rnd() * TAU, f = rr(0.25, 0.42), px = cx + cos(a) * sc * f, pz = cz + sin(a) * sc * f;
             if (nx && hypot(px - nx[0], pz - nx[2]) < nx[3] * 0.5 + 0.5) continue;
             for (let m = 0; m < n; m++) { const b = a + rr(-0.25, 0.25), g = f + rr(-0.06, 0.04), qx = cx + cos(b) * sc * g, qz = cz + sin(b) * sc * g, rr2 = min(0.95, g / 0.5);
-              ane(qx, cy + sc * 0.5 * Math.sqrt(1 - rr2 * rr2) - 0.12, qz, rr(lo, hi), kind, col, cos(b) * rr2 * 0.7, sin(b) * rr2 * 0.7); }
+              ane(qx, cy + sc * 0.5 * Math.sqrt(1 - rr2 * rr2) + 0.02, qz, rr(lo, hi), kind, col, cos(b) * rr2 * 0.7, sin(b) * rr2 * 0.7); }
             return;
           }
         };
         shelf(3, 3, 0, 2, 1.4, 1.7);                     // the summit: a clump of magnificent anemones (violet-pink)
-        shelf(2, 2, 0, 1, 1.3, 1.6); shelf(2, 4, 2, 1, 1.0, 1.3);
-        shelf(1, 3, 0, 0, 1.3, 1.6); shelf(1, 5, 2, 4, 1.0, 1.3);
-        shelf(0, 4, 2, 2, 1.0, 1.3); shelf(0, 2, 0, 3, 1.4, 1.7);
+        shelf(2, 2, 0, 1, 1.3, 1.6); shelf(1, 3, 0, 0, 1.3, 1.6); shelf(0, 2, 0, 3, 1.4, 1.7);
+        // what already stands round the foot (rocks, fans, sponges), so nothing below is placed inside it
+        const blocked = (px, pz, r) => {
+          for (const arr of solids) if (arr) for (let i = 0; i < arr.length; i += 12) if (hypot(arr[i] - px, arr[i + 2] - pz) < arr[i + 3] * 0.55 + r) return true;
+          const c0 = cellOf(px, pz);
+          for (const pr of props) for (const dc of [0, -1, 1, -CELLS, CELLS, -CELLS - 1, -CELLS + 1, CELLS - 1, CELLS + 1]) { const arr = pr[c0 + dc]; if (arr) for (let i = 0; i < arr.length; i += 12) if (hypot(arr[i] - px, arr[i + 2] - pz) < arr[i + 3] * 0.5 + r) return true; }
+          return false;
+        };
+        // bubble-tips in small groups at the foot of the rock, nestled against it (in the real reef: in the cracks)
+        for (const [col, a0] of [[1, 0.9], [4, 2.6], [2, 4.4], [1, 5.6]]) {
+          for (let i = 0, m = 0; i < 300 && m < 4; i++) { const a = a0 + rr(-0.35, 0.35), r0 = rr(2.6, 3.6), ax = x + cos(a) * r0, az = z + sin(a) * r0;
+            if (blocked(ax, az, 0.25) || !onFloor(ax, az)) continue; m++; ane(ax, top(ax, az) - 0.02, az, rr(1.0, 1.3), 2, col, -cos(a) * 0.15, -sin(a) * 0.15); } }
         for (let j = 0; j < 3; j++) { const a = 1.2 + j * 2.1 + rr(-0.3, 0.3), r0 = rr(3.8, 4.6), ax = x + cos(a) * r0, az = z + sin(a) * r0; ane(ax, top(ax, az) - 0.03, az, rr(2.4, 2.9), 1, [0, 2, 1][j]); } // carpets in the sand at the foot
+        // on the open sand a little further out (user 2026-11-26: all five kinds in the home): long-tentacle anemones
+        // alone or in pairs, a small group of tube anemones; kept clear of the rocks round the foot
+        { const sand = [], ok = (px, pz, r) => !sand.some((p) => hypot(p[0] - px, p[1] - pz) < r) && hypot(px - x, pz - z) > 4.6 && !blocked(px, pz, 0.5) && top(px, pz) < floorY + 0.6;
+          for (const [kind, n, lo2, hi2, gap, a0] of [[3, 3, 1.2, 1.5, 1.6, 0.2], [4, 3, 0.8, 1.0, 1.1, 3.4]]) {
+            for (let i = 0, m = 0; i < 800 && m < n; i++) { const a = a0 + rr(-0.9, 0.9), r0 = rr(5, 8), ax = x + cos(a) * r0, az = z + sin(a) * r0;
+              if (!ok(ax, az, gap)) continue; sand.push([ax, az]); m++; ane(ax, top(ax, az) - 0.02, az, rr(lo2, hi2), kind, 1); } } }
       }
     }
     // three parts from south to north: a sand flat by the entrance (tube and long-tentacle anemones, sparse), the main
@@ -2995,7 +3010,7 @@ function anemSort() {
     ANC[j] = o;
     for (let k = 0; k < nAnem; k++) {
       const b = k * 8, kind = AN[b + 4] | 0, d = hypot(AN[b] - F[CX], AN[b + 1] - F[CY], AN[b + 2] - F[CZ]);
-      if (kind * 2 + (d > (11 + 3 * AN[b + 3]) * NEARK) !== j || d > 75 || k < TANK) continue;
+      if (kind * 2 + (d > (11 + 3 * AN[b + 3]) * NEARK) !== j || d > min(75, CLIPD) || k < TANK) continue;
       for (let q = 0; q < 8; q++) ANd[o * 8 + q] = AN[b + q];
       o++;
     }
@@ -3003,6 +3018,7 @@ function anemSort() {
   ANC[16] = o;
 }
 let NEARK = [1, 0.6, 0.35][LV] ?? 1; // how far out anemones get their detailed mesh: shrinks with the quality setting
+let CLIPD = 1e9; // dev (dev.js clip): nothing farther than this from the camera is drawn
 let TANK = 0; // dev test tank: > 0 draws only the anemones from this index on and a bare floor (dev.js tank())
 let nEcoF = 0, nEcoS = 0, nEcoE = 0, nAnem = 0, DAY = 1, GNITE = 1; // GNITE: how far the garden's night has faded in
 Q.writeTexture({ texture: tVol }, Wd.volD, { bytesPerRow: NX, rowsPerImage: NY / 2 }, [NX / 2, NY / 2, NZ / 2]);
@@ -3106,6 +3122,7 @@ const rowOrd = new Uint8Array(CELLS);
 // Draws the cells of a cell-sorted buffer that are in view and within [minD, maxD) (scaled by `det`, but not for the
 // terrain) as merged runs, nearest rows first.
 function drawCells(r, start, lo, hi, mar, indexed, verts, minD, maxD) {
+  maxD = min(maxD, CLIPD); // dev: draw only what is near the camera (fast review renders of one zone)
   const cx = F[CX], cy = F[CY], cz = F[CZ], fx = F[FX], fy = F[FY], fz = F[FZ], rx = F[RX], rz = F[RZ], ux = F[UX], uy = F[UY], uz = F[UZ];
   const ds = indexed === 1 ? 1 : det * det;
   const tx = TANH * W / H, hw = CELLW * 0.5, ex = hw + mar, min2 = minD * minD * ds, max2 = maxD * maxD * ds;
@@ -3495,7 +3512,7 @@ CLOWNS[4] = { zh: '三斑宅泥鱼（三点白）', short: '三点白', la: 'Das
 function setDasc(i) { VR[i] = 4; LEN[i] = rr(0.18, 0.23); }
 function setClown(i, a, j) {
   const kd = a[4] | 0, col = ((a[4] % 1) * 6) | 0;
-  let v = kd === 2 || kd === 7 ? 2 : kd === 0 ? (col === 2 ? 1 : 0) : ((abs(a[0] * 7 + a[2] * 3) | 0) % 2 ? 2 : 0);
+  let v = kd === 2 || kd === 3 || kd === 7 ? 2 : kd === 0 ? (col === 2 ? 1 : 0) : ((abs(a[0] * 7 + a[2] * 3) | 0) % 2 ? 2 : 0);
   if (v === 2 && j === 0) v = 3;
   VR[i] = v; if (v === 3) LEN[i] *= 1.2; if (v === 1) LEN[i] *= 0.92;
 }
@@ -3521,7 +3538,7 @@ let nG = 0;
   for (const h of all) if (HEADS.length < 16 && !HEADS.some((q) => hypot(q[0] - h[0], q[2] - h[2]) < 9)) HEADS.push(h);
   if (!HEADS.length) HEADS.push([0, floorAt(0, 0) + 1, 0, 1]);
   // clownfish: a big female, a smaller male, sometimes a juvenile, in every anemone
-  ANE.forEach((a, k) => { if ((a[4] | 0) > 2 || (k > 3 && rnd() > 0.45)) return; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) { LEN[i] = [0.3, 0.27, 0.24][j]; setClown(i, a, j); } } }); // ~3.5x life size (the hosts are big too), so you can see them
+  ANE.forEach((a, k) => { if ((a[4] | 0) > 3 || (k > 3 && rnd() > 0.45)) return; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) { LEN[i] = [0.3, 0.27, 0.24][j]; setClown(i, a, j); } } }); // ~3.5x life size (the hosts are big too), so you can see them
   // three-spot dascyllus: 4-6 juveniles over the bigger magnificent anemones (at most 7 anemones)
   { let m = 0; ANE.forEach((a, k) => { if ((a[4] | 0) !== 0 || a[3] < 1.3 || m >= 7) return; m++; const n = 4 + (rnd() * 3 | 0); for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.4, 0.4), a[1] + 0.6, a[2] + rr(-0.4, 0.4), k); if (i >= 0) setDasc(i); } }); }
   // chromis: a cloud over each coral head
@@ -4225,7 +4242,9 @@ function lineup(x, y, z, vrs = [0, 1, 2, 3], gap = 0.9) {
   for (let i = 0, k = 0; i < nA && k < vrs.length; i++) if (SP[i] === 0 && !FROZ[i] && !(i in tank.used)) { FROZ[i] = 1; VR[i] = vrs[k]; LEN[i] = vrs[k] === 4 ? 0.2 : 0.3 * (vrs[k] === 3 ? 1.2 : vrs[k] === 1 ? 0.92 : 1); P[i * 3] = x + (k - (vrs.length - 1) / 2) * gap; P[i * 3 + 1] = y; P[i * 3 + 2] = z; Hd[i * 3] = 1; Hd[i * 3 + 1] = 0; Hd[i * 3 + 2] = 0; ids.push(i); k++; }
   return ids;
 }
-window.__dev = { lookAt, F, POSES, tank, VR, lineup, TG, HM, set tankOff(v) { TANK = 0; }, set nearK(v) { NEARK = v; }, set gn(v) { GNITE = v; }, get menu() { return menu; }, go: () => ui(false), setHour: (h) => { HOUR = h; }, P, SP, ST, LEN, Hd, get nA() { return nA; }, follow, camTo, unfollow, get fol() { return fol; }, ANE, HEADS, STA, HOL, AN, get counts() { return [nEcoF, nEcoS, nEcoE, nAnem, nA]; }, floorAt, rockAt };
+window.__dev = { lookAt, F, POSES, tank, VR, lineup, TG, HM, set tankOff(v) { TANK = 0; }, set nearK(v) { NEARK = v; }, set gn(v) { GNITE = v; }, set clip(v) { CLIPD = v; }, get menu() { return menu; }, go: () => ui(false), setHour: (h) => { HOUR = h; }, P, SP, ST, LEN, Hd, get nA() { return nA; }, follow, camTo, unfollow, get fol() { return fol; }, ANE, HEADS, STA, HOL, AN, get counts() { return [nEcoF, nEcoS, nEcoE, nAnem, nA]; }, floorAt, rockAt };
+// dev.html?clip=30 draws only what lies within 30 m of the camera (fast review renders of one zone)
+{ const m = /clip=(\d+)/.exec(location.search); if (m) CLIPD = +m[1]; }
 // dev.html?tank opens straight at the five clownfish-home anemones in a row (test tank), for reviewing the look
 if (/tank/.test(location.search)) { const tw = setInterval(() => { if (!nAnem || !window.__dev) return; clearInterval(tw);
   NEARK = 1; tank(); const k = nAnem - 3, h = [AN[k * 8], AN[k * 8 + 1], AN[k * 8 + 2]];

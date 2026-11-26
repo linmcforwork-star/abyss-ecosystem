@@ -320,21 +320,21 @@ function makeWorld(D, T, flyPts, POSES) {
       // growth over the rock: boulder and branching corals, sponges and sea fans round each tier's shoulder, so the landmark
       // reads as a living bommie, not bare stone
       ledges.forEach(([lx, ly, lz, sc]) => {
-        for (let k = 0; k < (HOME ? 7 : 16); k++) { // (fewer with the clownfish home, to leave the ledges to the anemones)
+        for (let k = 0; k < (HOME ? 4 : 16); k++) { // (fewer with the clownfish home, to leave the ledges to the anemones)
           const a = k / 16 * TAU * 2 + rr(-0.3, 0.3), dy = rr(-0.3, 0.55), r0 = sc * (0.95 - 0.5 * max(0, dy) ** 2), px = lx + cos(a) * r0, pz = lz + sin(a) * r0, py = ly - sc * 0.5 + sc * dy * 0.8, u = rnd();
           const up = qMul(qFromY(cos(a) * 0.35, 1, sin(a) * 0.35), qAxis(0, 1, 0, rnd() * TAU));
           if (u < 0.25) solid(26, px, py, pz, rr(0.9, 1.6), q(0.4), 6, rnd(), 1, 0);
           else if (u < 0.45) solid(7, px, py, pz, rr(0.8, 1.4), up, 5, rnd(), 1, 0);
-          else if (u < 0.6) solid(27, px, py, pz, rr(0.9, 1.5), q(0.15), 7, rnd(), 1, 0);
+          else if (u < 0.6) { if (!HOME || ly < floorY + 4) solid(27, px, py, pz, rr(0.9, 1.5), q(0.15), 7, rnd(), 1, 0); } // (home: no table corals roofing the anemones on the upper tiers)
           else if (u < 0.85) solid(4 + (rnd() * 3 | 0), px, py, pz, rr(0.6, 1.2), up, 4, rnd(), 1, 0);
           else solid(8, px, py, pz, rr(1.2, 2), up, 5, rnd(), 1, 0);
         }
       });
-      for (let j = 0; j < 9; j++) { const a = rnd() * TAU, r0 = rr(3.5, 6); solid(rnd() < 0.5 ? 26 : 7, x + cos(a) * r0, floorY - 0.3, z + sin(a) * r0, rr(1.2, 2.4), q(0.4), rnd() < 0.5 ? 6 : 5, rnd(), 1, 0); }
+      for (let j = 0; j < (HOME ? 4 : 9); j++) { const a = rnd() * TAU, r0 = rr(3.5, 6); solid(rnd() < 0.5 ? 26 : 7, x + cos(a) * r0, floorY - 0.3, z + sin(a) * r0, HOME ? rr(0.8, 1.4) : rr(1.2, 2.4), q(0.4), rnd() < 0.5 ? 6 : 5, rnd(), 1, 0); }
       if (!HOME) for (let j = 0; j < 3; j++) ane(x + rr(-0.8, 0.8), h - 0.3, z + rr(-0.8, 0.8), rr(1.4, 1.8), 0, 3);
       ane(x + 5, h2 - 0.25, z + 2.8, 1.6, 0, 5);
       if (!HOME) ledges.slice(0, 3).forEach(([lx, ly, lz, sc], j) => { const a = rnd() * TAU, r0 = sc * 0.3; for (let k = 0; k < 7; k++) ane(lx + cos(a) * r0 + rr(-0.5, 0.5), ly - 0.15 + rr(-0.1, 0.1), lz + sin(a) * r0 + rr(-0.5, 0.5), rr(1.1, 1.5), 2, [1, 4, 2][j], cos(a) * 0.3, sin(a) * 0.3); });
-      for (let j = 0; j < 6; j++) { const a = j / 6 * TAU + rr(-0.3, 0.3), r0 = rr(4.5, 6); solid(8, x + cos(a) * r0, floorY - 0.1, z + sin(a) * r0, rr(2, 3.2), qMul(qFromY(cos(a) * 0.25, 1, sin(a) * 0.25), qAxis(0, 1, 0, a)), 5, rnd(), 1, 0); }
+      for (let j = 0; j < (HOME ? 3 : 6); j++) { const a = j / (HOME ? 3 : 6) * TAU + rr(-0.3, 0.3), r0 = HOME ? rr(7, 8.5) : rr(4.5, 6); solid(8, x + cos(a) * r0, floorY - 0.1, z + sin(a) * r0, rr(2, 3.2), qMul(qFromY(cos(a) * 0.25, 1, sin(a) * 0.25), qAxis(0, 1, 0, a)), 5, rnd(), 1, 0); }
       heads.push([x + 4, floorY + 4, z, 1.3]);
       // clownfish home (user 2026-11-26): the anemones are gathered here instead of spread over the basin floor. A few
       // magnificent clumps on the ledges, carpet anemones in the sand pockets at the foot, bubble-tips in the crevices
@@ -348,15 +348,30 @@ function makeWorld(D, T, flyPts, POSES) {
             const a = rnd() * TAU, f = rr(0.25, 0.42), px = cx + cos(a) * sc * f, pz = cz + sin(a) * sc * f;
             if (nx && hypot(px - nx[0], pz - nx[2]) < nx[3] * 0.5 + 0.5) continue;
             for (let m = 0; m < n; m++) { const b = a + rr(-0.25, 0.25), g = f + rr(-0.06, 0.04), qx = cx + cos(b) * sc * g, qz = cz + sin(b) * sc * g, rr2 = min(0.95, g / 0.5);
-              ane(qx, cy + sc * 0.5 * Math.sqrt(1 - rr2 * rr2) - 0.12, qz, rr(lo, hi), kind, col, cos(b) * rr2 * 0.7, sin(b) * rr2 * 0.7); }
+              ane(qx, cy + sc * 0.5 * Math.sqrt(1 - rr2 * rr2) + 0.02, qz, rr(lo, hi), kind, col, cos(b) * rr2 * 0.7, sin(b) * rr2 * 0.7); }
             return;
           }
         };
         shelf(3, 3, 0, 2, 1.4, 1.7);                     // the summit: a clump of magnificent anemones (violet-pink)
-        shelf(2, 2, 0, 1, 1.3, 1.6); shelf(2, 4, 2, 1, 1.0, 1.3);
-        shelf(1, 3, 0, 0, 1.3, 1.6); shelf(1, 5, 2, 4, 1.0, 1.3);
-        shelf(0, 4, 2, 2, 1.0, 1.3); shelf(0, 2, 0, 3, 1.4, 1.7);
+        shelf(2, 2, 0, 1, 1.3, 1.6); shelf(1, 3, 0, 0, 1.3, 1.6); shelf(0, 2, 0, 3, 1.4, 1.7);
+        // what already stands round the foot (rocks, fans, sponges), so nothing below is placed inside it
+        const blocked = (px, pz, r) => {
+          for (const arr of solids) if (arr) for (let i = 0; i < arr.length; i += 12) if (hypot(arr[i] - px, arr[i + 2] - pz) < arr[i + 3] * 0.55 + r) return true;
+          const c0 = cellOf(px, pz);
+          for (const pr of props) for (const dc of [0, -1, 1, -CELLS, CELLS, -CELLS - 1, -CELLS + 1, CELLS - 1, CELLS + 1]) { const arr = pr[c0 + dc]; if (arr) for (let i = 0; i < arr.length; i += 12) if (hypot(arr[i] - px, arr[i + 2] - pz) < arr[i + 3] * 0.5 + r) return true; }
+          return false;
+        };
+        // bubble-tips in small groups at the foot of the rock, nestled against it (in the real reef: in the cracks)
+        for (const [col, a0] of [[1, 0.9], [4, 2.6], [2, 4.4], [1, 5.6]]) {
+          for (let i = 0, m = 0; i < 300 && m < 4; i++) { const a = a0 + rr(-0.35, 0.35), r0 = rr(2.6, 3.6), ax = x + cos(a) * r0, az = z + sin(a) * r0;
+            if (blocked(ax, az, 0.25) || !onFloor(ax, az)) continue; m++; ane(ax, top(ax, az) - 0.02, az, rr(1.0, 1.3), 2, col, -cos(a) * 0.15, -sin(a) * 0.15); } }
         for (let j = 0; j < 3; j++) { const a = 1.2 + j * 2.1 + rr(-0.3, 0.3), r0 = rr(3.8, 4.6), ax = x + cos(a) * r0, az = z + sin(a) * r0; ane(ax, top(ax, az) - 0.03, az, rr(2.4, 2.9), 1, [0, 2, 1][j]); } // carpets in the sand at the foot
+        // on the open sand a little further out (user 2026-11-26: all five kinds in the home): long-tentacle anemones
+        // alone or in pairs, a small group of tube anemones; kept clear of the rocks round the foot
+        { const sand = [], ok = (px, pz, r) => !sand.some((p) => hypot(p[0] - px, p[1] - pz) < r) && hypot(px - x, pz - z) > 4.6 && !blocked(px, pz, 0.5) && top(px, pz) < floorY + 0.6;
+          for (const [kind, n, lo2, hi2, gap, a0] of [[3, 3, 1.2, 1.5, 1.6, 0.2], [4, 3, 0.8, 1.0, 1.1, 3.4]]) {
+            for (let i = 0, m = 0; i < 800 && m < n; i++) { const a = a0 + rr(-0.9, 0.9), r0 = rr(5, 8), ax = x + cos(a) * r0, az = z + sin(a) * r0;
+              if (!ok(ax, az, gap)) continue; sand.push([ax, az]); m++; ane(ax, top(ax, az) - 0.02, az, rr(lo2, hi2), kind, 1); } } }
       }
     }
     // three parts from south to north: a sand flat by the entrance (tube and long-tentacle anemones, sparse), the main
