@@ -42,6 +42,8 @@ const ANSP = [SPC[10],
   { zh: '地中海珠海葵（海番茄）', la: 'Actinia mediterranea', short: '珠海葵',
     facts: ['只有手心大小：光滑的酒红色身子，粉红色的细触手。受惊或退潮时，触手全缩进去，变成一个红色小圆球，像颗番茄。', '身子顶上藏着一圈钴蓝色的小珠子（领瘤）。碰到挤过来的邻居时，它会鼓起蓝珠去刺对方，抢地盘。', '住在地中海的潮间带岩石上，是冷水海葵。小丑鱼不住在它里面。'] }];
 ANSP[6] = ANSP[5]; // shut into a red dome: the same animal
+ANSP[7] = { zh: '珠光海葵', la: 'Heteractis aurora', short: '珠光海葵',
+  facts: ['每根触手上都有一圈圈白色的"珠子"，像一串串珍珠，所以叫珠光海葵。', '身子埋在沙里，只露出铺满触手的口盘；受惊时整个缩进沙里。', '克氏小丑最爱住它，三点白小鱼也常躲在里面。'] };
 // states
 const S_HOVER = 0, S_HIDE = 1, S_TRAVEL = 2, S_GRAZE = 3, S_POSE = 4, S_CLEAN = 5, S_STALK = 6, S_BURST = 7, S_SLEEP = 8, S_PATROL = 9,
   S_GUARD = 10, S_FORAGE = 11, S_HOLE = 12, S_GONE = 13, S_ATE = 14;
@@ -109,7 +111,7 @@ CLOWNS[4] = { zh: '三斑宅泥鱼（三点白）', short: '三点白', la: 'Das
 function setDasc(i) { VR[i] = 4; LEN[i] = rr(0.18, 0.23); }
 function setClown(i, a, j) {
   const kd = a[4] | 0, col = ((a[4] % 1) * 6) | 0;
-  let v = kd === 2 ? 2 : kd === 0 ? (col === 2 ? 1 : 0) : ((abs(a[0] * 7 + a[2] * 3) | 0) % 2 ? 2 : 0);
+  let v = kd === 2 || kd === 7 ? 2 : kd === 0 ? (col === 2 ? 1 : 0) : ((abs(a[0] * 7 + a[2] * 3) | 0) % 2 ? 2 : 0);
   if (v === 2 && j === 0) v = 3;
   VR[i] = v; if (v === 3) LEN[i] *= 1.2; if (v === 1) LEN[i] *= 0.92;
 }
@@ -243,7 +245,7 @@ function ecoFrame(dtIn) {
   mapStep(); tagStep(); zoneStep(dtIn);
 }
 
-const CROWN = [0.55, 0.16, 0.42, 0.12, 0.45]; // height of each anemone kind's tentacle crown above its base (x size)
+const CROWN = [0.55, 0.16, 0.42, 0.12, 0.45, 0.2, 0.12, 0.08]; // height of each anemone kind's tentacle crown above its base (x size)
 function clown(i, dt) {
   const a = ANE[HM[i]], nx = a[5] || 0, nz = a[6] || 0, ny = sqrt(max(0, 1 - nx * nx - nz * nz)), ax = a[0] + nx * 0.1 * a[3], ay = a[1] + ny * 0.1 * a[3], az = a[2] + nz * 0.1 * a[3], camD = hypot(F[CX] - ax, F[CY] - ay, F[CZ] - az);
   const big = LEN[i] > 0.33 && VR[i] !== 4, dsc = VR[i] === 4, thr = threat(i, 0);
@@ -673,13 +675,13 @@ function zoneStep(dt) {
 // ---------------------------------------------------------------- the card's picture: a real photo of the species
 // The 3D models are coloured for looks; the card shows what the animal really looks like. Photos from Wikimedia Commons
 // (free licences), stored next to the page in photos/ and loaded only when a card opens; the author is credited under it.
-const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "clown1": "Diego Delso · CC BY-SA 4.0", "clown2": "Diego Delso · CC BY-SA 4.0", "dasc": "Diego Delso · CC BY-SA 4.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0", "an5": "Fabrizio P. · CC BY-SA 3.0"}; // photo credits (details and links: SPECIES.md)
+const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "clown1": "Diego Delso · CC BY-SA 4.0", "clown2": "Diego Delso · CC BY-SA 4.0", "dasc": "Diego Delso · CC BY-SA 4.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0", "an5": "Fabrizio P. · CC BY-SA 3.0", "an7": "Diego Delso · CC BY-SA 4.0"}; // photo credits (details and links: SPECIES.md)
 const PKEY = ['clown', 'chromis', 'cleaner', 'parrot', 'idol', 'grouper', 'tang', 'shark', 'moray', 'manta'];
 const cvImg = document.createElement('img'), cvCr = document.createElement('small');
 cvImg.alt = ''; cPic.appendChild(cvImg); cPic.appendChild(cvCr);
 let cvKey = '';
 function cvShow(sp, id) {
-  const k = sp === 10 ? 'an' + min(AN[(id - ANEB) * 8 + 4] | 0, 5) : sp === 0 && VR[id] ? (VR[id] === 4 ? 'dasc' : 'clown' + min(VR[id], 2)) : PKEY[sp], c = PHOTOS[k];
+  const k = sp === 10 ? 'an' + [0, 1, 2, 3, 4, 5, 5, 7][AN[(id - ANEB) * 8 + 4] | 0] : sp === 0 && VR[id] ? (VR[id] === 4 ? 'dasc' : 'clown' + min(VR[id], 2)) : PKEY[sp], c = PHOTOS[k];
   cPic.style.display = c ? 'block' : 'none';
   if (!c || k === cvKey) return;
   cvKey = k; cvImg.src = 'photos/' + k + '.webp'; cvCr.textContent = '照片：' + c;

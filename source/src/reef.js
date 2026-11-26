@@ -18,7 +18,8 @@ function meshTable() {
 // aux: -0.5 for the disc / column, tentacles (seed * 5 + ring) / 127 so each sways on its own (vsAnem). Every tentacle has
 // 5 points (ring 0 at the base .. 4 at the tip). Kinds: 0 magnificent (Heteractis), 1 carpet (Stichodactyla), 2 bubble-tip
 // (Entacmaea), 3 long-tentacle sand anemone (Macrodactyla), 4 tube-dwelling anemone (Cerianthus, a tall tube),
-// 5 Mediterranean beadlet anemone (Actinia) open, 6 the same shut into a red dome
+// 5 Mediterranean beadlet anemone (Actinia) open, 6 the same shut into a red dome (both parked for a future
+// Mediterranean zone), 7 beaded sea anemone (Heteractis aurora)
 function meshAnem(kind, lo) {
   rseed(232 + kind * 7);
   const m = new Mesh();
@@ -129,6 +130,20 @@ function meshAnem(kind, lo) {
     const R = 0.13;
     m.tube([[0, -0.03, 0], [0, 0.003, 0], [0, 0.03, 0], [0, 0.06, 0], [0, 0.085, 0], [0, 0.1, 0], [0, 0.108, 0]], (k) => R * [1.2, 1.16, 1.06, 0.98, 0.8, 0.45, 0.12][k], lo ? 12 : 28, false, () => -0.5);
     disc(R * 0.12, 0.108, -0.01, 0, 1, lo ? 12 : 28);
+  } else if (kind === 7) {
+    // beaded sea anemone (Heteractis aurora; refs: beaded-anemone/LOOKS.md): the column buried in sand, only a flat, slightly
+    // sunken purple disc shows, packed with short, thick tentacles that curl; each is a string of white beads on a dark
+    // brown stalk. The beads are painted (fsAnem), not modelled: ~17k triangles near (performance budget, critic F)
+    const R = 0.3;
+    disc(R * 1.05, -0.005, -0.03, 0.08, 4, lo ? 16 : 32);
+    const TP = lo ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1];
+    tent(lo ? 70 : 260, (i, n) => {
+      const [a, r] = spiral(i, n, R * 0.97), f = r / R, x = cos(a) * r, z = sin(a) * r, y = -0.03 * (1 - f * f) + 0.004;
+      const L = rr(0.045, 0.07) * (0.85 + 0.3 * f), tilt = min(1.0, 0.1 + 0.85 * f + rr(-0.2, 0.2)), bend = rr(1.0, 2.6), side = rr(-1.4, 1.4);
+      const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
+      return { r: rr(0.012, 0.015) * (lo ? 1.4 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t + 0.5 * bend * cos(tilt) * L * t * t, h = cos(tilt) * L * t - 0.5 * bend * sin(tilt) * L * t * t, c = side * L * t * t;
+        return [x + ox * o + tx * c, y + max(h, -0.02 - y), z + oz * o + tz * c]; }) };
+    }, (t) => 1 - 0.25 * t, lo ? 4 : 5); // thick, blunt, curling
   } else {
     // tube-dwelling: a tall leathery tube, an outer crown of long drooping tentacles and an inner ring of short ones
     const H = 0.55, Rt = 0.065, ns = lo ? 8 : 12;

@@ -1280,13 +1280,13 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     let v = round(i.n.w * 127.); let q = v - 16. * floor(v / 16.); let sd = floor(v / 16.) + i.b.x * 7. + hsh * 31.;
     a = q / 15.;   // position along the tentacle, 0 root .. 1 tip
     // sway and pivot by kind: carpet barely moves, long thin tentacles swing more; a tube anemone closes toward its tube top
-    let amp = array<f32, 7>(1., .35, .8, 2.2, 1.8, .9, 0.)[u32(kind)]; let py = select(select(.06, .5, kind > 3.5), .13, kind > 4.5);
+    let amp = array<f32, 8>(1., .35, .8, 2.2, 1.8, .9, 0., .5)[u32(kind)]; let py = select(select(.06, .5, kind > 3.5), .13, kind > 4.5);
     let sw = a * a * amp; let ph = sd * 2.39996;
     let shrink = 1. - i.b.y * .4 * a;
     l = vec3f(l.x * mix(1., .9, i.b.y * a), (l.y - py) * shrink + py, l.z * mix(1., .9, i.b.y * a));
     // the garden's current: all tentacles lean downstream together (more toward the tips) and breathe with slow surges,
     // like anemones in a reef current or an aquarium's pump flow; each tentacle then adds only a small sway of its own
-    let lean = array<f32, 7>(.14, .07, .18, .1, .14, .1, 0.)[u32(kind)] * a * a * (.75 + .25 * sin(t * .45 + i.a.x * .15 + i.a.z * .1) + .08 * sin(t * 1.3 + sd));
+    let lean = array<f32, 8>(.14, .07, .18, .1, .14, .1, 0., .06)[u32(kind)] * a * a * (.75 + .25 * sin(t * .45 + i.a.x * .15 + i.a.z * .1) + .08 * sin(t * 1.3 + sd));
     var ln = lean;
     l.x += ln * .86; l.z += ln * .51; l.y -= ln * .35;
     let cv = a * a * .035 * sin(sd * 1.7 + a * 3.); l.x += cv * -.51; l.z += cv * .86;   // each tentacle curls a little its own way
@@ -1327,13 +1327,14 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   var CT = array<vec3f, 6>(vec3f(.43, .62, 1.), vec3f(1., .72, .55), vec3f(.7, .55, 1.), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
   var B = CB[k]; var M = CM[k]; var T = CT[k];
     if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
-  let act = kind > 4.5; // beadlet anemone (5 open, 6 shut): coral-red roots, pink shafts, pale pink-white tips
+  let act = kind > 4.5 && kind < 6.5; let aur = kind > 6.5; // beadlet anemone (5 open, 6 shut): coral-red roots, pink shafts, pale pink-white tips
   if (act) { B = vec3f(.75, .1, .16); M = vec3f(1., .38, .55); T = vec3f(1., .82, .88); }
   var tip = ss(.72, .98, i.aux);
   if (kind == 1.) { tip = ss(.9, 1., i.aux) * .7; }
   if (kind == 2.) { tip = ss(.88, 1., i.aux); }
   if (kind == 0.) { tip = ss(.45, 1., i.aux); }
-  if (act) { tip = ss(.55, 1., i.aux); } // magnificent: salmon-pink shafts fade slowly into lavender tips // bubble-tip: only the bulb end is pale // carpet: only the very tip is a pale dot // the violet form fades into coral over half its length
+  if (act) { tip = ss(.55, 1., i.aux); }
+  if (aur) { B = vec3f(.11, .05, .03); M = vec3f(.2, .1, .05); T = vec3f(.66, .62, .52); tip = 0.; } // magnificent: salmon-pink shafts fade slowly into lavender tips // bubble-tip: only the bulb end is pale // carpet: only the very tip is a pale dot // the violet form fades into coral over half its length
   var alb = mix(B, M, ss(0., .55, i.aux));
   if (kind == 4.) { alb = mix(alb, M * .35, step(.5, fract(i.aux * 3.5)) * .6); }  // tube: banded tentacles
   if (kind == 1.) { alb = mix(B, M, .25 + .75 * ss(0., .6, i.aux)); // carpet: violet roots, blue body; patches drift from cyan to violet
@@ -1349,6 +1350,10 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let col0 = (kind == 0. || act) && i.aux < -.45; // the magnificent's satiny column: a deep, saturated red-violet of its own
   if (col0 && kind == 0.) { alb = vec3f(.5, .015, .05) * mix(.55, 1., ss(-.04, .3, i.op.y)); } // deep wine red, darker toward the rock
   if (kind == 0. && i.aux < 0. && !col0) { alb = vec3f(.9, .55, .2) * .6; } // its oral disc and mouth: orange-yellow
+  if (aur) { // beaded anemone: grey-brown stalks ringed by white beads; a purple disc with pale radial lines between them
+    if (i.aux >= 0.) { let bd = ss(.24, .14, abs(fract(i.aux * 9. + .5) - .5)); alb = mix(mix(B, M, ss(0., .5, i.aux)), T, bd); tip = 0.; } // 9 beads per tentacle, soft-edged
+    else { let an = atan2(i.op.z, i.op.x); alb = mix(vec3f(.3, .12, .38), vec3f(.55, .42, .62), ss(.6, .95, sin(an * 40.)) * .4); }
+  }
   if (act && i.aux < 0.) { // beadlet: glossy wine-red column, a thin blue line round the foot, a ring of cobalt beads (acrorhagi) at the top edge
     let ar = length(i.op.xz); let an = atan2(i.op.z, i.op.x);
     alb = vec3f(.5, .02, .06) * mix(.6, 1., ss(-.02, .08, i.op.y));
@@ -1387,7 +1392,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     let nv = sat(dot(nb, V));
     var occ = mix(select(.22, .08, kind == 1.), 1., ss(0., .6, a0));
     if (col0) { occ = .9; }                           // deep inside the crown it is darker
-    if (kind != 1. && !col0) { occ *= mix(.35, 1., ss(0., .8, i.op.y / select(select(.45, .5, kind == 2.), .3, act))); } // lower tentacles sit in the shade of the upper ones
+    if (kind != 1. && !col0) { occ *= mix(.35, 1., ss(0., .8, i.op.y / select(select(select(.45, .5, kind == 2.), .3, act), .07, aur))); } // lower tentacles sit in the shade of the upper ones
     let VI = vec3f(.20, .26, 1.);                                       // the blue of the reef light
     let vk = array<f32, 6>(1., .25, 1.4, 1., 1., 1.)[k];
     let kb = array<f32, 6>(1., .5, .6, 1., 1., 1.)[k];             // warm colours sit much closer to white on screen: less light
@@ -1403,7 +1408,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     let trans = TR * thin * thin * (1. - key) * (.25 + .75 * sat(dot(-V, Ld) * .5 + .5)) * .35 * step(0., i.aux);
     let blue = VI * vk * wrap * (1. - key) * select(select(.45, .2, k == 1u), .06, col0); // blue only where the key light is absent
     // sheen (like a stocking or velvet): the edges of each tentacle, seen at a grazing angle, turn pale; the middle keeps its colour
-    let shK = array<f32, 7>(.0, 0., .55, .2, .2, .3, 0.)[u32(kind)] * step(0., i.aux);
+    let shK = array<f32, 8>(.0, 0., .55, .2, .2, .3, 0., 0.)[u32(kind)] * step(0., i.aux);
     let sheen = mix(alb, vec3f(1., .95, .9), .6) * kb * pow(1. - nv, 1.6) * (.25 + .75 * wrap) * shK * 2.2;
     // the carpet's beads catch the reef light: a bright little highlight on each one makes them read as vivid, not grey
     let bead = select(0., 1., kind == 1.) * tip * pow(sat(dot(nb, normalize(Ld + V))), 12.) * .9 * vec3f(.45, .85, 1.);
@@ -2418,7 +2423,8 @@ function meshTable() {
 // aux: -0.5 for the disc / column, tentacles (seed * 5 + ring) / 127 so each sways on its own (vsAnem). Every tentacle has
 // 5 points (ring 0 at the base .. 4 at the tip). Kinds: 0 magnificent (Heteractis), 1 carpet (Stichodactyla), 2 bubble-tip
 // (Entacmaea), 3 long-tentacle sand anemone (Macrodactyla), 4 tube-dwelling anemone (Cerianthus, a tall tube),
-// 5 Mediterranean beadlet anemone (Actinia) open, 6 the same shut into a red dome
+// 5 Mediterranean beadlet anemone (Actinia) open, 6 the same shut into a red dome (both parked for a future
+// Mediterranean zone), 7 beaded sea anemone (Heteractis aurora)
 function meshAnem(kind, lo) {
   rseed(232 + kind * 7);
   const m = new Mesh();
@@ -2529,6 +2535,20 @@ function meshAnem(kind, lo) {
     const R = 0.13;
     m.tube([[0, -0.03, 0], [0, 0.003, 0], [0, 0.03, 0], [0, 0.06, 0], [0, 0.085, 0], [0, 0.1, 0], [0, 0.108, 0]], (k) => R * [1.2, 1.16, 1.06, 0.98, 0.8, 0.45, 0.12][k], lo ? 12 : 28, false, () => -0.5);
     disc(R * 0.12, 0.108, -0.01, 0, 1, lo ? 12 : 28);
+  } else if (kind === 7) {
+    // beaded sea anemone (Heteractis aurora; refs: beaded-anemone/LOOKS.md): the column buried in sand, only a flat, slightly
+    // sunken purple disc shows, packed with short, thick tentacles that curl; each is a string of white beads on a dark
+    // brown stalk. The beads are painted (fsAnem), not modelled: ~17k triangles near (performance budget, critic F)
+    const R = 0.3;
+    disc(R * 1.05, -0.005, -0.03, 0.08, 4, lo ? 16 : 32);
+    const TP = lo ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1];
+    tent(lo ? 70 : 260, (i, n) => {
+      const [a, r] = spiral(i, n, R * 0.97), f = r / R, x = cos(a) * r, z = sin(a) * r, y = -0.03 * (1 - f * f) + 0.004;
+      const L = rr(0.045, 0.07) * (0.85 + 0.3 * f), tilt = min(1.0, 0.1 + 0.85 * f + rr(-0.2, 0.2)), bend = rr(1.0, 2.6), side = rr(-1.4, 1.4);
+      const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
+      return { r: rr(0.012, 0.015) * (lo ? 1.4 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t + 0.5 * bend * cos(tilt) * L * t * t, h = cos(tilt) * L * t - 0.5 * bend * sin(tilt) * L * t * t, c = side * L * t * t;
+        return [x + ox * o + tx * c, y + max(h, -0.02 - y), z + oz * o + tz * c]; }) };
+    }, (t) => 1 - 0.25 * t, lo ? 4 : 5); // thick, blunt, curling
   } else {
     // tube-dwelling: a tall leathery tube, an outer crown of long drooping tentacles and an inner ring of short ones
     const H = 0.55, Rt = 0.065, ns = lo ? 8 : 12;
@@ -2900,7 +2920,7 @@ const meshes = [meshChunk(1, 3), meshChunk(7, 3), meshChunk(13, 3), meshChunk(22
 meshes.push(meshFluke(), meshShip().build(), meshManta().build(), meshFish().build(),
   meshChunk(3).build(), meshChunk(11).build(), meshChunk(29).build(), meshChunk(5, 3).build(), meshChunk(17, 3).build(), meshChunk(41, 3).build(), meshChunk(9, 1).build(), meshCoral(0, 1).build(), meshCoral(1, 1).build(), meshChunk(5, 2, 1).build(), meshChunk(17, 2, 1).build(), meshChunk(41, 2, 1).build(),
   meshBrain().build(), meshTable().build(), meshReefFish().build(), meshShark().build(), meshEel().build(), meshAnem(0, 0).build());
-for (let j = 1; j < 14; j++) meshes.push(meshAnem(j >> 1, j & 1).build()); // anemone kind k, far f: mesh 31 + k * 2 + f
+for (let j = 1; j < 16; j++) meshes.push(meshAnem(j >> 1, j & 1).build()); // anemone kind k, far f: mesh 31 + k * 2 + f
 let nV = 0, nI = 0;
 for (const m of meshes) { m.v0 = nV; m.i0 = nI; nV += m.nv; nI += m.ib.length; }
 const allV = new Uint8Array(nV * 16), allI = new Uint32Array(nI);
@@ -2918,11 +2938,11 @@ const nFish = Wd.fish.length / 8, nManta = Wd.mantas.length / 8, nBub = Wd.bubbl
 const MANTA = meshes[12], FISH = meshes[13];
 // the reef animals (eco.js) write their instances here every frame: fish, then sharks, then eels; 8 floats each
 const NA = 470, EB = new Float32Array(8 * NA), ibEco = device.createBuffer({ size: EB.byteLength, usage: BU.VERTEX | BU.COPY_DST });
-const AN = new Float32Array(8 * 256), ANd = new Float32Array(8 * 256), ANC = new Int32Array(15), ibAnem = device.createBuffer({ size: AN.byteLength, usage: BU.VERTEX | BU.COPY_DST });
+const AN = new Float32Array(8 * 256), ANd = new Float32Array(8 * 256), ANC = new Int32Array(17), ibAnem = device.createBuffer({ size: AN.byteLength, usage: BU.VERTEX | BU.COPY_DST });
 // anemones sorted for drawing: by kind, the near ones (full tentacles) then the far ones (a quarter, fatter); none past the fog
 function anemSort() {
   let o = 0;
-  for (let j = 0; j < 14; j++) {
+  for (let j = 0; j < 16; j++) {
     ANC[j] = o;
     for (let k = 0; k < nAnem; k++) {
       const b = k * 8, kind = AN[b + 4] | 0, d = hypot(AN[b] - F[CX], AN[b + 1] - F[CY], AN[b + 2] - F[CZ]);
@@ -2931,7 +2951,7 @@ function anemSort() {
       o++;
     }
   }
-  ANC[14] = o;
+  ANC[16] = o;
 }
 let NEARK = [1, 0.6, 0.35][LV] ?? 1; // how far out anemones get their detailed mesh: shrinks with the quality setting
 let TANK = 0; // dev test tank: > 0 draws only the anemones from this index on and a bare floor (dev.js tank())
@@ -3135,8 +3155,8 @@ function render() {
     if (nEcoE && !TANK) r.drawIndexed(meshes[30].ib.length, nEcoE, meshes[30].i0, meshes[30].v0, nEcoF + nEcoS);
   }
   if (nAnem) {
-    anemSort(); Q.writeBuffer(ibAnem, 0, ANd, 0, ANC[14] * 8); r.setPipeline(pAnem); r.setVertexBuffer(1, ibAnem);
-    for (let j = 0; j < 14; j++) { const n = ANC[j + 1] - ANC[j], M = meshes[31 + j]; if (n) r.drawIndexed(M.ib.length, n, M.i0, M.v0, ANC[j]); }
+    anemSort(); Q.writeBuffer(ibAnem, 0, ANd, 0, ANC[16] * 8); r.setPipeline(pAnem); r.setVertexBuffer(1, ibAnem);
+    for (let j = 0; j < 16; j++) { const n = ANC[j + 1] - ANC[j], M = meshes[31 + j]; if (n) r.drawIndexed(M.ib.length, n, M.i0, M.v0, ANC[j]); }
   }
   // kelp and plants: 9-row blades up close, 5 rows mid-range, a decimated set far away
   if (!TANK) {
@@ -3357,6 +3377,8 @@ const ANSP = [SPC[10],
   { zh: '地中海珠海葵（海番茄）', la: 'Actinia mediterranea', short: '珠海葵',
     facts: ['只有手心大小：光滑的酒红色身子，粉红色的细触手。受惊或退潮时，触手全缩进去，变成一个红色小圆球，像颗番茄。', '身子顶上藏着一圈钴蓝色的小珠子（领瘤）。碰到挤过来的邻居时，它会鼓起蓝珠去刺对方，抢地盘。', '住在地中海的潮间带岩石上，是冷水海葵。小丑鱼不住在它里面。'] }];
 ANSP[6] = ANSP[5]; // shut into a red dome: the same animal
+ANSP[7] = { zh: '珠光海葵', la: 'Heteractis aurora', short: '珠光海葵',
+  facts: ['每根触手上都有一圈圈白色的"珠子"，像一串串珍珠，所以叫珠光海葵。', '身子埋在沙里，只露出铺满触手的口盘；受惊时整个缩进沙里。', '克氏小丑最爱住它，三点白小鱼也常躲在里面。'] };
 // states
 const S_HOVER = 0, S_HIDE = 1, S_TRAVEL = 2, S_GRAZE = 3, S_POSE = 4, S_CLEAN = 5, S_STALK = 6, S_BURST = 7, S_SLEEP = 8, S_PATROL = 9,
   S_GUARD = 10, S_FORAGE = 11, S_HOLE = 12, S_GONE = 13, S_ATE = 14;
@@ -3424,7 +3446,7 @@ CLOWNS[4] = { zh: '三斑宅泥鱼（三点白）', short: '三点白', la: 'Das
 function setDasc(i) { VR[i] = 4; LEN[i] = rr(0.18, 0.23); }
 function setClown(i, a, j) {
   const kd = a[4] | 0, col = ((a[4] % 1) * 6) | 0;
-  let v = kd === 2 ? 2 : kd === 0 ? (col === 2 ? 1 : 0) : ((abs(a[0] * 7 + a[2] * 3) | 0) % 2 ? 2 : 0);
+  let v = kd === 2 || kd === 7 ? 2 : kd === 0 ? (col === 2 ? 1 : 0) : ((abs(a[0] * 7 + a[2] * 3) | 0) % 2 ? 2 : 0);
   if (v === 2 && j === 0) v = 3;
   VR[i] = v; if (v === 3) LEN[i] *= 1.2; if (v === 1) LEN[i] *= 0.92;
 }
@@ -3558,7 +3580,7 @@ function ecoFrame(dtIn) {
   mapStep(); tagStep(); zoneStep(dtIn);
 }
 
-const CROWN = [0.55, 0.16, 0.42, 0.12, 0.45]; // height of each anemone kind's tentacle crown above its base (x size)
+const CROWN = [0.55, 0.16, 0.42, 0.12, 0.45, 0.2, 0.12, 0.08]; // height of each anemone kind's tentacle crown above its base (x size)
 function clown(i, dt) {
   const a = ANE[HM[i]], nx = a[5] || 0, nz = a[6] || 0, ny = sqrt(max(0, 1 - nx * nx - nz * nz)), ax = a[0] + nx * 0.1 * a[3], ay = a[1] + ny * 0.1 * a[3], az = a[2] + nz * 0.1 * a[3], camD = hypot(F[CX] - ax, F[CY] - ay, F[CZ] - az);
   const big = LEN[i] > 0.33 && VR[i] !== 4, dsc = VR[i] === 4, thr = threat(i, 0);
@@ -3988,13 +4010,13 @@ function zoneStep(dt) {
 // ---------------------------------------------------------------- the card's picture: a real photo of the species
 // The 3D models are coloured for looks; the card shows what the animal really looks like. Photos from Wikimedia Commons
 // (free licences), stored next to the page in photos/ and loaded only when a card opens; the author is credited under it.
-const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "clown1": "Diego Delso · CC BY-SA 4.0", "clown2": "Diego Delso · CC BY-SA 4.0", "dasc": "Diego Delso · CC BY-SA 4.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0", "an5": "Fabrizio P. · CC BY-SA 3.0"}; // photo credits (details and links: SPECIES.md)
+const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "clown1": "Diego Delso · CC BY-SA 4.0", "clown2": "Diego Delso · CC BY-SA 4.0", "dasc": "Diego Delso · CC BY-SA 4.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0", "an5": "Fabrizio P. · CC BY-SA 3.0", "an7": "Diego Delso · CC BY-SA 4.0"}; // photo credits (details and links: SPECIES.md)
 const PKEY = ['clown', 'chromis', 'cleaner', 'parrot', 'idol', 'grouper', 'tang', 'shark', 'moray', 'manta'];
 const cvImg = document.createElement('img'), cvCr = document.createElement('small');
 cvImg.alt = ''; cPic.appendChild(cvImg); cPic.appendChild(cvCr);
 let cvKey = '';
 function cvShow(sp, id) {
-  const k = sp === 10 ? 'an' + min(AN[(id - ANEB) * 8 + 4] | 0, 5) : sp === 0 && VR[id] ? (VR[id] === 4 ? 'dasc' : 'clown' + min(VR[id], 2)) : PKEY[sp], c = PHOTOS[k];
+  const k = sp === 10 ? 'an' + [0, 1, 2, 3, 4, 5, 5, 7][AN[(id - ANEB) * 8 + 4] | 0] : sp === 0 && VR[id] ? (VR[id] === 4 ? 'dasc' : 'clown' + min(VR[id], 2)) : PKEY[sp], c = PHOTOS[k];
   cPic.style.display = c ? 'block' : 'none';
   if (!c || k === cvKey) return;
   cvKey = k; cvImg.src = 'photos/' + k + '.webp'; cvCr.textContent = '照片：' + c;
@@ -4140,8 +4162,11 @@ function tank(x = 3, z = 31, cols = [[1, 0, 1.6], [2, 1, 1.4], [0, 2, 1.3]], s =
     if (kd === 0) for (let i = 0, m = 0; i < nA && m < 5; i++) if (SP[i] === 0 && !FROZ[i] && !(i in tank.used)) { tank.used[i] = 1; HM[i] = nAnem; setDasc(i); P[i * 3] = TG[i * 3] = hx + rr(-0.45, 0.45) * a[3]; P[i * 3 + 1] = TG[i * 3 + 1] = a[1] + (0.6 + rr(0.05, 0.3)) * a[3]; P[i * 3 + 2] = TG[i * 3 + 2] = hz + rr(-0.45, 0.45) * a[3]; m++; } // already in place: the headless renders run too few frames for them to swim there
     nAnem++;
   });
-  // in front: a little group of Mediterranean beadlet anemones, two open and one shut (kind 5/6)
-  [[5, 1.5, -0.35, -1.3], [5, 1.2, 0.3, -1.45], [6, 1.3, 0.0, -1.05]].forEach(([kd, sz, dx, dz]) => { const hx = x + dx * s, hz = z + dz * s, a = [hx, floorAt(hx, hz), hz, s * sz, kd + 5.5 / 6, 0, 0]; ANE[nAnem] = a; AN.set([a[0], a[1], a[2], a[3], a[4], 0, 0, 0], nAnem * 8); nAnem++; });
+  // in front: the newest sample, a beaded sea anemone (kind 7) with a pair of Clark's clownfish
+  // (the parked Mediterranean beadlets, kinds 5/6: tank.extra = [[5, 1.5, -0.35, -1.3], [6, 1.3, 0.3, -1.3]])
+  (tank.extra || [[7, 1.2, 0, -1.3]]).forEach(([kd, sz, dx, dz]) => { const hx = x + dx * s, hz = z + dz * s, a = [hx, floorAt(hx, hz), hz, s * sz, kd + 0.5 / 6, 0, 0]; ANE[nAnem] = a; AN.set([a[0], a[1], a[2], a[3], a[4], 0, 0, 0], nAnem * 8);
+    if (kd === 7) for (let i = 0, m = 0; i < nA && m < 2; i++) if (SP[i] === 0 && !FROZ[i] && !(i in tank.used)) { tank.used[i] = 1; HM[i] = nAnem; setClown(i, a, m); P[i * 3] = TG[i * 3] = hx + rr(-0.2, 0.2); P[i * 3 + 1] = TG[i * 3 + 1] = a[1] + 0.15 * s; P[i * 3 + 2] = TG[i * 3 + 2] = hz + rr(-0.2, 0.2); m++; }
+    nAnem++; });
   return 'tank at ' + [x, z] + ', ' + cols.length + ' anemones, ' + c + ' clownfish';
 }
 tank.used = {};
@@ -4154,7 +4179,7 @@ function lineup(x, y, z, vrs = [0, 1, 2, 3], gap = 0.9) {
 window.__dev = { lookAt, F, POSES, tank, VR, lineup, TG, HM, set tankOff(v) { TANK = 0; }, set nearK(v) { NEARK = v; }, set gn(v) { GNITE = v; }, get menu() { return menu; }, go: () => ui(false), setHour: (h) => { HOUR = h; }, P, SP, ST, LEN, Hd, get nA() { return nA; }, follow, camTo, unfollow, get fol() { return fol; }, ANE, HEADS, STA, HOL, AN, get counts() { return [nEcoF, nEcoS, nEcoE, nAnem, nA]; }, floorAt, rockAt };
 // dev.html?tank opens straight at the three hero anemones (test tank), close up, for reviewing the look
 if (/tank/.test(location.search)) { const tw = setInterval(() => { if (!nAnem || !window.__dev) return; clearInterval(tw);
-  NEARK = 1; tank(); const n = nAnem, h = [n - 6, n - 5, n - 4].map((k) => [AN[k * 8], AN[k * 8 + 1], AN[k * 8 + 2], AN[k * 8 + 3]])[1];
+  NEARK = 1; tank(); const n = nAnem, h = [n - 4, n - 3, n - 2].map((k) => [AN[k * 8], AN[k * 8 + 1], AN[k * 8 + 2], AN[k * 8 + 3]])[1];
   lookAt(h[0], h[1] + 1.6, h[2] - 3.6, h[0], h[1] + 0.3, h[2]);
 }, 500); }
 
