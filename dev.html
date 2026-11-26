@@ -1308,6 +1308,13 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let col0 = kind == 0. && i.aux < -.45; // the magnificent's satiny column: a deep, saturated red-violet of its own
   if (col0) { alb = vec3f(.5, .015, .05) * mix(.55, 1., ss(-.04, .3, i.op.y)); } // deep wine red, darker toward the rock
   if (kind == 0. && i.aux < 0. && !col0) { alb = vec3f(.9, .55, .2) * .6; } // its oral disc and mouth: orange-yellow
+  let fq = length(fwidth(i.op)) * 90.; // how big one pile cell is on screen (computed outside any branch)
+  if (kind == 1. && i.aux < 0. && length(i.op.xz) > .08) { // carpet: the disc under the tentacles is painted as a dense pile of short tentacle ends (no bare surface)
+    let ny = abs(n.y); let q = select(vec2f(atan2(i.op.z, i.op.x) * 9., i.op.y * 90.), i.op.xz * 90., ny > .5);
+    let cl = floor(q); let h = fract(sin(dot(cl, vec2f(12.9898, 78.233))) * 43758.5); let d = length(fract(q) - .5 - (h - .5) * .3);
+    let dt0 = ss(.36, .12, d) * step(.3, h) * (.5 + .5 * h) * ss(.04, .25, fq); // irregular; fades out up close, where the real tentacles take over
+    alb = mix(vec3f(.04, .2, .9) * .45 * (.7 + .6 * h), vec3f(.43, .62, 1.) * .8, dt0 * .6) * (1. - .35 * ss(.4, .5, d) * ss(.04, .25, fq));
+    tip = dt0 * .6; }
   // tissue pattern: darker stripes along the bubble-tip's tentacles, soft mottling on the magnificent's
   let stp = .5 + .5 * sin(phi * select(6., 8., kind == 2.));
   if (kind == 2. && okT) { alb *= 1. - .35 * ss(.35, .9, stp) * (1. - tip); }
