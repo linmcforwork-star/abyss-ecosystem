@@ -843,13 +843,14 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let k = u32(fract(i.sp.x) * 6.) % 6u; let kind = floor(i.sp.x);
   //                              blue                  peach-orange           violet-pink           golden                green                 rose-red
   var CB = array<vec3f, 6>(vec3f(.06, .07, .5), vec3f(.40, .12, .08), vec3f(.40, .15, .55), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
-  var CM = array<vec3f, 6>(vec3f(.03, .22, 1.), vec3f(1., .5, .25), vec3f(1., .36, .26), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
+  var CM = array<vec3f, 6>(vec3f(.03, .22, 1.), vec3f(1., .5, .25), vec3f(1., .33, .33), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
   var CT = array<vec3f, 6>(vec3f(.43, .62, 1.), vec3f(1., .72, .55), vec3f(.7, .55, 1.), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
   var B = CB[k]; var M = CM[k]; var T = CT[k];
     if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
   var tip = ss(.72, .98, i.aux);
   if (kind == 1.) { tip = ss(.9, 1., i.aux) * .7; }
-  if (kind == 2.) { tip = ss(.88, 1., i.aux); } // bubble-tip: only the bulb end is pale // carpet: only the very tip is a pale dot // the violet form fades into coral over half its length
+  if (kind == 2.) { tip = ss(.88, 1., i.aux); }
+  if (kind == 0.) { tip = ss(.45, 1., i.aux); } // magnificent: salmon-pink shafts fade slowly into lavender tips // bubble-tip: only the bulb end is pale // carpet: only the very tip is a pale dot // the violet form fades into coral over half its length
   var alb = mix(B, M, ss(0., .55, i.aux));
   if (kind == 4.) { alb = mix(alb, M * .35, step(.5, fract(i.aux * 3.5)) * .6); }  // tube: banded tentacles
   if (kind == 1.) { alb = mix(B, M, .25 + .75 * ss(0., .6, i.aux)); // carpet: violet roots, blue body; patches drift from cyan to violet
@@ -861,9 +862,9 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     alb = mix(alb * (1. - .5 * vf), vec3f(.28, .08, .45) * .6, .35 * vf);
     if (i.aux < 0. && rf < .12) { alb = vec3f(.55, .6, .35) * .5; } }              // carpet: one strong colour all over
   alb = mix(alb, T, tip * .7);
-  if (i.aux < 0.) { alb = select(select(B * 1.2, B * .5 + M * .12, kind == 1.), vec3f(.12, .09, .07), kind == 4.); } // disc / column
+  if (i.aux < 0.) { alb = select(select(B * 1.2, B * .6 + M * .3, kind == 1.), vec3f(.12, .09, .07), kind == 4.); } // disc / column
   let col0 = kind == 0. && i.aux < -.45; // the magnificent's satiny column: a deep, saturated red-violet of its own
-  if (col0) { alb = vec3f(.5, .015, .035); }
+  if (col0) { alb = vec3f(.5, .015, .05) * mix(.55, 1., ss(-.04, .3, i.op.y)); } // deep wine red, darker toward the rock
   if (kind == 0. && i.aux < 0. && !col0) { alb = vec3f(.9, .55, .2) * .6; } // its oral disc and mouth: orange-yellow
   // tissue pattern: darker stripes along the bubble-tip's tentacles, soft mottling on the magnificent's
   let stp = .5 + .5 * sin(phi * select(6., 8., kind == 2.));
@@ -918,7 +919,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   // their own light: a little in the saturated body, much more at the tips; stronger at night
   let gl = (.5 + .5 * g.mis.w) * (1. - .85 * nite());
   if (i.aux >= 0.) { c += M * ss(.2, .7, i.aux) * .14 * gl + T * tip * (.55 + .35 * (1. - g.mis.w)) * gl; }
-  if (kind == 1. && i.aux >= 0.) { c += T * tip * .12 * nite(); } // carpet beads: a faint fluorescence
+  // (carpet beads: no glow of their own; the bead highlight does the work) // carpet beads: a faint fluorescence
   { c = max(c, vec3f(0.)); let m0 = max(max(c.r, max(c.g, c.b)), 1e-4); c = mix(c, m0 * pow(c / m0, vec3f(1.5)), nite()); } // night: richer colour (the screen's gamma washes thin colours to pastel)
   { let mx = max(c.r, max(c.g, c.b)); c *= mix(1. / (1. + 2. * max(mx - .3, 0.)), 1. / (1. + .8 * max(mx - .5, 0.)), nite()); } // a soft roll-off that keeps light and dark apart // never burn out to white (night exposure is ~2.6x)
   return fin(fog(c, i.wp, z));
@@ -1117,7 +1118,7 @@ fn sat3(x: vec3f) -> vec3f { return clamp(x, vec3f(0.), vec3f(1.)); }
     c += beam(rv / rl, zf * rl);
   }
   let bl = textureSampleLevel(tB, sC, uv, 0.).rgb;
-  c = mix(c, bl, .06) + bl * .03;
+  c = mix(c, bl, .06 * (1. - .6 * nite())) + bl * .03 * (1. - .6 * nite()); // less bloom at night: anemones are lit, they don't glow
   c *= g.mis.x;
   let q = uv - .5;
   let nt = nite();

@@ -43,17 +43,17 @@ function meshAnem(kind, lo) {
     // rounded drum, about half as tall as wide; on top a disc with a few broad waves whose rim turns up; finger tentacles
     // cover the disc, the inner ones stand up, the rim ones lean out and droop over the column's edge
     const R = 0.4, H = 0.38, WV = 0.35;
-    m.tube([[0, -0.04, 0], [0, H * 0.3, 0], [0, H * 0.65, 0], [0, H * 0.9, 0], [0, H, 0]], (k) => R * [0.8, 0.9, 0.97, 1.02, 0.98][k], lo ? 14 : 28, false, () => -0.5);
+    m.tube([[0, -0.04, 0], [0, H * 0.3, 0], [0, H * 0.65, 0], [0, H * 0.9, 0], [0, H, 0]], (k) => R * [0.7, 0.98, 1.08, 1.02, 0.94][k], lo ? 14 : 28, false, () => -0.5);
     const top = (a, f) => H + 0.02 + 0.05 * f * f * f * (1 + sin(a * 5 + 0.6)) ;   // the rim turns up in 5 broad waves
     { const nr = 6, ns = lo ? 28 : 56, rows = [];
       for (let r = 0; r <= nr; r++) { const row = [], f = r / nr; for (let k = 0; k < ns; k++) { const a = k / ns * TAU, rq = R * 0.95 * f; row.push(m.v(cos(a) * rq, top(a, f), sin(a) * rq, -0.4)); } rows.push(row); }
       for (let r = 0; r < nr; r++) for (let k = 0; k < ns; k++) { const k2 = (k + 1) % ns; m.quad(rows[r][k2], rows[r][k], rows[r + 1][k], rows[r + 1][k2]); } }
     const TP = lo ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1];
-    tent(lo ? 220 : 950, (i, n) => {
+    tent(lo ? 280 : 1300, (i, n) => {
       const a = i * 2.39996 + rr(-0.1, 0.1), f = min(1, 0.15 + 0.85 * sqrt((i + 0.5) / n)), rq = R * 0.95 * f, x = cos(a) * rq, z = sin(a) * rq, y = top(a, f);
-      const tilt = 0.05 + 1.1 * Math.pow(f, 2) + rr(-0.1, 0.1), L = rr(0.18, 0.26) * (1.35 - 0.45 * f), ph = rr(0, 6.3), w = rr(0.02, 0.04), droop = 0.9 * Math.pow(f, 3);
+      const tilt = 0.05 + 1.1 * Math.pow(f, 2) + rr(-0.1, 0.1), L = rr(0.18, 0.26) * (1.35 - 0.45 * f), ph = rr(0, 6.3), w = rr(0.02, 0.04), droop = 0.9 * Math.pow(f, 3), bend = rr(0.4, 1.0) * (0.4 + 0.6 * f);
       const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
-      return { r: rr(0.012, 0.016) * (lo ? 1.5 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t, h = cos(tilt) * L * t - droop * L * t * t, c = w * sin(t * 3.5 + ph) * t, ld = 0.1 * L * t * t;
+      return { r: rr(0.009, 0.012) * (lo ? 1.5 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t + 0.5 * bend * cos(tilt) * L * t * t, h = cos(tilt) * L * t - 0.5 * bend * sin(tilt) * L * t * t - droop * L * t * t, c = w * sin(t * 3.5 + ph) * t, ld = 0.1 * L * t * t;
         return [x + ox * o + tx * c + ld, y + h, z + oz * o + tz * c + 0.4 * ld]; }) };
     }, (t) => 1 - 0.12 * t + 0.08 * Math.exp(-(((t - 0.9) / 0.08) ** 2)), lo ? 5 : 7); // fingers of even thickness, blunt round ends
   } else if (kind === 1) {
@@ -71,10 +71,11 @@ function meshAnem(kind, lo) {
       // the rim's underside down to the sand, so the folds read as solid, not a floating sheet
       const lip = []; for (let k = 0; k < ns; k++) { const a = k / ns * TAU, [rq] = surf(a, 1); lip.push(m.v(cos(a) * rq * 0.93, -0.02, sin(a) * rq * 0.93, -0.5)); }
       for (let k = 0; k < ns; k++) { const k2 = (k + 1) % ns; m.quad(rows[nr][k], rows[nr][k2], lip[k2], lip[k]); } }
-    tent(lo ? 600 : 1300, (i, n) => {
-      const a = i * 2.39996 + rr(-0.15, 0.15);
-      if (i % 3 === 0) { // the outer wall of the rolled-over rim is just as densely covered: tentacles stand out from the wall
-        const [rq, y] = surf(a, 1), u = Math.sqrt(rnd()) * 0.95, x = cos(a) * rq * (1 - 0.07 * u), z = sin(a) * rq * (1 - 0.07 * u), yy = mix(y, -0.02, u), L = rr(0.045, 0.07) * (lo ? 1.3 : 1);
+    tent(lo ? 900 : 2200, (i, n) => {
+      let a = i * 2.39996 + rr(-0.15, 0.15);
+      if (i % 2 === 0) { // the outer wall of the rolled-over rim is just as densely covered: tentacles stand out from the wall
+        for (let k = 0; k < 8; k++) { a = rnd() * TAU; if (rnd() * 0.31 < surf(a, 1)[1] + 0.02) break; } // more where the wall is tall (the crests)
+        const [rq, y] = surf(a, 1), u = Math.sqrt(rnd()) * 0.95, x = cos(a) * rq * (1 - 0.07 * u), z = sin(a) * rq * (1 - 0.07 * u), yy = mix(y, -0.02, u), L = rr(0.035, 0.055) * (lo ? 1.3 : 1);
         const ox = cos(a) * 0.85, oy = 0.5 - 0.3 * u, ol = Math.hypot(ox, oy, 0.85 * sin(a)) || 1;
         return { r: rr(0.005, 0.0062) * (lo ? 2 : 1), pts: (lo ? [0, 0.5, 1] : [0, 0.4, 0.75, 1]).map((t) => [x + ox / ol * L * t, yy + (oy / ol + 0.3 * t) * L * t, z + 0.85 * sin(a) / ol * L * t]) };
       }
@@ -83,7 +84,7 @@ function meshAnem(kind, lo) {
       const t1 = [cos(a) * r2 - x, y2 - y, sin(a) * r2 - z], t2 = [cos(a + 0.02) * r3 - x, y3 - y, sin(a + 0.02) * r3 - z];
       let nx = t1[1] * t2[2] - t1[2] * t2[1], ny = t1[2] * t2[0] - t1[0] * t2[2], nz = t1[0] * t2[1] - t1[1] * t2[0]; if (ny < 0) { nx = -nx; ny = -ny; nz = -nz; }
       const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
-      const L = rr(0.045, 0.07) * (lo ? 1.3 : 1), sw = sin(x * 9 + 1) + cos(z * 7);
+      const L = rr(0.035, 0.055) * (lo ? 1.3 : 1), sw = sin(x * 9 + 1) + cos(z * 7);
       return { r: rr(0.005, 0.0062) * (lo ? 2 : 1), pts: (lo ? [0, 0.5, 1] : [0, 0.4, 0.75, 1]).map((t) => [x + (nx + cos(sw) * 0.25) * L * t, y - 0.004 + ny * L * t, z + (nz + sin(sw) * 0.25) * L * t]) };
     }, (t) => 1 - 0.2 * t + 0.5 * Math.exp(-(((t - 0.93) / 0.07) ** 2)), lo ? 4 : 6);
   } else if (kind === 2) {

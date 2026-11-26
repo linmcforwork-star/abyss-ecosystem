@@ -218,6 +218,7 @@ function ecoFrame(dtIn) {
   mapStep(); tagStep(); zoneStep(dtIn);
 }
 
+const CROWN = [0.55, 0.16, 0.42, 0.12, 0.45]; // height of each anemone kind's tentacle crown above its base (x size)
 function clown(i, dt) {
   const a = ANE[HM[i]], nx = a[5] || 0, nz = a[6] || 0, ny = sqrt(max(0, 1 - nx * nx - nz * nz)), ax = a[0] + nx * 0.1 * a[3], ay = a[1] + ny * 0.1 * a[3], az = a[2] + nz * 0.1 * a[3], camD = hypot(F[CX] - ax, F[CY] - ay, F[CZ] - az);
   const big = LEN[i] > 0.33, thr = threat(i, 0);
@@ -227,9 +228,9 @@ function clown(i, dt) {
   else ST[i] = S_HOVER;
   if ((TM[i] -= dt) < 0 || ST[i] === S_GUARD) {
     TM[i] = rr(0.6, 2);
-    if (ST[i] === S_HOVER) { const r = rr(0, 0.45) * a[3], t = rnd() * TAU; { const o = rr(0.02, 0.1) * a[3]; setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny + sin(t) * r * (1 - ny), az + sin(t) * r * ny + nz * o); } }
+    if (ST[i] === S_HOVER) { const r = rr(0, 0.4) * a[3], t = rnd() * TAU; { const o = (CROWN[a[4] | 0] + rr(0.04, 0.22)) * a[3]; /* above the tentacle crown, never down among the column */ setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny + sin(t) * r * (1 - ny), az + sin(t) * r * ny + nz * o); } }
     else if (ST[i] === S_GUARD) { const k = 0.8 / camD; setT(i, ax + (F[CX] - ax) * k, ay + (F[CY] - ay) * k, az + (F[CZ] - az) * k); }
-    else { const r = rr(0, 0.2) * a[3], t = rnd() * TAU, o = rr(0.02, 0.1); setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny, az + sin(t) * r * ny + nz * o); }
+    else { const r = rr(0, 0.2) * a[3], t = rnd() * TAU, o = (CROWN[a[4] | 0] + rr(-0.06, 0.02)) * a[3]; /* hide or sleep: nestled into the top of the crown */ setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny, az + sin(t) * r * ny + nz * o); }
   }
   steer(i, ST[i] === S_GUARD ? 1.2 : ST[i] === S_HIDE ? 0.8 : 0.35, dt, 3, 0, false);
   face(i, dt, ST[i] === S_GUARD ? F[CX] - P[i * 3] : 0, ST[i] === S_GUARD ? F[CY] - P[i * 3 + 1] : 0, ST[i] === S_GUARD ? F[CZ] - P[i * 3 + 2] : 0);

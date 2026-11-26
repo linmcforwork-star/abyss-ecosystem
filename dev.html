@@ -1285,13 +1285,14 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let k = u32(fract(i.sp.x) * 6.) % 6u; let kind = floor(i.sp.x);
   //                              blue                  peach-orange           violet-pink           golden                green                 rose-red
   var CB = array<vec3f, 6>(vec3f(.06, .07, .5), vec3f(.40, .12, .08), vec3f(.40, .15, .55), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
-  var CM = array<vec3f, 6>(vec3f(.03, .22, 1.), vec3f(1., .5, .25), vec3f(1., .36, .26), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
+  var CM = array<vec3f, 6>(vec3f(.03, .22, 1.), vec3f(1., .5, .25), vec3f(1., .33, .33), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
   var CT = array<vec3f, 6>(vec3f(.43, .62, 1.), vec3f(1., .72, .55), vec3f(.7, .55, 1.), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
   var B = CB[k]; var M = CM[k]; var T = CT[k];
     if (kind == 3.) { B = vec3f(.35, .3, .22); M = vec3f(.9, .85, .7); }  // long-tentacle: pale, only the tips coloured
   var tip = ss(.72, .98, i.aux);
   if (kind == 1.) { tip = ss(.9, 1., i.aux) * .7; }
-  if (kind == 2.) { tip = ss(.88, 1., i.aux); } // bubble-tip: only the bulb end is pale // carpet: only the very tip is a pale dot // the violet form fades into coral over half its length
+  if (kind == 2.) { tip = ss(.88, 1., i.aux); }
+  if (kind == 0.) { tip = ss(.45, 1., i.aux); } // magnificent: salmon-pink shafts fade slowly into lavender tips // bubble-tip: only the bulb end is pale // carpet: only the very tip is a pale dot // the violet form fades into coral over half its length
   var alb = mix(B, M, ss(0., .55, i.aux));
   if (kind == 4.) { alb = mix(alb, M * .35, step(.5, fract(i.aux * 3.5)) * .6); }  // tube: banded tentacles
   if (kind == 1.) { alb = mix(B, M, .25 + .75 * ss(0., .6, i.aux)); // carpet: violet roots, blue body; patches drift from cyan to violet
@@ -1303,9 +1304,9 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     alb = mix(alb * (1. - .5 * vf), vec3f(.28, .08, .45) * .6, .35 * vf);
     if (i.aux < 0. && rf < .12) { alb = vec3f(.55, .6, .35) * .5; } }              // carpet: one strong colour all over
   alb = mix(alb, T, tip * .7);
-  if (i.aux < 0.) { alb = select(select(B * 1.2, B * .5 + M * .12, kind == 1.), vec3f(.12, .09, .07), kind == 4.); } // disc / column
+  if (i.aux < 0.) { alb = select(select(B * 1.2, B * .6 + M * .3, kind == 1.), vec3f(.12, .09, .07), kind == 4.); } // disc / column
   let col0 = kind == 0. && i.aux < -.45; // the magnificent's satiny column: a deep, saturated red-violet of its own
-  if (col0) { alb = vec3f(.5, .015, .035); }
+  if (col0) { alb = vec3f(.5, .015, .05) * mix(.55, 1., ss(-.04, .3, i.op.y)); } // deep wine red, darker toward the rock
   if (kind == 0. && i.aux < 0. && !col0) { alb = vec3f(.9, .55, .2) * .6; } // its oral disc and mouth: orange-yellow
   // tissue pattern: darker stripes along the bubble-tip's tentacles, soft mottling on the magnificent's
   let stp = .5 + .5 * sin(phi * select(6., 8., kind == 2.));
@@ -1360,7 +1361,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   // their own light: a little in the saturated body, much more at the tips; stronger at night
   let gl = (.5 + .5 * g.mis.w) * (1. - .85 * nite());
   if (i.aux >= 0.) { c += M * ss(.2, .7, i.aux) * .14 * gl + T * tip * (.55 + .35 * (1. - g.mis.w)) * gl; }
-  if (kind == 1. && i.aux >= 0.) { c += T * tip * .12 * nite(); } // carpet beads: a faint fluorescence
+  // (carpet beads: no glow of their own; the bead highlight does the work) // carpet beads: a faint fluorescence
   { c = max(c, vec3f(0.)); let m0 = max(max(c.r, max(c.g, c.b)), 1e-4); c = mix(c, m0 * pow(c / m0, vec3f(1.5)), nite()); } // night: richer colour (the screen's gamma washes thin colours to pastel)
   { let mx = max(c.r, max(c.g, c.b)); c *= mix(1. / (1. + 2. * max(mx - .3, 0.)), 1. / (1. + .8 * max(mx - .5, 0.)), nite()); } // a soft roll-off that keeps light and dark apart // never burn out to white (night exposure is ~2.6x)
   return fin(fog(c, i.wp, z));
@@ -1559,7 +1560,7 @@ fn sat3(x: vec3f) -> vec3f { return clamp(x, vec3f(0.), vec3f(1.)); }
     c += beam(rv / rl, zf * rl);
   }
   let bl = textureSampleLevel(tB, sC, uv, 0.).rgb;
-  c = mix(c, bl, .06) + bl * .03;
+  c = mix(c, bl, .06 * (1. - .6 * nite())) + bl * .03 * (1. - .6 * nite()); // less bloom at night: anemones are lit, they don't glow
   c *= g.mis.x;
   let q = uv - .5;
   let nt = nite();
@@ -2360,17 +2361,17 @@ function meshAnem(kind, lo) {
     // rounded drum, about half as tall as wide; on top a disc with a few broad waves whose rim turns up; finger tentacles
     // cover the disc, the inner ones stand up, the rim ones lean out and droop over the column's edge
     const R = 0.4, H = 0.38, WV = 0.35;
-    m.tube([[0, -0.04, 0], [0, H * 0.3, 0], [0, H * 0.65, 0], [0, H * 0.9, 0], [0, H, 0]], (k) => R * [0.8, 0.9, 0.97, 1.02, 0.98][k], lo ? 14 : 28, false, () => -0.5);
+    m.tube([[0, -0.04, 0], [0, H * 0.3, 0], [0, H * 0.65, 0], [0, H * 0.9, 0], [0, H, 0]], (k) => R * [0.7, 0.98, 1.08, 1.02, 0.94][k], lo ? 14 : 28, false, () => -0.5);
     const top = (a, f) => H + 0.02 + 0.05 * f * f * f * (1 + sin(a * 5 + 0.6)) ;   // the rim turns up in 5 broad waves
     { const nr = 6, ns = lo ? 28 : 56, rows = [];
       for (let r = 0; r <= nr; r++) { const row = [], f = r / nr; for (let k = 0; k < ns; k++) { const a = k / ns * TAU, rq = R * 0.95 * f; row.push(m.v(cos(a) * rq, top(a, f), sin(a) * rq, -0.4)); } rows.push(row); }
       for (let r = 0; r < nr; r++) for (let k = 0; k < ns; k++) { const k2 = (k + 1) % ns; m.quad(rows[r][k2], rows[r][k], rows[r + 1][k], rows[r + 1][k2]); } }
     const TP = lo ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1];
-    tent(lo ? 220 : 950, (i, n) => {
+    tent(lo ? 280 : 1300, (i, n) => {
       const a = i * 2.39996 + rr(-0.1, 0.1), f = min(1, 0.15 + 0.85 * sqrt((i + 0.5) / n)), rq = R * 0.95 * f, x = cos(a) * rq, z = sin(a) * rq, y = top(a, f);
-      const tilt = 0.05 + 1.1 * Math.pow(f, 2) + rr(-0.1, 0.1), L = rr(0.18, 0.26) * (1.35 - 0.45 * f), ph = rr(0, 6.3), w = rr(0.02, 0.04), droop = 0.9 * Math.pow(f, 3);
+      const tilt = 0.05 + 1.1 * Math.pow(f, 2) + rr(-0.1, 0.1), L = rr(0.18, 0.26) * (1.35 - 0.45 * f), ph = rr(0, 6.3), w = rr(0.02, 0.04), droop = 0.9 * Math.pow(f, 3), bend = rr(0.4, 1.0) * (0.4 + 0.6 * f);
       const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
-      return { r: rr(0.012, 0.016) * (lo ? 1.5 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t, h = cos(tilt) * L * t - droop * L * t * t, c = w * sin(t * 3.5 + ph) * t, ld = 0.1 * L * t * t;
+      return { r: rr(0.009, 0.012) * (lo ? 1.5 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t + 0.5 * bend * cos(tilt) * L * t * t, h = cos(tilt) * L * t - 0.5 * bend * sin(tilt) * L * t * t - droop * L * t * t, c = w * sin(t * 3.5 + ph) * t, ld = 0.1 * L * t * t;
         return [x + ox * o + tx * c + ld, y + h, z + oz * o + tz * c + 0.4 * ld]; }) };
     }, (t) => 1 - 0.12 * t + 0.08 * Math.exp(-(((t - 0.9) / 0.08) ** 2)), lo ? 5 : 7); // fingers of even thickness, blunt round ends
   } else if (kind === 1) {
@@ -2388,10 +2389,11 @@ function meshAnem(kind, lo) {
       // the rim's underside down to the sand, so the folds read as solid, not a floating sheet
       const lip = []; for (let k = 0; k < ns; k++) { const a = k / ns * TAU, [rq] = surf(a, 1); lip.push(m.v(cos(a) * rq * 0.93, -0.02, sin(a) * rq * 0.93, -0.5)); }
       for (let k = 0; k < ns; k++) { const k2 = (k + 1) % ns; m.quad(rows[nr][k], rows[nr][k2], lip[k2], lip[k]); } }
-    tent(lo ? 600 : 1300, (i, n) => {
-      const a = i * 2.39996 + rr(-0.15, 0.15);
-      if (i % 3 === 0) { // the outer wall of the rolled-over rim is just as densely covered: tentacles stand out from the wall
-        const [rq, y] = surf(a, 1), u = Math.sqrt(rnd()) * 0.95, x = cos(a) * rq * (1 - 0.07 * u), z = sin(a) * rq * (1 - 0.07 * u), yy = mix(y, -0.02, u), L = rr(0.045, 0.07) * (lo ? 1.3 : 1);
+    tent(lo ? 900 : 2200, (i, n) => {
+      let a = i * 2.39996 + rr(-0.15, 0.15);
+      if (i % 2 === 0) { // the outer wall of the rolled-over rim is just as densely covered: tentacles stand out from the wall
+        for (let k = 0; k < 8; k++) { a = rnd() * TAU; if (rnd() * 0.31 < surf(a, 1)[1] + 0.02) break; } // more where the wall is tall (the crests)
+        const [rq, y] = surf(a, 1), u = Math.sqrt(rnd()) * 0.95, x = cos(a) * rq * (1 - 0.07 * u), z = sin(a) * rq * (1 - 0.07 * u), yy = mix(y, -0.02, u), L = rr(0.035, 0.055) * (lo ? 1.3 : 1);
         const ox = cos(a) * 0.85, oy = 0.5 - 0.3 * u, ol = Math.hypot(ox, oy, 0.85 * sin(a)) || 1;
         return { r: rr(0.005, 0.0062) * (lo ? 2 : 1), pts: (lo ? [0, 0.5, 1] : [0, 0.4, 0.75, 1]).map((t) => [x + ox / ol * L * t, yy + (oy / ol + 0.3 * t) * L * t, z + 0.85 * sin(a) / ol * L * t]) };
       }
@@ -2400,7 +2402,7 @@ function meshAnem(kind, lo) {
       const t1 = [cos(a) * r2 - x, y2 - y, sin(a) * r2 - z], t2 = [cos(a + 0.02) * r3 - x, y3 - y, sin(a + 0.02) * r3 - z];
       let nx = t1[1] * t2[2] - t1[2] * t2[1], ny = t1[2] * t2[0] - t1[0] * t2[2], nz = t1[0] * t2[1] - t1[1] * t2[0]; if (ny < 0) { nx = -nx; ny = -ny; nz = -nz; }
       const nl = Math.hypot(nx, ny, nz) || 1; nx /= nl; ny /= nl; nz /= nl;
-      const L = rr(0.045, 0.07) * (lo ? 1.3 : 1), sw = sin(x * 9 + 1) + cos(z * 7);
+      const L = rr(0.035, 0.055) * (lo ? 1.3 : 1), sw = sin(x * 9 + 1) + cos(z * 7);
       return { r: rr(0.005, 0.0062) * (lo ? 2 : 1), pts: (lo ? [0, 0.5, 1] : [0, 0.4, 0.75, 1]).map((t) => [x + (nx + cos(sw) * 0.25) * L * t, y - 0.004 + ny * L * t, z + (nz + sin(sw) * 0.25) * L * t]) };
     }, (t) => 1 - 0.2 * t + 0.5 * Math.exp(-(((t - 0.93) / 0.07) ** 2)), lo ? 4 : 6);
   } else if (kind === 2) {
@@ -3427,6 +3429,7 @@ function ecoFrame(dtIn) {
   mapStep(); tagStep(); zoneStep(dtIn);
 }
 
+const CROWN = [0.55, 0.16, 0.42, 0.12, 0.45]; // height of each anemone kind's tentacle crown above its base (x size)
 function clown(i, dt) {
   const a = ANE[HM[i]], nx = a[5] || 0, nz = a[6] || 0, ny = sqrt(max(0, 1 - nx * nx - nz * nz)), ax = a[0] + nx * 0.1 * a[3], ay = a[1] + ny * 0.1 * a[3], az = a[2] + nz * 0.1 * a[3], camD = hypot(F[CX] - ax, F[CY] - ay, F[CZ] - az);
   const big = LEN[i] > 0.33, thr = threat(i, 0);
@@ -3436,9 +3439,9 @@ function clown(i, dt) {
   else ST[i] = S_HOVER;
   if ((TM[i] -= dt) < 0 || ST[i] === S_GUARD) {
     TM[i] = rr(0.6, 2);
-    if (ST[i] === S_HOVER) { const r = rr(0, 0.45) * a[3], t = rnd() * TAU; { const o = rr(0.02, 0.1) * a[3]; setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny + sin(t) * r * (1 - ny), az + sin(t) * r * ny + nz * o); } }
+    if (ST[i] === S_HOVER) { const r = rr(0, 0.4) * a[3], t = rnd() * TAU; { const o = (CROWN[a[4] | 0] + rr(0.04, 0.22)) * a[3]; /* above the tentacle crown, never down among the column */ setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny + sin(t) * r * (1 - ny), az + sin(t) * r * ny + nz * o); } }
     else if (ST[i] === S_GUARD) { const k = 0.8 / camD; setT(i, ax + (F[CX] - ax) * k, ay + (F[CY] - ay) * k, az + (F[CZ] - az) * k); }
-    else { const r = rr(0, 0.2) * a[3], t = rnd() * TAU, o = rr(0.02, 0.1); setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny, az + sin(t) * r * ny + nz * o); }
+    else { const r = rr(0, 0.2) * a[3], t = rnd() * TAU, o = (CROWN[a[4] | 0] + rr(-0.06, 0.02)) * a[3]; /* hide or sleep: nestled into the top of the crown */ setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny, az + sin(t) * r * ny + nz * o); }
   }
   steer(i, ST[i] === S_GUARD ? 1.2 : ST[i] === S_HIDE ? 0.8 : 0.35, dt, 3, 0, false);
   face(i, dt, ST[i] === S_GUARD ? F[CX] - P[i * 3] : 0, ST[i] === S_GUARD ? F[CY] - P[i * 3 + 1] : 0, ST[i] === S_GUARD ? F[CZ] - P[i * 3 + 2] : 0);
