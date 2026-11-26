@@ -90,18 +90,21 @@ function meshAnem(kind, lo) {
       return { r: rr(0.005, 0.0062) * (lo ? 2 : 1), pts: (lo ? [0, 0.5, 1] : [0, 0.4, 0.75, 1]).map((t) => [x + (nx + cos(sw) * 0.25) * L * t, y - 0.004 + ny * L * t, z + (nz + sin(sw) * 0.25) * L * t]) };
     }, (t) => 1 - 0.2 * t + 0.5 * Math.exp(-(((t - 0.93) / 0.07) ** 2)), lo ? 4 : 6);
   } else if (kind === 2) {
-    // bubble-tip (the peach hero): a crown of long tentacles rising from the mouth, then bending over, each swollen
-    // into a bulb just below its tip
-    // a domed body; tentacles leave it all over (more at the top) and the rim ones droop outward and down: a rounded mop
-    const Rd = 0.2; disc(Rd, 0, 0.18, 0, 4, lo ? 12 : 24);
-    const TB = lo ? [0, 0.4, 0.75, 1] : [0, 0.22, 0.44, 0.64, 0.8, 0.92, 1];
-    tent(lo ? 200 : 700, (i, n) => {
-      const a = i * 2.39996 + rr(-0.1, 0.1), th = Math.acos(1 - 1.15 * (i + 0.5) / n), st = sin(th), ct = cos(th);
-      const nx = cos(a) * st, ny = ct, nz = sin(a) * st, bx = nx * Rd, by = ct * Rd * 0.9 + 0.02, bz = nz * Rd;
-      const L = rr(0.24, 0.32) * (1.1 - 0.25 * ct), dr = 0.35 + 0.9 * st, ph = rr(0, 6.3);
-      return { r: rr(0.0065, 0.008) * (lo ? 1.6 : 1), pts: TB.map((t) => { const sl = L * t, sag = dr * sl * sl / L * 0.55, c = 0.04 * sin(ph + t * 4) * t;
-        return [bx + nx * sl - sin(a) * c, by + ny * sl - sag, bz + nz * sl + cos(a) * c]; }) };
-    }, (t) => 1 - 0.2 * t + 0.35 * Math.exp(-(((t - 0.9) / 0.08) ** 2)), lo ? 4 : 6);
+    // bubble-tip (Entacmaea quadricolor; refs: anatomy/entacmaea-quadricolor, fluorescent/peach-anemone-clown): the body hidden
+    // in a hole, only a low cupped disc shows; from it a loose upright bouquet (height ~ 2/3 of width, not a koosh ball) of
+    // tentacles leaning up and out, each a stalk, then a swollen bulb (~1.7x) just below a short nipple tip; about a
+    // quarter are long and stringy with no bulb. Peach (fsAnem). ~20k triangles near
+    const Rd = 0.15; disc(Rd, 0.0, 0.04, 0, 3, lo ? 10 : 20);
+    // (aquarium form, like the owner's reference: bulbs only half inflated) long soft tentacles that rise, arch out and
+    // droop, each only gently swollen just below its pale tip
+    const TB = lo ? [0, 0.4, 0.75, 1] : [0, 0.2, 0.4, 0.58, 0.74, 0.86, 0.94, 1];
+    const BR = lo ? [1, 0.95, 1.15, 0.7] : [1, 0.95, 0.9, 0.88, 1.05, 1.35, 1.3, 0.7];
+    tent(lo ? 45 : 140, (i, n) => {
+      const [a, r] = spiral(i, n, Rd * 0.95), f = r / Rd, ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
+      const L = rr(0.2, 0.28) * (1.1 - 0.25 * f), tilt = 0.15 + 0.9 * f + rr(-0.15, 0.15), bend = rr(0.5, 1.0) * (0.4 + 0.8 * f), w = rr(-0.3, 0.3), ph = rr(0, 6.3);
+      return { r: rr(0.0065, 0.008) * (lo ? 1.5 : 1), pts: TB.map((t) => { const o = sin(tilt) * L * t + 0.5 * bend * cos(tilt) * L * t * t, h = cos(tilt) * L * t - 0.5 * bend * sin(tilt) * L * t * t * 1.4, c = (w * t * t + 0.04 * sin(ph + t * 4) * t) * L;
+        return [ox * (r + o) + tx * c, 0.03 * (1 - f * f) + max(h, 0.01 - 0.03 * (1 - f * f)), oz * (r + o) + tz * c]; }) };
+    }, BR, lo ? 4 : 6);
   } else if (kind === 3) {
     // long-tentacle sand anemone (Radianthus/Macrodactyla doreensis; refs: scratchpad long/, Anilao photos): the column is
     // buried, only a small disc shows; from it rises a dense round bouquet of smooth, glossy tentacles of even thickness.
