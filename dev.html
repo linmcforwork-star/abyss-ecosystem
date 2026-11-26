@@ -732,7 +732,7 @@ fn zone(p: vec3f) -> f32 { return mix(g.sun.w, textureSampleLevel(tM, sC, p.xz /
 fn side(p: vec3f, n: vec3f, open: f32, z: f32) -> vec3f { return mix(WCOL, PCOL, z) * exp(kd(z) * min(p.y, 0.)) * open * (1. - abs(n.y)) * .7 * dayL(); }
 // skylight at most 150 m along the ray: past that, terrain and the background behind it (vsB) get the same haze
 // the anemone garden (start basin): clearer, darker water so the fluorescent anemones stand out
-fn gard(p: vec3f) -> f32 { return ss(-19., -11., p.x) * ss(24., 16., p.x) * ss(-14., -6., p.z) * ss(50., 42., p.z); }
+fn gard(p: vec3f) -> f32 { return ss(20., 14., length(p.xz - vec2f(3., 18.))); } // only round the clownfish home (the reef pinnacle)
 fn fog(c: vec3f, wp: vec3f, z: f32) -> vec3f {
   let v = wp - g.cam.xyz; let d = length(v); let rd = v / d; let gf = gard(g.cam.xyz);
   return c * exp(-sg(z) * d * (1. - .45 * gf)) * ss(230., 185., d) + fogIn(g.cam.xyz, rd, d, z, g.sun.xyz) * (.58 + .42 * vol(g.cam.xyz + rd * min(d, 150.)).g) * (1. - .75 * gf);
@@ -1087,14 +1087,14 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
 @vertex fn vsReef(i: VI) -> VO {
   var o: VO;
   let t = g.cam.w; let sz = i.a.w; let bw = floor(i.b.w); let ph = fract(i.b.w) * TAU;
-  let k = i32(bw) % 16; let asleep = bw >= 16.;
+  let kv = i32(bw); let k = kv % 16; let asleep = (kv / 16) % 2 == 1; let vr = kv / 32; // vr: clownfish species (0 ocellaris, 1 pink, 2/3 Clark's)
   let bl = length(i.b.xyz); let T = i.b.xyz / max(bl, 1e-4);
   let c = cross(vec3f(0., 1., 0.), T); let S = select(vec3f(0., 0., 1.), normalize(c), length(c) > 1e-3); let Up = cross(T, S);
   var l = i.p; let aux = i.n.w;
   // body shape per species: height, width, extra fin height
   var hs = 1.; var ws = 1.; var fs = 1.; var fq = 9.; var amp = .1;
   switch k {
-    case 0 { hs = 1.05; ws = 1.15; fs = .85; fq = 11.; }
+    case 0 { hs = select(1.05, select(.97, 1.1, vr >= 2), vr >= 1); ws = 1.15; fs = .85; fq = 11.; }
     case 1 { hs = 1.2; ws = .9; fs = 1.1; fq = 12.; }
     case 2 { hs = .62; ws = .95; fs = .7; fq = 10.; }
     case 3 { hs = 1.; ws = 1.2; fs = .55; fq = 6.; }
@@ -1108,6 +1108,8 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
     let isF = aux > .5 && aux < .7;
     l.y *= hs; l.z *= ws;
     if (isF) { let e = sat((abs(i.p.y) - .14) / .08); l.y *= 1. + (fs - 1.) * e; }
+    // clownfish: a rounded tail, not a forked one (the notch filled out, the lobe tips pulled in)
+    if (k == 0 && aux > .25 && aux < .35 && i.p.x < -.4) { if (abs(i.p.y) < .01) { l.x = -.57; } else { l.x += .03; l.y *= .85; } }
     // moorish idol: the dorsal fin's front edge streams back into a long white filament
     if (k == 4 && aux > .58 && aux < .62 && i.p.y > .2 && i.p.x > -.05) { l.y += .28; l.x -= .2; }
   }
@@ -1118,7 +1120,7 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
   // pectoral fins flutter
   if (aux > .75 && aux < .85) { l.y += sin(t * 7. + ph) * .02 * abs(l.z) * 10.; }
   let w = i.a.xyz + (T * l.x + Up * l.y + S * l.z) * sz;
-  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = T * i.n.x + Up * i.n.y + S * i.n.z; o.op = l; o.sp = vec2f(f32(k), select(0., 1., asleep)); o.aux = aux;
+  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = T * i.n.x + Up * i.n.y + S * i.n.z; o.op = l; o.sp = vec2f(f32(k), select(0., 1., asleep) + 2. * f32(vr)); o.aux = aux;
   o.lt = shadow1(w);
   return o;
 }
@@ -1133,13 +1135,33 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let tail = i.aux > .25 && i.aux < .35;
   var alb = vec3f(.5); var spec = .5; var iri = 0.;
   switch k {
-    case 0 { // clownfish: orange, three white bands edged in black, black-rimmed fins
-      alb = vec3f(1., .25, .0);
-      let b1 = abs(x - .29 + y * .15); let b2 = abs(x - .02 - y * .25); let b3 = abs(x + .3);
-      let bd = min(min(b1 - .035, b2 - .045), b3 - .025);
-      alb = mix(alb, vec3f(.01), ss(.042, .022, bd) * f32(!isF));
-      alb = mix(alb, vec3f(.95, .95, .9), ss(.004, -.004, bd) * f32(!isF));
-      if (isF) { alb = mix(alb, vec3f(.02), ss(.55, .85, edge) + select(0., ss(-.44, -.48, x), tail)); }
+    case 0 { // clownfish (refs: clownfish/LOOKS.md)
+      let vr = i32(floor(i.sp.y * .5 + .01));
+      if (vr == 0) { // ocellaris: orange, three white bands edged in black (the middle one bulging toward the head), black-rimmed fins
+        alb = vec3f(1., .25, .0);
+        let b1 = abs(x - .29 + .04 * (1. - pow(y / .19, 2.))); let b2 = abs(x - .03 - .06 * (1. - ss(0., .17, abs(y)))); let b3 = abs(x + .3); // head bar bowed back behind the eye; one middle bar with a smooth point toward the head
+        let bd = min(min(b1 - .035, b2 - .045), b3 - .025);
+        alb = mix(alb, vec3f(.01), ss(.016, .008, bd) * f32(!isF));
+        alb = mix(alb, vec3f(.95, .95, .9), ss(.004, -.004, bd) * f32(!isF));
+        if (isF) { alb = mix(alb, vec3f(.02), sat(ss(.35, .6, edge) + select(0., ss(-.42, -.46, x), tail))); } // bold black fin margins
+      } else if (vr == 1) { // pink skunk: peach-pink, a white stripe along the whole back, a thin white bar behind the eye, pale fins
+        alb = mix(vec3f(.92, .4, .38), vec3f(.88, .5, .56), ss(.1, -.15, y));
+        let bk = ss(hb * .7, hb * .8, y) * f32(!isF); // a thin white line on the dorsal ridge, snout to tail base                       // the dorsal stripe, snout to tail
+        let hbar = ss(.016, .01, abs(x - .3 + y * .12)) * f32(!isF);
+        alb = mix(alb, vec3f(.97, .95, .92), max(bk, hbar));
+        if (isF) { alb = mix(vec3f(.95, .55, .55), vec3f(.97, .85, .82), select(.4 * edge, .7, tail)); spec = .25; } // fins pink, paler to the edge; the tail whitish
+      } else { // Clark's: black back, yellow-orange face, chest and belly, two broad white bands, white tail stalk; male tail yellow, female white
+        let face = max(ss(.26, .36, x), ss(-.01, -.1, y) * ss(-.3, .1, x));
+        alb = mix(vec3f(.025, .018, .012), vec3f(1., .42, .02), face);
+        let b1 = abs(x - .27 + y * .15) - .045; let b2 = abs(x + .02 - y * .1) - .045;
+        let wb = max(ss(.004, -.004, min(b1, b2)), ss(.004, -.004, abs(x + .37) - .045)) * f32(!isF); // and a crisp white ring round the tail stalk
+        alb = mix(alb, vec3f(.95, .95, .92), wb);
+        if (isF) {
+          alb = vec3f(1., .45, .02);                                              // pectoral, pelvic and anal fins: yellow-orange
+          if (y > hb * .6) { alb = vec3f(.03, .02, .015); } // the dorsal fin: black like the back
+          if (tail) { alb = select(vec3f(1., .72, .1), vec3f(.95, .93, .85), vr == 3); }
+        }
+      }
     }
     case 1 { // blue-green chromis
       alb = mix(vec3f(.25, .95, .55), vec3f(.45, .85, 1.), ss(-.1, .1, -y));
@@ -1222,9 +1244,16 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   if (isF) { c += alb * E * sat(-ndl) * .5; }                                   // light through the fins
   c += E * pow(sat(dot(n, normalize(V + L))), 30.) * spec * .9;
   c += (.5 + .5 * cos(TAU * (vec3f(0., .33, .67) + ndv * 1.3 + .45))) * iri * .25 * E * pow(1. - ndv, 2.);
-  if (k == 0) { c += alb * (.06 + .5 * g.mis.w); }                                  // clownfish: keep their orange at depth (the showpiece)
+  if (k == 0) { // clownfish: keep their colour at depth, but shaded (lit from above, belly in shadow) and wet: a sharp glint and a blue rim
+    c += alb * (.015 + .12 * g.mis.w) * (.3 + .7 * sat(n.y * .5 + .5));
+    c *= mix(.5, 1., sat(n.y * .5 + .5));
+    let sc = spots(vec2f(x * 1.6, y), 70., .45); if (!isF) { c *= .92 + .08 * sc; }
+    c += nite() * select(.9, .25, isF) * (.6 + .4 * sc) * .35 * pow(ndv, 48.) * vec3f(1., .95, .9);
+    c += amb(i.wp, n, vv.g, z) * pow(1. - ndv, 3.) * .8;
+    if (isF) { c += alb * E * sat(-ndl) * .6 * mix(1., .5, edge); }
+  }                                  // clownfish: keep their orange at depth (the showpiece)
   // asleep in a mucus cocoon (parrotfish): a milky film over the body
-  if (i.sp.y > .5) { c = mix(c, amb(i.wp, n, vv.g, z) * vec3f(1.6, 1.8, 1.9) + E * .1, .25 + .45 * pow(1. - ndv, 2.)); }
+  if (i.sp.y - 2. * floor(i.sp.y * .5) > .5) { c = mix(c, amb(i.wp, n, vv.g, z) * vec3f(1.6, 1.8, 1.9) + E * .1, .25 + .45 * pow(1. - ndv, 2.)); }
   return fin(fog(c, i.wp, z));
 }
 // sea anemone: a = base position + size, b.x colour seed, b.y how far the tentacles are drawn in (night)
@@ -1719,7 +1748,7 @@ function makeWorld(D, T, flyPts, POSES) {
   const tangent = (n) => { let t = abs(n[1]) < 0.9 ? [n[2], 0, -n[0]] : [1, 0, 0]; const l = hypot(...t); t = t.map((v) => v / l); return [t, [n[1] * t[2] - n[2] * t[1], n[2] * t[0] - n[0] * t[2], n[0] * t[1] - n[1] * t[0]]]; };
   const nearFly = (x, y, z, r) => { for (const p of flyPts) if (hypot(x - p[0], z - p[2]) < r && y < p[1] + 3 && y > p[1] - 13) return true; return false; };
   // the exhibits: small themed areas on open sand, kept clear of the generic scatter and dressed by hand below
-  const ZONES = [{ zh: '海葵花园', sub: '小丑鱼和它们的海葵', x: 3, z: 18, r: 24, box: [-17, 22, -12, 48] }]; // box: the whole basin floor
+  const ZONES = [{ zh: '小丑鱼之家', sub: '礁石上的海葵和住在里面的小丑鱼', x: 3, z: 18, r: 12, box: [-17, 22, -12, 48] }]; // box: the whole basin floor
   const inZone = (x, z, pad = 0) => { for (const { box: b } of ZONES) if (x > b[0] - pad && x < b[1] + pad && z > b[2] - pad && z < b[3] + pad) return true; return false; };
   const nearPose = (x, z, r = 3) => { for (const p of POSES) if (hypot(x - p[0], z - p[2]) < r) return true; return false; };
   // --- kelp columns
@@ -1894,6 +1923,7 @@ function makeWorld(D, T, flyPts, POSES) {
     const q = (n = 0.2) => qMul(qFromY(rr(-n, n), 1, rr(-n, n)), qAxis(0, 1, 0, rnd() * TAU));
     const floorY = top(g.x, g.z), onFloor = (x, z) => top(x, z) < floorY + 3; // the basin floor, not the walls' tops
     // anemone: [x, y, z, scale, kind + colour (see meshAnem), normal x, normal z]
+    const HOME = true; // anemones only on the reef pinnacle (the clownfish home); false = the old basin-wide garden
     const ane = (x, y, z, sc, kind, col, nx = 0, nz = 0) => anemones.push([x, y, z, sc, kind + (col + 0.5) / 6, nx, nz]);
     // the pinnacle (the garden's landmark): magnificent anemones on top, bubble-tip clusters on its ledges, fans at its foot
     { const x = g.x, z = g.z; let h = floorY; const ledges = [];
@@ -1907,7 +1937,7 @@ function makeWorld(D, T, flyPts, POSES) {
       // growth over the rock: boulder and branching corals, sponges and sea fans round each tier's shoulder, so the landmark
       // reads as a living bommie, not bare stone
       ledges.forEach(([lx, ly, lz, sc]) => {
-        for (let k = 0; k < 16; k++) {
+        for (let k = 0; k < (HOME ? 7 : 16); k++) { // (fewer with the clownfish home, to leave the ledges to the anemones)
           const a = k / 16 * TAU * 2 + rr(-0.3, 0.3), dy = rr(-0.3, 0.55), r0 = sc * (0.95 - 0.5 * max(0, dy) ** 2), px = lx + cos(a) * r0, pz = lz + sin(a) * r0, py = ly - sc * 0.5 + sc * dy * 0.8, u = rnd();
           const up = qMul(qFromY(cos(a) * 0.35, 1, sin(a) * 0.35), qAxis(0, 1, 0, rnd() * TAU));
           if (u < 0.25) solid(26, px, py, pz, rr(0.9, 1.6), q(0.4), 6, rnd(), 1, 0);
@@ -1918,11 +1948,33 @@ function makeWorld(D, T, flyPts, POSES) {
         }
       });
       for (let j = 0; j < 9; j++) { const a = rnd() * TAU, r0 = rr(3.5, 6); solid(rnd() < 0.5 ? 26 : 7, x + cos(a) * r0, floorY - 0.3, z + sin(a) * r0, rr(1.2, 2.4), q(0.4), rnd() < 0.5 ? 6 : 5, rnd(), 1, 0); }
-      for (let j = 0; j < 3; j++) ane(x + rr(-0.8, 0.8), h - 0.3, z + rr(-0.8, 0.8), rr(1.4, 1.8), 0, 3);
+      if (!HOME) for (let j = 0; j < 3; j++) ane(x + rr(-0.8, 0.8), h - 0.3, z + rr(-0.8, 0.8), rr(1.4, 1.8), 0, 3);
       ane(x + 5, h2 - 0.25, z + 2.8, 1.6, 0, 5);
-      ledges.slice(0, 3).forEach(([lx, ly, lz, sc], j) => { const a = rnd() * TAU, r0 = sc * 0.3; for (let k = 0; k < 7; k++) ane(lx + cos(a) * r0 + rr(-0.5, 0.5), ly - 0.15 + rr(-0.1, 0.1), lz + sin(a) * r0 + rr(-0.5, 0.5), rr(1.1, 1.5), 2, [1, 4, 2][j], cos(a) * 0.3, sin(a) * 0.3); });
+      if (!HOME) ledges.slice(0, 3).forEach(([lx, ly, lz, sc], j) => { const a = rnd() * TAU, r0 = sc * 0.3; for (let k = 0; k < 7; k++) ane(lx + cos(a) * r0 + rr(-0.5, 0.5), ly - 0.15 + rr(-0.1, 0.1), lz + sin(a) * r0 + rr(-0.5, 0.5), rr(1.1, 1.5), 2, [1, 4, 2][j], cos(a) * 0.3, sin(a) * 0.3); });
       for (let j = 0; j < 6; j++) { const a = j / 6 * TAU + rr(-0.3, 0.3), r0 = rr(4.5, 6); solid(8, x + cos(a) * r0, floorY - 0.1, z + sin(a) * r0, rr(2, 3.2), qMul(qFromY(cos(a) * 0.25, 1, sin(a) * 0.25), qAxis(0, 1, 0, a)), 5, rnd(), 1, 0); }
       heads.push([x + 4, floorY + 4, z, 1.3]);
+      // clownfish home (user 2026-11-26): the anemones are gathered here instead of spread over the basin floor. A few
+      // magnificent clumps on the ledges, carpet anemones in the sand pockets at the foot, bubble-tips in the crevices
+      if (HOME) {
+        // each tier is a rough rock about sc wide and sc tall (centre at top - sc/2); the next tier sits on it, so the
+        // free shelf is the part of the tier's shoulder outside the next tier. Clumps go there, on the rounded top
+        // (height from an ellipsoid), leaning outward. kinds: 0 magnificent, 1 carpet, 2 bubble-tip
+        const shelf = (k, n, kind, col, lo, hi) => {
+          const [cx, ty, cz, sc] = ledges[k], cy = ty - sc / 2, nx = ledges[k + 1];
+          for (let i = 0; i < 400; i++) {
+            const a = rnd() * TAU, f = rr(0.25, 0.42), px = cx + cos(a) * sc * f, pz = cz + sin(a) * sc * f;
+            if (nx && hypot(px - nx[0], pz - nx[2]) < nx[3] * 0.5 + 0.5) continue;
+            for (let m = 0; m < n; m++) { const b = a + rr(-0.25, 0.25), g = f + rr(-0.06, 0.04), qx = cx + cos(b) * sc * g, qz = cz + sin(b) * sc * g, rr2 = min(0.95, g / 0.5);
+              ane(qx, cy + sc * 0.5 * Math.sqrt(1 - rr2 * rr2) - 0.12, qz, rr(lo, hi), kind, col, cos(b) * rr2 * 0.7, sin(b) * rr2 * 0.7); }
+            return;
+          }
+        };
+        shelf(3, 3, 0, 2, 1.4, 1.7);                     // the summit: a clump of magnificent anemones (violet-pink)
+        shelf(2, 2, 0, 1, 1.3, 1.6); shelf(2, 4, 2, 1, 1.0, 1.3);
+        shelf(1, 3, 0, 0, 1.3, 1.6); shelf(1, 5, 2, 4, 1.0, 1.3);
+        shelf(0, 4, 2, 2, 1.0, 1.3); shelf(0, 2, 0, 3, 1.4, 1.7);
+        for (let j = 0; j < 3; j++) { const a = 1.2 + j * 2.1 + rr(-0.3, 0.3), r0 = rr(3.8, 4.6), ax = x + cos(a) * r0, az = z + sin(a) * r0; ane(ax, top(ax, az) - 0.03, az, rr(2.4, 2.9), 1, [0, 2, 1][j]); } // carpets in the sand at the foot
+      }
     }
     // three parts from south to north: a sand flat by the entrance (tube and long-tentacle anemones, sparse), the main
     // exhibit round the pinnacle (magnificent and carpet anemones in loose drifts, the brightest colours), and the rocky
@@ -1963,6 +2015,7 @@ function makeWorld(D, T, flyPts, POSES) {
       }
       return null;
     };
+    if (!HOME) { // (the old spread-out garden, kept switchable)
     // main exhibit: 5 drifts round the pinnacle, big and bright
     for (const [kind, col, n, len, lo, hi, gap] of [[0, 0, 7, 4, 1.9, 2.6, 1.9], [1, 0, 3, 3, 2.5, 3.1, 2.6], [0, 1, 6, 3.5, 1.9, 2.5, 1.9], [1, 2, 3, 2.5, 2.5, 3, 2.6], [0, 2, 6, 3.5, 1.8, 2.4, 1.9], [1, 1, 2, 2, 2.4, 2.9, 2.6]]) {
       const p = site(6, 32, len + 0.5, 5.5, 12); if (p) drift(p[0], p[1], n, len, kind, col, lo, hi, gap);
@@ -1978,6 +2031,7 @@ function makeWorld(D, T, flyPts, POSES) {
       for (let k = 0; k < 12; k++) { const a = rnd() * TAU, r0 = rr(0.2, 0.75) * sc; ane(x + cos(a) * r0, y + sc * 0.3 * (1 - (r0 / sc) ** 2) + 0.1, z + sin(a) * r0, rr(1.1, 1.5), 2, col, cos(a) * 0.35 * r0 / sc, sin(a) * 0.35 * r0 / sc); }
       taken.push([x, z, 3]);
     }
+    } // !HOME
     // between the groups: a few giant sponges and sea fans (1-3 m), small growth underfoot, all kept off the open sand
     const grp = []; for (let i = 0; i < 4000 && grp.length < 5; i++) { const x = rr(bx0 + 2, bx1 - 2), z = rr(bz0 + 2, bz1 - 2); if (onFloor(x, z) && !inner(x, z, 3) && free(x, z, 2) && !grp.some((p) => hypot(p[0] - x, p[1] - z) < 10)) grp.push([x, z]); }
     if (!grp.length) grp.push([g.x + 8, g.z]);
@@ -2002,14 +2056,14 @@ function makeWorld(D, T, flyPts, POSES) {
     for (let i = 0; i < 600000 && walls.length < 1; i++) {
       const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
       const nl = hypot(T.wn[k], T.wn[k + 2]) || 1, sunny = (T.wn[k] * 0.27 - T.wn[k + 2] * 0.24) / nl / 0.36;
-      if (x < bx0 - 4 || x > bx1 + 4 || z < bz0 - 4 || z > 10 || abs(ny) > 0.3 || sunny < 0.3 || y < floorY + 3 || y > floorY + 12) continue;
+      if (HOME ? (hypot(x - g.x, z - g.z) < 9 || hypot(x - g.x, z - g.z) > 16 || abs(ny) > 0.3 || y < floorY + 2 || y > floorY + 8) : (x < bx0 - 4 || x > bx1 + 4 || z < bz0 - 4 || z > 10 || abs(ny) > 0.3 || sunny < 0.3 || y < floorY + 3 || y > floorY + 12)) continue;
       walls.push([x, y, z]);
     }
     walls.forEach(([sx, sy, sz], w) => {
       const placed = [];
-      for (let i = 0; i < 400000 && placed.length < 24; i++) {
+      for (let i = 0; i < 400000 && placed.length < (HOME ? 9 : 24); i++) {
         const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
-        if (hypot(x - sx, y - sy, z - sz) > 5.5 || ny < -0.2 || ny > 0.75 || placed.some((p) => hypot(p[0] - x, p[1] - y, p[2] - z) < 0.9)) continue;
+        if (hypot(x - sx, y - sy, z - sz) > (HOME ? 2.5 : 5.5) || ny < -0.2 || ny > 0.75 || placed.some((p) => hypot(p[0] - x, p[1] - y, p[2] - z) < 0.9)) continue;
         const nx = T.wn[k], nz = T.wn[k + 2], l = hypot(nx, ny, nz), m = hypot(nx, nz) / l, c = min(1, 0.97 / max(m, 1e-3));
         placed.push([x, y, z]); const bub = placed.length % 3 === 0; ane(x - nx / l * 0.05, y, z - nz / l * 0.05, bub ? rr(0.8, 1.5) : rr(1, 2.1), bub ? 2 : 0, bub ? 4 : [3, 5, 1][placed.length % 3], nx / l * c, nz / l * c);
       }
@@ -2126,7 +2180,7 @@ function makeWorld(D, T, flyPts, POSES) {
   const gm = new Uint8Array(512 * 512 * 4);
   for (let j = 0; j < 512; j++) for (let i = 0; i < 512; i++) {
     const x = (i + 0.5) / 512 * 384 - 192, z = (j + 0.5) / 512 * 384 - 192, o = (i + 512 * j) * 4;
-    gm[o] = (inZone(x, z, -1) ? 0 : magAt(x, z)) * 255; gm[o + 1] = sstep(-17, -11, x) * sstep(22, 16, x) * sstep(-12, -6, z) * sstep(48, 42, z) * 255; // g: darker garden floor so anemones glow against it
+    gm[o] = (inZone(x, z, -1) ? 0 : magAt(x, z)) * 255; gm[o + 1] = sstep(18, 12, hypot(x - 3, z - 18)) * 255; // g: darker garden floor so anemones glow against it
     gm[o + 2] = zoneP(x, z) * 255; gm[o + 3] = sstep(0.42, 0.6, fbm(x * 0.04, 3, z * 0.04, 3)) * 255; // (no magenta ground in the anemone garden: it fought the anemones)
   }
 
@@ -2987,7 +3041,7 @@ function render() {
   { // the anemone garden (start basin) is shown as a night dive under blue light: swimming in, the light fades to night;
     // leaving, day comes back. Only the look changes; the animals keep the real time of day.
     const b = (a, c, x) => { const t = clamp((x - a) / (c - a), 0, 1); return t * t * (3 - 2 * t); };
-    GNITE += (b(-23, -15, cx) * b(28, 20, cx) * b(-18, -10, cz) * b(54, 46, cz) - GNITE) * 0.03;
+    GNITE += (b(21, 15, Math.hypot(cx - 3, cz - 18)) - GNITE) * 0.03; // night only near the clownfish home (the reef pinnacle)
   }
   const DV = DAY * (1 - GNITE);
   m[56] = EXPO * (0.6 + 0.4 * ek) * (2.6 - 1.6 * DV); m[57] = RAYS * DV; m[58] = det; m[59] = DV;
@@ -3303,12 +3357,28 @@ function rockGrad(x, y, z) {
 }
 
 // ---------------------------------------------------------------- the animals
+const FROZ = new Uint8Array(NA); // dev only: animals held still for a portrait (dev.js lineup)
+const VR = new Int8Array(NA); // clownfish species: 0 ocellaris, 1 pink (perideraion), 2 Clark's male, 3 Clark's female (white tail)
 const SP = new Int8Array(NA), ST = new Int8Array(NA), HM = new Int16Array(NA), GR = new Int16Array(NA), XI = new Int16Array(NA);
 const P = new Float64Array(NA * 3), Vv = new Float64Array(NA * 3), Hd = new Float64Array(NA * 3), TG = new Float64Array(NA * 3), OF = new Float64Array(NA * 3);
 const LEN = new Float32Array(NA), PH = new Float32Array(NA), TM = new Float32Array(NA), T2 = new Float32Array(NA), BEAT = new Float32Array(NA);
 let nA = 0;
 // shown bigger than life so you can tell them apart from the background fish at a glance (the small ones the most)
 const SHOW = [1, 3, 3, 1.7, 2.2, 1.3, 2, 1, 1, 1];
+// which clownfish lives in which anemone (refs: clownfish/LOOKS.md): the pink one in the violet magnificent anemones,
+// Clark's in the bubble-tips (and some carpets), ocellaris in the other magnificent and carpet anemones
+const CLOWNS = [
+  { zh: '眼斑双锯鱼（公子小丑）', short: '公子小丑', la: 'Amphiprion ocellaris', facts: ['橙色身体上三条白带，白带和鳍边都有细细的黑边。', '和海葵共生：身上的黏液让它不被海葵的刺细胞蜇伤，海葵的触手又替它挡住捕食者。', '一群里最大的是雌鱼。雌鱼不在了，最大的雄鱼会变成雌鱼。'] },
+  { zh: '颈环双锯鱼（粉红小丑）', short: '粉红小丑', la: 'Amphiprion perideraion', facts: ['粉桃色的身体，一条白线沿着背脊从嘴拉到尾巴，眼后一道细白带。', '最小的小丑鱼之一，最长约 10 厘米，几乎只住在华丽海葵里。', '是唯一主要吃藻类的小丑鱼。'] },
+  { zh: '克氏双锯鱼（克氏小丑）', short: '克氏小丑', la: 'Amphiprion clarkii', facts: ['背部黑色，脸、胸和鳍是黄橙色，两条宽白带。雄鱼尾巴黄色，雌鱼尾巴发白。', '最不挑的小丑鱼：十种能住的海葵它都住。', '雌鱼可长到 15 厘米，是这里最大、最大胆的小丑鱼。'] },
+];
+CLOWNS[3] = CLOWNS[2];
+function setClown(i, a, j) {
+  const kd = a[4] | 0, col = ((a[4] % 1) * 6) | 0;
+  let v = kd === 2 ? 2 : kd === 0 ? (col === 2 ? 1 : 0) : ((abs(a[0] * 7 + a[2] * 3) | 0) % 2 ? 2 : 0);
+  if (v === 2 && j === 0) v = 3;
+  VR[i] = v; if (v === 3) LEN[i] *= 1.2; if (v === 1) LEN[i] *= 0.92;
+}
 const add = (sp, x, y, z, home, grp = -1) => {
   if (nA >= NA) return -1;
   const i = nA++, L = SPC[sp].len;
@@ -3331,7 +3401,7 @@ let nG = 0;
   for (const h of all) if (HEADS.length < 16 && !HEADS.some((q) => hypot(q[0] - h[0], q[2] - h[2]) < 9)) HEADS.push(h);
   if (!HEADS.length) HEADS.push([0, floorAt(0, 0) + 1, 0, 1]);
   // clownfish: a big female, a smaller male, sometimes a juvenile, in every anemone
-  ANE.forEach((a, k) => { if ((a[4] | 0) > 1 || (k > 3 && rnd() > 0.45)) return; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) LEN[i] = [0.3, 0.27, 0.24][j]; } }); // ~3.5x life size (the hosts are big too), so you can see them
+  ANE.forEach((a, k) => { if ((a[4] | 0) > 2 || (k > 3 && rnd() > 0.45)) return; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) { LEN[i] = [0.3, 0.27, 0.24][j]; setClown(i, a, j); } } }); // ~3.5x life size (the hosts are big too), so you can see them
   // chromis: a cloud over each coral head
   HEADS.forEach((h, k) => { const n = 10 + (rnd() * 10 | 0); for (let j = 0; j < n; j++) add(1, h[0] + rr(-0.5, 0.5), h[1] + rr(0.2, 0.9), h[2] + rr(-0.5, 0.5), k); });
   // cleaner wrasse at every station
@@ -3411,6 +3481,7 @@ function ecoFrame(dtIn) {
     const far = d2(i, cx, cy, cz) > 4900;
     if (far && (frameN + i) % 4) continue;
     const st = far ? dt * 4 : dt;
+    if (FROZ[i]) { BEAT[i] = 0.5; continue; } // (dev: held still for a portrait)
     switch (SP[i]) {
       case 0: clown(i, st); break; case 1: chromis(i, st); break; case 2: cleaner(i, st); break;
       case 3: case 4: case 6: grouper(i, st); break; case 5: trout(i, st); break; case 7: shark(i, st); break; case 8: moray(i, st); break; case 9: manta(i); break;
@@ -3424,7 +3495,7 @@ function ecoFrame(dtIn) {
     const o = n * 8, s = BEAT[i] * (ST[i] === S_SLEEP || ST[i] === S_HOLE ? 0.15 : 1);
     EB[o] = P[i * 3]; EB[o + 1] = P[i * 3 + 1]; EB[o + 2] = P[i * 3 + 2]; EB[o + 3] = LEN[i];
     EB[o + 4] = Hd[i * 3] * s; EB[o + 5] = Hd[i * 3 + 1] * s; EB[o + 6] = Hd[i * 3 + 2] * s;
-    EB[o + 7] = SP[i] + (ST[i] === S_SLEEP && SP[i] === 3 ? 16 : 0) + PH[i] * 0.99; n++;
+    EB[o + 7] = SP[i] + (ST[i] === S_SLEEP && SP[i] === 3 ? 16 : 0) + 32 * VR[i] + PH[i] * 0.99; n++;
   };
   for (let i = 0; i < nA; i++) if (SP[i] < 7 && ST[i] !== S_GONE) put(i);
   nEcoF = n;
@@ -3643,7 +3714,7 @@ function lookPick() {
 const spOf = (id) => id >= ANEB ? 10 : SP[id];
 const stOf = (id) => id >= ANEB ? S_HOVER : ST[id];
 function showCard(id) {
-  const sp = spOf(id), s = id >= ANEB ? ANSP[AN[(id - ANEB) * 8 + 4] | 0] : SPC[sp];
+  const sp = spOf(id), s = id >= ANEB ? ANSP[AN[(id - ANEB) * 8 + 4] | 0] : sp === 0 ? CLOWNS[VR[id]] : SPC[sp];
   cN.textContent = s.zh; cL.textContent = s.la; cvShow(sp, id); cF.textContent = s.facts.join(' ');
   card.className = 'on'; cardI = id; lastDo = '';
 }
@@ -3844,7 +3915,7 @@ function tagStep() {
       const x = an ? AN[(id - ANEB) * 8] : P[o] + Hd[o] * h, y = an ? AN[(id - ANEB) * 8 + 1] + 0.2 : P[o + 1] + Hd[o + 1] * h, z = an ? AN[(id - ANEB) * 8 + 2] : P[o + 2] + Hd[o + 2] * h;
       if (!tagPos(x, y, z, TP)) continue;
       const t = tags[n++], r = max(14, L / (TP[2] * TANH) * canvas.clientHeight * 0.5) | 0, a = min(1, (TAGR - TP[3]) / 1.2);
-      const nm = an ? ANSP[AN[(id - ANEB) * 8 + 4] | 0].short || '海葵' : TAGNAME[sp]; if (t.txt !== nm) { t.txt = nm; t.name.textContent = nm; }
+      const nm = an ? ANSP[AN[(id - ANEB) * 8 + 4] | 0].short || '海葵' : sp === 0 ? CLOWNS[VR[id]].short : TAGNAME[sp]; if (t.txt !== nm) { t.txt = nm; t.name.textContent = nm; }
       if (t.rr !== r) { t.rr = r; t.ring.style.cssText = `width:${2 * r}px;height:${2 * r}px;transform:translate(${-r}px,${-r}px)`; t.name.style.top = `${r + 4}px`; }
       t.d.style.transform = `translate(${TP[0].toFixed(1)}px,${TP[1].toFixed(1)}px)`; t.d.style.opacity = a.toFixed(2);
       if (!t.on) { t.on = true; t.d.style.display = 'block'; }
@@ -3866,13 +3937,13 @@ function zoneStep(dt) {
 // ---------------------------------------------------------------- the card's picture: a real photo of the species
 // The 3D models are coloured for looks; the card shows what the animal really looks like. Photos from Wikimedia Commons
 // (free licences), stored next to the page in photos/ and loaded only when a card opens; the author is credited under it.
-const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0"}; // photo credits (details and links: SPECIES.md)
+const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "clown1": "Diego Delso · CC BY-SA 4.0", "clown2": "Diego Delso · CC BY-SA 4.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0"}; // photo credits (details and links: SPECIES.md)
 const PKEY = ['clown', 'chromis', 'cleaner', 'parrot', 'idol', 'grouper', 'tang', 'shark', 'moray', 'manta'];
 const cvImg = document.createElement('img'), cvCr = document.createElement('small');
 cvImg.alt = ''; cPic.appendChild(cvImg); cPic.appendChild(cvCr);
 let cvKey = '';
 function cvShow(sp, id) {
-  const k = sp === 10 ? 'an' + (AN[(id - ANEB) * 8 + 4] | 0) : PKEY[sp], c = PHOTOS[k];
+  const k = sp === 10 ? 'an' + (AN[(id - ANEB) * 8 + 4] | 0) : sp === 0 && VR[id] ? 'clown' + min(VR[id], 2) : PKEY[sp], c = PHOTOS[k];
   cPic.style.display = c ? 'block' : 'none';
   if (!c || k === cvKey) return;
   cvKey = k; cvImg.src = 'photos/' + k + '.webp'; cvCr.textContent = '照片：' + c;
@@ -4008,22 +4079,28 @@ document.addEventListener('visibilitychange', () => { if (AC) document.hidden ? 
 // test hook: lets automated screenshot scripts move the camera, set the time and frame an animal (dev.html only)
 // test tank (dev only): three hero anemones side by side on bare sand, two clownfish each; everything else is hidden,
 // so a close-up renders fast. Same meshes and shaders as the garden.
-function tank(x = -6, z = 36, cols = [[1, 0, 1.6], [2, 1, 1.4], [0, 2, 1.3]], s = 1) { // [kind, colour, size]
+function tank(x = 3, z = 31, cols = [[1, 0, 1.6], [2, 1, 1.4], [0, 2, 1.3]], s = 1) { // [kind, colour, size]
   if (!TANK) TANK = nAnem;
   nAnem = TANK; let c = 0;
   cols.forEach(([kd, col, sz], j) => {
     const hx = x + (j - (cols.length - 1) / 2) * 1.9 * s, hz = z + (j % 2) * 0.4, a = [hx, floorAt(hx, hz), hz, s * sz, kd + (col + 0.5) / 6, 0, 0];
     ANE[nAnem] = a; AN.set([a[0], a[1], a[2], a[3], a[4], 0, 0, 0], nAnem * 8);
-    for (let i = 0, m = 0; i < nA && m < 2; i++) if (SP[i] === 0 && !(i in tank.used)) { tank.used[i] = 1; HM[i] = nAnem; P[i * 3] = hx; P[i * 3 + 1] = a[1] + 0.4 * s; P[i * 3 + 2] = hz; m++; c++; }
+    for (let i = 0, m = 0; i < nA && m < 2; i++) if (SP[i] === 0 && !FROZ[i] && !(i in tank.used)) { tank.used[i] = 1; HM[i] = nAnem; setClown(i, a, m); P[i * 3] = hx; P[i * 3 + 1] = a[1] + 0.4 * s; P[i * 3 + 2] = hz; m++; c++; }
     nAnem++;
   });
   return 'tank at ' + [x, z] + ', ' + cols.length + ' anemones, ' + c + ' clownfish';
 }
 tank.used = {};
-window.__dev = { lookAt, F, POSES, tank, set tankOff(v) { TANK = 0; }, set nearK(v) { NEARK = v; }, set gn(v) { GNITE = v; }, get menu() { return menu; }, go: () => ui(false), setHour: (h) => { HOUR = h; }, P, SP, ST, LEN, Hd, get nA() { return nA; }, follow, camTo, unfollow, get fol() { return fol; }, ANE, HEADS, STA, HOL, AN, get counts() { return [nEcoF, nEcoS, nEcoE, nAnem, nA]; }, floorAt, rockAt };
+// dev: a still line-up of fish for side-on portraits: one of each clownfish (VR 0-3) in a row, facing +x
+function lineup(x, y, z, vrs = [0, 1, 2, 3], gap = 0.9) {
+  const ids = [];
+  for (let i = 0, k = 0; i < nA && k < vrs.length; i++) if (SP[i] === 0 && !FROZ[i] && !(i in tank.used)) { FROZ[i] = 1; VR[i] = vrs[k]; LEN[i] = 0.3 * (vrs[k] === 3 ? 1.2 : vrs[k] === 1 ? 0.92 : 1); P[i * 3] = x + (k - (vrs.length - 1) / 2) * gap; P[i * 3 + 1] = y; P[i * 3 + 2] = z; Hd[i * 3] = 1; Hd[i * 3 + 1] = 0; Hd[i * 3 + 2] = 0; ids.push(i); k++; }
+  return ids;
+}
+window.__dev = { lookAt, F, POSES, tank, VR, lineup, set tankOff(v) { TANK = 0; }, set nearK(v) { NEARK = v; }, set gn(v) { GNITE = v; }, get menu() { return menu; }, go: () => ui(false), setHour: (h) => { HOUR = h; }, P, SP, ST, LEN, Hd, get nA() { return nA; }, follow, camTo, unfollow, get fol() { return fol; }, ANE, HEADS, STA, HOL, AN, get counts() { return [nEcoF, nEcoS, nEcoE, nAnem, nA]; }, floorAt, rockAt };
 // dev.html?tank opens straight at the three hero anemones (test tank), close up, for reviewing the look
 if (/tank/.test(location.search)) { const tw = setInterval(() => { if (!nAnem || !window.__dev) return; clearInterval(tw);
-  NEARK = 1; tank(-6, 36); const n = nAnem, h = [n - 3, n - 2, n - 1].map((k) => [AN[k * 8], AN[k * 8 + 1], AN[k * 8 + 2], AN[k * 8 + 3]])[1];
+  NEARK = 1; tank(); const n = nAnem, h = [n - 3, n - 2, n - 1].map((k) => [AN[k * 8], AN[k * 8 + 1], AN[k * 8 + 2], AN[k * 8 + 3]])[1];
   lookAt(h[0], h[1] + 1.6, h[2] - 3.6, h[0], h[1] + 0.3, h[2]);
 }, 500); }
 

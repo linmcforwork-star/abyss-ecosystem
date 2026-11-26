@@ -85,12 +85,28 @@ function rockGrad(x, y, z) {
 }
 
 // ---------------------------------------------------------------- the animals
+const FROZ = new Uint8Array(NA); // dev only: animals held still for a portrait (dev.js lineup)
+const VR = new Int8Array(NA); // clownfish species: 0 ocellaris, 1 pink (perideraion), 2 Clark's male, 3 Clark's female (white tail)
 const SP = new Int8Array(NA), ST = new Int8Array(NA), HM = new Int16Array(NA), GR = new Int16Array(NA), XI = new Int16Array(NA);
 const P = new Float64Array(NA * 3), Vv = new Float64Array(NA * 3), Hd = new Float64Array(NA * 3), TG = new Float64Array(NA * 3), OF = new Float64Array(NA * 3);
 const LEN = new Float32Array(NA), PH = new Float32Array(NA), TM = new Float32Array(NA), T2 = new Float32Array(NA), BEAT = new Float32Array(NA);
 let nA = 0;
 // shown bigger than life so you can tell them apart from the background fish at a glance (the small ones the most)
 const SHOW = [1, 3, 3, 1.7, 2.2, 1.3, 2, 1, 1, 1];
+// which clownfish lives in which anemone (refs: clownfish/LOOKS.md): the pink one in the violet magnificent anemones,
+// Clark's in the bubble-tips (and some carpets), ocellaris in the other magnificent and carpet anemones
+const CLOWNS = [
+  { zh: '眼斑双锯鱼（公子小丑）', short: '公子小丑', la: 'Amphiprion ocellaris', facts: ['橙色身体上三条白带，白带和鳍边都有细细的黑边。', '和海葵共生：身上的黏液让它不被海葵的刺细胞蜇伤，海葵的触手又替它挡住捕食者。', '一群里最大的是雌鱼。雌鱼不在了，最大的雄鱼会变成雌鱼。'] },
+  { zh: '颈环双锯鱼（粉红小丑）', short: '粉红小丑', la: 'Amphiprion perideraion', facts: ['粉桃色的身体，一条白线沿着背脊从嘴拉到尾巴，眼后一道细白带。', '最小的小丑鱼之一，最长约 10 厘米，几乎只住在华丽海葵里。', '是唯一主要吃藻类的小丑鱼。'] },
+  { zh: '克氏双锯鱼（克氏小丑）', short: '克氏小丑', la: 'Amphiprion clarkii', facts: ['背部黑色，脸、胸和鳍是黄橙色，两条宽白带。雄鱼尾巴黄色，雌鱼尾巴发白。', '最不挑的小丑鱼：十种能住的海葵它都住。', '雌鱼可长到 15 厘米，是这里最大、最大胆的小丑鱼。'] },
+];
+CLOWNS[3] = CLOWNS[2];
+function setClown(i, a, j) {
+  const kd = a[4] | 0, col = ((a[4] % 1) * 6) | 0;
+  let v = kd === 2 ? 2 : kd === 0 ? (col === 2 ? 1 : 0) : ((abs(a[0] * 7 + a[2] * 3) | 0) % 2 ? 2 : 0);
+  if (v === 2 && j === 0) v = 3;
+  VR[i] = v; if (v === 3) LEN[i] *= 1.2; if (v === 1) LEN[i] *= 0.92;
+}
 const add = (sp, x, y, z, home, grp = -1) => {
   if (nA >= NA) return -1;
   const i = nA++, L = SPC[sp].len;
@@ -113,7 +129,7 @@ let nG = 0;
   for (const h of all) if (HEADS.length < 16 && !HEADS.some((q) => hypot(q[0] - h[0], q[2] - h[2]) < 9)) HEADS.push(h);
   if (!HEADS.length) HEADS.push([0, floorAt(0, 0) + 1, 0, 1]);
   // clownfish: a big female, a smaller male, sometimes a juvenile, in every anemone
-  ANE.forEach((a, k) => { if ((a[4] | 0) > 1 || (k > 3 && rnd() > 0.45)) return; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) LEN[i] = [0.3, 0.27, 0.24][j]; } }); // ~3.5x life size (the hosts are big too), so you can see them
+  ANE.forEach((a, k) => { if ((a[4] | 0) > 2 || (k > 3 && rnd() > 0.45)) return; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) { LEN[i] = [0.3, 0.27, 0.24][j]; setClown(i, a, j); } } }); // ~3.5x life size (the hosts are big too), so you can see them
   // chromis: a cloud over each coral head
   HEADS.forEach((h, k) => { const n = 10 + (rnd() * 10 | 0); for (let j = 0; j < n; j++) add(1, h[0] + rr(-0.5, 0.5), h[1] + rr(0.2, 0.9), h[2] + rr(-0.5, 0.5), k); });
   // cleaner wrasse at every station
@@ -193,6 +209,7 @@ function ecoFrame(dtIn) {
     const far = d2(i, cx, cy, cz) > 4900;
     if (far && (frameN + i) % 4) continue;
     const st = far ? dt * 4 : dt;
+    if (FROZ[i]) { BEAT[i] = 0.5; continue; } // (dev: held still for a portrait)
     switch (SP[i]) {
       case 0: clown(i, st); break; case 1: chromis(i, st); break; case 2: cleaner(i, st); break;
       case 3: case 4: case 6: grouper(i, st); break; case 5: trout(i, st); break; case 7: shark(i, st); break; case 8: moray(i, st); break; case 9: manta(i); break;
@@ -206,7 +223,7 @@ function ecoFrame(dtIn) {
     const o = n * 8, s = BEAT[i] * (ST[i] === S_SLEEP || ST[i] === S_HOLE ? 0.15 : 1);
     EB[o] = P[i * 3]; EB[o + 1] = P[i * 3 + 1]; EB[o + 2] = P[i * 3 + 2]; EB[o + 3] = LEN[i];
     EB[o + 4] = Hd[i * 3] * s; EB[o + 5] = Hd[i * 3 + 1] * s; EB[o + 6] = Hd[i * 3 + 2] * s;
-    EB[o + 7] = SP[i] + (ST[i] === S_SLEEP && SP[i] === 3 ? 16 : 0) + PH[i] * 0.99; n++;
+    EB[o + 7] = SP[i] + (ST[i] === S_SLEEP && SP[i] === 3 ? 16 : 0) + 32 * VR[i] + PH[i] * 0.99; n++;
   };
   for (let i = 0; i < nA; i++) if (SP[i] < 7 && ST[i] !== S_GONE) put(i);
   nEcoF = n;
@@ -425,7 +442,7 @@ function lookPick() {
 const spOf = (id) => id >= ANEB ? 10 : SP[id];
 const stOf = (id) => id >= ANEB ? S_HOVER : ST[id];
 function showCard(id) {
-  const sp = spOf(id), s = id >= ANEB ? ANSP[AN[(id - ANEB) * 8 + 4] | 0] : SPC[sp];
+  const sp = spOf(id), s = id >= ANEB ? ANSP[AN[(id - ANEB) * 8 + 4] | 0] : sp === 0 ? CLOWNS[VR[id]] : SPC[sp];
   cN.textContent = s.zh; cL.textContent = s.la; cvShow(sp, id); cF.textContent = s.facts.join(' ');
   card.className = 'on'; cardI = id; lastDo = '';
 }
@@ -626,7 +643,7 @@ function tagStep() {
       const x = an ? AN[(id - ANEB) * 8] : P[o] + Hd[o] * h, y = an ? AN[(id - ANEB) * 8 + 1] + 0.2 : P[o + 1] + Hd[o + 1] * h, z = an ? AN[(id - ANEB) * 8 + 2] : P[o + 2] + Hd[o + 2] * h;
       if (!tagPos(x, y, z, TP)) continue;
       const t = tags[n++], r = max(14, L / (TP[2] * TANH) * canvas.clientHeight * 0.5) | 0, a = min(1, (TAGR - TP[3]) / 1.2);
-      const nm = an ? ANSP[AN[(id - ANEB) * 8 + 4] | 0].short || '海葵' : TAGNAME[sp]; if (t.txt !== nm) { t.txt = nm; t.name.textContent = nm; }
+      const nm = an ? ANSP[AN[(id - ANEB) * 8 + 4] | 0].short || '海葵' : sp === 0 ? CLOWNS[VR[id]].short : TAGNAME[sp]; if (t.txt !== nm) { t.txt = nm; t.name.textContent = nm; }
       if (t.rr !== r) { t.rr = r; t.ring.style.cssText = `width:${2 * r}px;height:${2 * r}px;transform:translate(${-r}px,${-r}px)`; t.name.style.top = `${r + 4}px`; }
       t.d.style.transform = `translate(${TP[0].toFixed(1)}px,${TP[1].toFixed(1)}px)`; t.d.style.opacity = a.toFixed(2);
       if (!t.on) { t.on = true; t.d.style.display = 'block'; }
@@ -648,13 +665,13 @@ function zoneStep(dt) {
 // ---------------------------------------------------------------- the card's picture: a real photo of the species
 // The 3D models are coloured for looks; the card shows what the animal really looks like. Photos from Wikimedia Commons
 // (free licences), stored next to the page in photos/ and loaded only when a card opens; the author is credited under it.
-const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0"}; // photo credits (details and links: SPECIES.md)
+const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "clown1": "Diego Delso · CC BY-SA 4.0", "clown2": "Diego Delso · CC BY-SA 4.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0"}; // photo credits (details and links: SPECIES.md)
 const PKEY = ['clown', 'chromis', 'cleaner', 'parrot', 'idol', 'grouper', 'tang', 'shark', 'moray', 'manta'];
 const cvImg = document.createElement('img'), cvCr = document.createElement('small');
 cvImg.alt = ''; cPic.appendChild(cvImg); cPic.appendChild(cvCr);
 let cvKey = '';
 function cvShow(sp, id) {
-  const k = sp === 10 ? 'an' + (AN[(id - ANEB) * 8 + 4] | 0) : PKEY[sp], c = PHOTOS[k];
+  const k = sp === 10 ? 'an' + (AN[(id - ANEB) * 8 + 4] | 0) : sp === 0 && VR[id] ? 'clown' + min(VR[id], 2) : PKEY[sp], c = PHOTOS[k];
   cPic.style.display = c ? 'block' : 'none';
   if (!c || k === cvKey) return;
   cvKey = k; cvImg.src = 'photos/' + k + '.webp'; cvCr.textContent = '照片：' + c;

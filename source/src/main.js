@@ -470,7 +470,7 @@ function render() {
   { // the anemone garden (start basin) is shown as a night dive under blue light: swimming in, the light fades to night;
     // leaving, day comes back. Only the look changes; the animals keep the real time of day.
     const b = (a, c, x) => { const t = clamp((x - a) / (c - a), 0, 1); return t * t * (3 - 2 * t); };
-    GNITE += (b(-23, -15, cx) * b(28, 20, cx) * b(-18, -10, cz) * b(54, 46, cz) - GNITE) * 0.03;
+    GNITE += (b(21, 15, Math.hypot(cx - 3, cz - 18)) - GNITE) * 0.03; // night only near the clownfish home (the reef pinnacle)
   }
   const DV = DAY * (1 - GNITE);
   m[56] = EXPO * (0.6 + 0.4 * ek) * (2.6 - 1.6 * DV); m[57] = RAYS * DV; m[58] = det; m[59] = DV;

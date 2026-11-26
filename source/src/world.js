@@ -131,7 +131,7 @@ function makeWorld(D, T, flyPts, POSES) {
   const tangent = (n) => { let t = abs(n[1]) < 0.9 ? [n[2], 0, -n[0]] : [1, 0, 0]; const l = hypot(...t); t = t.map((v) => v / l); return [t, [n[1] * t[2] - n[2] * t[1], n[2] * t[0] - n[0] * t[2], n[0] * t[1] - n[1] * t[0]]]; };
   const nearFly = (x, y, z, r) => { for (const p of flyPts) if (hypot(x - p[0], z - p[2]) < r && y < p[1] + 3 && y > p[1] - 13) return true; return false; };
   // the exhibits: small themed areas on open sand, kept clear of the generic scatter and dressed by hand below
-  const ZONES = [{ zh: '海葵花园', sub: '小丑鱼和它们的海葵', x: 3, z: 18, r: 24, box: [-17, 22, -12, 48] }]; // box: the whole basin floor
+  const ZONES = [{ zh: '小丑鱼之家', sub: '礁石上的海葵和住在里面的小丑鱼', x: 3, z: 18, r: 12, box: [-17, 22, -12, 48] }]; // box: the whole basin floor
   const inZone = (x, z, pad = 0) => { for (const { box: b } of ZONES) if (x > b[0] - pad && x < b[1] + pad && z > b[2] - pad && z < b[3] + pad) return true; return false; };
   const nearPose = (x, z, r = 3) => { for (const p of POSES) if (hypot(x - p[0], z - p[2]) < r) return true; return false; };
   // --- kelp columns
@@ -306,6 +306,7 @@ function makeWorld(D, T, flyPts, POSES) {
     const q = (n = 0.2) => qMul(qFromY(rr(-n, n), 1, rr(-n, n)), qAxis(0, 1, 0, rnd() * TAU));
     const floorY = top(g.x, g.z), onFloor = (x, z) => top(x, z) < floorY + 3; // the basin floor, not the walls' tops
     // anemone: [x, y, z, scale, kind + colour (see meshAnem), normal x, normal z]
+    const HOME = true; // anemones only on the reef pinnacle (the clownfish home); false = the old basin-wide garden
     const ane = (x, y, z, sc, kind, col, nx = 0, nz = 0) => anemones.push([x, y, z, sc, kind + (col + 0.5) / 6, nx, nz]);
     // the pinnacle (the garden's landmark): magnificent anemones on top, bubble-tip clusters on its ledges, fans at its foot
     { const x = g.x, z = g.z; let h = floorY; const ledges = [];
@@ -319,7 +320,7 @@ function makeWorld(D, T, flyPts, POSES) {
       // growth over the rock: boulder and branching corals, sponges and sea fans round each tier's shoulder, so the landmark
       // reads as a living bommie, not bare stone
       ledges.forEach(([lx, ly, lz, sc]) => {
-        for (let k = 0; k < 16; k++) {
+        for (let k = 0; k < (HOME ? 7 : 16); k++) { // (fewer with the clownfish home, to leave the ledges to the anemones)
           const a = k / 16 * TAU * 2 + rr(-0.3, 0.3), dy = rr(-0.3, 0.55), r0 = sc * (0.95 - 0.5 * max(0, dy) ** 2), px = lx + cos(a) * r0, pz = lz + sin(a) * r0, py = ly - sc * 0.5 + sc * dy * 0.8, u = rnd();
           const up = qMul(qFromY(cos(a) * 0.35, 1, sin(a) * 0.35), qAxis(0, 1, 0, rnd() * TAU));
           if (u < 0.25) solid(26, px, py, pz, rr(0.9, 1.6), q(0.4), 6, rnd(), 1, 0);
@@ -330,11 +331,33 @@ function makeWorld(D, T, flyPts, POSES) {
         }
       });
       for (let j = 0; j < 9; j++) { const a = rnd() * TAU, r0 = rr(3.5, 6); solid(rnd() < 0.5 ? 26 : 7, x + cos(a) * r0, floorY - 0.3, z + sin(a) * r0, rr(1.2, 2.4), q(0.4), rnd() < 0.5 ? 6 : 5, rnd(), 1, 0); }
-      for (let j = 0; j < 3; j++) ane(x + rr(-0.8, 0.8), h - 0.3, z + rr(-0.8, 0.8), rr(1.4, 1.8), 0, 3);
+      if (!HOME) for (let j = 0; j < 3; j++) ane(x + rr(-0.8, 0.8), h - 0.3, z + rr(-0.8, 0.8), rr(1.4, 1.8), 0, 3);
       ane(x + 5, h2 - 0.25, z + 2.8, 1.6, 0, 5);
-      ledges.slice(0, 3).forEach(([lx, ly, lz, sc], j) => { const a = rnd() * TAU, r0 = sc * 0.3; for (let k = 0; k < 7; k++) ane(lx + cos(a) * r0 + rr(-0.5, 0.5), ly - 0.15 + rr(-0.1, 0.1), lz + sin(a) * r0 + rr(-0.5, 0.5), rr(1.1, 1.5), 2, [1, 4, 2][j], cos(a) * 0.3, sin(a) * 0.3); });
+      if (!HOME) ledges.slice(0, 3).forEach(([lx, ly, lz, sc], j) => { const a = rnd() * TAU, r0 = sc * 0.3; for (let k = 0; k < 7; k++) ane(lx + cos(a) * r0 + rr(-0.5, 0.5), ly - 0.15 + rr(-0.1, 0.1), lz + sin(a) * r0 + rr(-0.5, 0.5), rr(1.1, 1.5), 2, [1, 4, 2][j], cos(a) * 0.3, sin(a) * 0.3); });
       for (let j = 0; j < 6; j++) { const a = j / 6 * TAU + rr(-0.3, 0.3), r0 = rr(4.5, 6); solid(8, x + cos(a) * r0, floorY - 0.1, z + sin(a) * r0, rr(2, 3.2), qMul(qFromY(cos(a) * 0.25, 1, sin(a) * 0.25), qAxis(0, 1, 0, a)), 5, rnd(), 1, 0); }
       heads.push([x + 4, floorY + 4, z, 1.3]);
+      // clownfish home (user 2026-11-26): the anemones are gathered here instead of spread over the basin floor. A few
+      // magnificent clumps on the ledges, carpet anemones in the sand pockets at the foot, bubble-tips in the crevices
+      if (HOME) {
+        // each tier is a rough rock about sc wide and sc tall (centre at top - sc/2); the next tier sits on it, so the
+        // free shelf is the part of the tier's shoulder outside the next tier. Clumps go there, on the rounded top
+        // (height from an ellipsoid), leaning outward. kinds: 0 magnificent, 1 carpet, 2 bubble-tip
+        const shelf = (k, n, kind, col, lo, hi) => {
+          const [cx, ty, cz, sc] = ledges[k], cy = ty - sc / 2, nx = ledges[k + 1];
+          for (let i = 0; i < 400; i++) {
+            const a = rnd() * TAU, f = rr(0.25, 0.42), px = cx + cos(a) * sc * f, pz = cz + sin(a) * sc * f;
+            if (nx && hypot(px - nx[0], pz - nx[2]) < nx[3] * 0.5 + 0.5) continue;
+            for (let m = 0; m < n; m++) { const b = a + rr(-0.25, 0.25), g = f + rr(-0.06, 0.04), qx = cx + cos(b) * sc * g, qz = cz + sin(b) * sc * g, rr2 = min(0.95, g / 0.5);
+              ane(qx, cy + sc * 0.5 * Math.sqrt(1 - rr2 * rr2) - 0.12, qz, rr(lo, hi), kind, col, cos(b) * rr2 * 0.7, sin(b) * rr2 * 0.7); }
+            return;
+          }
+        };
+        shelf(3, 3, 0, 2, 1.4, 1.7);                     // the summit: a clump of magnificent anemones (violet-pink)
+        shelf(2, 2, 0, 1, 1.3, 1.6); shelf(2, 4, 2, 1, 1.0, 1.3);
+        shelf(1, 3, 0, 0, 1.3, 1.6); shelf(1, 5, 2, 4, 1.0, 1.3);
+        shelf(0, 4, 2, 2, 1.0, 1.3); shelf(0, 2, 0, 3, 1.4, 1.7);
+        for (let j = 0; j < 3; j++) { const a = 1.2 + j * 2.1 + rr(-0.3, 0.3), r0 = rr(3.8, 4.6), ax = x + cos(a) * r0, az = z + sin(a) * r0; ane(ax, top(ax, az) - 0.03, az, rr(2.4, 2.9), 1, [0, 2, 1][j]); } // carpets in the sand at the foot
+      }
     }
     // three parts from south to north: a sand flat by the entrance (tube and long-tentacle anemones, sparse), the main
     // exhibit round the pinnacle (magnificent and carpet anemones in loose drifts, the brightest colours), and the rocky
@@ -375,6 +398,7 @@ function makeWorld(D, T, flyPts, POSES) {
       }
       return null;
     };
+    if (!HOME) { // (the old spread-out garden, kept switchable)
     // main exhibit: 5 drifts round the pinnacle, big and bright
     for (const [kind, col, n, len, lo, hi, gap] of [[0, 0, 7, 4, 1.9, 2.6, 1.9], [1, 0, 3, 3, 2.5, 3.1, 2.6], [0, 1, 6, 3.5, 1.9, 2.5, 1.9], [1, 2, 3, 2.5, 2.5, 3, 2.6], [0, 2, 6, 3.5, 1.8, 2.4, 1.9], [1, 1, 2, 2, 2.4, 2.9, 2.6]]) {
       const p = site(6, 32, len + 0.5, 5.5, 12); if (p) drift(p[0], p[1], n, len, kind, col, lo, hi, gap);
@@ -390,6 +414,7 @@ function makeWorld(D, T, flyPts, POSES) {
       for (let k = 0; k < 12; k++) { const a = rnd() * TAU, r0 = rr(0.2, 0.75) * sc; ane(x + cos(a) * r0, y + sc * 0.3 * (1 - (r0 / sc) ** 2) + 0.1, z + sin(a) * r0, rr(1.1, 1.5), 2, col, cos(a) * 0.35 * r0 / sc, sin(a) * 0.35 * r0 / sc); }
       taken.push([x, z, 3]);
     }
+    } // !HOME
     // between the groups: a few giant sponges and sea fans (1-3 m), small growth underfoot, all kept off the open sand
     const grp = []; for (let i = 0; i < 4000 && grp.length < 5; i++) { const x = rr(bx0 + 2, bx1 - 2), z = rr(bz0 + 2, bz1 - 2); if (onFloor(x, z) && !inner(x, z, 3) && free(x, z, 2) && !grp.some((p) => hypot(p[0] - x, p[1] - z) < 10)) grp.push([x, z]); }
     if (!grp.length) grp.push([g.x + 8, g.z]);
@@ -414,14 +439,14 @@ function makeWorld(D, T, flyPts, POSES) {
     for (let i = 0; i < 600000 && walls.length < 1; i++) {
       const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
       const nl = hypot(T.wn[k], T.wn[k + 2]) || 1, sunny = (T.wn[k] * 0.27 - T.wn[k + 2] * 0.24) / nl / 0.36;
-      if (x < bx0 - 4 || x > bx1 + 4 || z < bz0 - 4 || z > 10 || abs(ny) > 0.3 || sunny < 0.3 || y < floorY + 3 || y > floorY + 12) continue;
+      if (HOME ? (hypot(x - g.x, z - g.z) < 9 || hypot(x - g.x, z - g.z) > 16 || abs(ny) > 0.3 || y < floorY + 2 || y > floorY + 8) : (x < bx0 - 4 || x > bx1 + 4 || z < bz0 - 4 || z > 10 || abs(ny) > 0.3 || sunny < 0.3 || y < floorY + 3 || y > floorY + 12)) continue;
       walls.push([x, y, z]);
     }
     walls.forEach(([sx, sy, sz], w) => {
       const placed = [];
-      for (let i = 0; i < 400000 && placed.length < 24; i++) {
+      for (let i = 0; i < 400000 && placed.length < (HOME ? 9 : 24); i++) {
         const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];
-        if (hypot(x - sx, y - sy, z - sz) > 5.5 || ny < -0.2 || ny > 0.75 || placed.some((p) => hypot(p[0] - x, p[1] - y, p[2] - z) < 0.9)) continue;
+        if (hypot(x - sx, y - sy, z - sz) > (HOME ? 2.5 : 5.5) || ny < -0.2 || ny > 0.75 || placed.some((p) => hypot(p[0] - x, p[1] - y, p[2] - z) < 0.9)) continue;
         const nx = T.wn[k], nz = T.wn[k + 2], l = hypot(nx, ny, nz), m = hypot(nx, nz) / l, c = min(1, 0.97 / max(m, 1e-3));
         placed.push([x, y, z]); const bub = placed.length % 3 === 0; ane(x - nx / l * 0.05, y, z - nz / l * 0.05, bub ? rr(0.8, 1.5) : rr(1, 2.1), bub ? 2 : 0, bub ? 4 : [3, 5, 1][placed.length % 3], nx / l * c, nz / l * c);
       }
@@ -538,7 +563,7 @@ function makeWorld(D, T, flyPts, POSES) {
   const gm = new Uint8Array(512 * 512 * 4);
   for (let j = 0; j < 512; j++) for (let i = 0; i < 512; i++) {
     const x = (i + 0.5) / 512 * 384 - 192, z = (j + 0.5) / 512 * 384 - 192, o = (i + 512 * j) * 4;
-    gm[o] = (inZone(x, z, -1) ? 0 : magAt(x, z)) * 255; gm[o + 1] = sstep(-17, -11, x) * sstep(22, 16, x) * sstep(-12, -6, z) * sstep(48, 42, z) * 255; // g: darker garden floor so anemones glow against it
+    gm[o] = (inZone(x, z, -1) ? 0 : magAt(x, z)) * 255; gm[o + 1] = sstep(18, 12, hypot(x - 3, z - 18)) * 255; // g: darker garden floor so anemones glow against it
     gm[o + 2] = zoneP(x, z) * 255; gm[o + 3] = sstep(0.42, 0.6, fbm(x * 0.04, 3, z * 0.04, 3)) * 255; // (no magenta ground in the anemone garden: it fought the anemones)
   }
 

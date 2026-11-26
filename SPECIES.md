@@ -31,6 +31,8 @@ Real photos on the cards are from Wikimedia Commons, used under their licences, 
 | 文件 | 原图 | 作者 | 许可 |
 |---|---|---|---|
 | clown | [Amphiprion ocellaris (Clown anemonefish) by Nick Hobgood.jpg](https://commons.wikimedia.org/wiki/File:Amphiprion_ocellaris_(Clown_anemonefish)_by_Nick_Hobgood.jpg) | Nick Hobgood | CC BY-SA 3.0 |
+| clown1 | [Pez payaso rosado (Amphiprion perideraion), Anilao, Filipinas, 2023-08-25, DD 98.jpg](https://commons.wikimedia.org/wiki/File:Pez_payaso_rosado_(Amphiprion_perideraion),_Anilao,_Filipinas,_2023-08-25,_DD_98.jpg) | Diego Delso | CC BY-SA 4.0 |
+| clown2 | [Pez payaso de cola amarilla (Amphiprion clarkii), Anilao, Filipinas, 2023-08-22, DD 85.jpg](https://commons.wikimedia.org/wiki/File:Pez_payaso_de_cola_amarilla_(Amphiprion_clarkii),_Anilao,_Filipinas,_2023-08-22,_DD_85.jpg) | Diego Delso | CC BY-SA 4.0 |
 | chromis | [Chromis viridis mâle nuptial.JPG](https://commons.wikimedia.org/wiki/File:Chromis_viridis_m%C3%A2le_nuptial.JPG) | Philippe Bourjon | CC BY-SA 4.0 |
 | cleaner | [Lábrido limpiador común (Labroides dimidiatus), islas Ad Dimaniyat, Omán, 2024-08-15, DD 54.jpg](https://commons.wikimedia.org/wiki/File:L%C3%A1brido_limpiador_com%C3%BAn_(Labroides_dimidiatus),_islas_Ad_Dimaniyat,_Om%C3%A1n,_2024-08-15,_DD_54.jpg) | Diego Delso | CC BY-SA 4.0 |
 | parrot | [Bullethead parrotfish (Chlorurus spilurus) (37479197131).jpg](https://commons.wikimedia.org/wiki/File:Bullethead_parrotfish_(Chlorurus_spilurus)_(37479197131).jpg) | Rickard Zerpe | CC BY 2.0 |

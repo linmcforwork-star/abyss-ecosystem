@@ -290,7 +290,7 @@ fn zone(p: vec3f) -> f32 { return mix(g.sun.w, textureSampleLevel(tM, sC, p.xz /
 fn side(p: vec3f, n: vec3f, open: f32, z: f32) -> vec3f { return mix(WCOL, PCOL, z) * exp(kd(z) * min(p.y, 0.)) * open * (1. - abs(n.y)) * .7 * dayL(); }
 // skylight at most 150 m along the ray: past that, terrain and the background behind it (vsB) get the same haze
 // the anemone garden (start basin): clearer, darker water so the fluorescent anemones stand out
-fn gard(p: vec3f) -> f32 { return ss(-19., -11., p.x) * ss(24., 16., p.x) * ss(-14., -6., p.z) * ss(50., 42., p.z); }
+fn gard(p: vec3f) -> f32 { return ss(20., 14., length(p.xz - vec2f(3., 18.))); } // only round the clownfish home (the reef pinnacle)
 fn fog(c: vec3f, wp: vec3f, z: f32) -> vec3f {
   let v = wp - g.cam.xyz; let d = length(v); let rd = v / d; let gf = gard(g.cam.xyz);
   return c * exp(-sg(z) * d * (1. - .45 * gf)) * ss(230., 185., d) + fogIn(g.cam.xyz, rd, d, z, g.sun.xyz) * (.58 + .42 * vol(g.cam.xyz + rd * min(d, 150.)).g) * (1. - .75 * gf);
@@ -645,14 +645,14 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
 @vertex fn vsReef(i: VI) -> VO {
   var o: VO;
   let t = g.cam.w; let sz = i.a.w; let bw = floor(i.b.w); let ph = fract(i.b.w) * TAU;
-  let k = i32(bw) % 16; let asleep = bw >= 16.;
+  let kv = i32(bw); let k = kv % 16; let asleep = (kv / 16) % 2 == 1; let vr = kv / 32; // vr: clownfish species (0 ocellaris, 1 pink, 2/3 Clark's)
   let bl = length(i.b.xyz); let T = i.b.xyz / max(bl, 1e-4);
   let c = cross(vec3f(0., 1., 0.), T); let S = select(vec3f(0., 0., 1.), normalize(c), length(c) > 1e-3); let Up = cross(T, S);
   var l = i.p; let aux = i.n.w;
   // body shape per species: height, width, extra fin height
   var hs = 1.; var ws = 1.; var fs = 1.; var fq = 9.; var amp = .1;
   switch k {
-    case 0 { hs = 1.05; ws = 1.15; fs = .85; fq = 11.; }
+    case 0 { hs = select(1.05, select(.97, 1.1, vr >= 2), vr >= 1); ws = 1.15; fs = .85; fq = 11.; }
     case 1 { hs = 1.2; ws = .9; fs = 1.1; fq = 12.; }
     case 2 { hs = .62; ws = .95; fs = .7; fq = 10.; }
     case 3 { hs = 1.; ws = 1.2; fs = .55; fq = 6.; }
@@ -666,6 +666,8 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
     let isF = aux > .5 && aux < .7;
     l.y *= hs; l.z *= ws;
     if (isF) { let e = sat((abs(i.p.y) - .14) / .08); l.y *= 1. + (fs - 1.) * e; }
+    // clownfish: a rounded tail, not a forked one (the notch filled out, the lobe tips pulled in)
+    if (k == 0 && aux > .25 && aux < .35 && i.p.x < -.4) { if (abs(i.p.y) < .01) { l.x = -.57; } else { l.x += .03; l.y *= .85; } }
     // moorish idol: the dorsal fin's front edge streams back into a long white filament
     if (k == 4 && aux > .58 && aux < .62 && i.p.y > .2 && i.p.x > -.05) { l.y += .28; l.x -= .2; }
   }
@@ -676,7 +678,7 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
   // pectoral fins flutter
   if (aux > .75 && aux < .85) { l.y += sin(t * 7. + ph) * .02 * abs(l.z) * 10.; }
   let w = i.a.xyz + (T * l.x + Up * l.y + S * l.z) * sz;
-  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = T * i.n.x + Up * i.n.y + S * i.n.z; o.op = l; o.sp = vec2f(f32(k), select(0., 1., asleep)); o.aux = aux;
+  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = T * i.n.x + Up * i.n.y + S * i.n.z; o.op = l; o.sp = vec2f(f32(k), select(0., 1., asleep) + 2. * f32(vr)); o.aux = aux;
   o.lt = shadow1(w);
   return o;
 }
@@ -691,13 +693,33 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let tail = i.aux > .25 && i.aux < .35;
   var alb = vec3f(.5); var spec = .5; var iri = 0.;
   switch k {
-    case 0 { // clownfish: orange, three white bands edged in black, black-rimmed fins
-      alb = vec3f(1., .25, .0);
-      let b1 = abs(x - .29 + y * .15); let b2 = abs(x - .02 - y * .25); let b3 = abs(x + .3);
-      let bd = min(min(b1 - .035, b2 - .045), b3 - .025);
-      alb = mix(alb, vec3f(.01), ss(.042, .022, bd) * f32(!isF));
-      alb = mix(alb, vec3f(.95, .95, .9), ss(.004, -.004, bd) * f32(!isF));
-      if (isF) { alb = mix(alb, vec3f(.02), ss(.55, .85, edge) + select(0., ss(-.44, -.48, x), tail)); }
+    case 0 { // clownfish (refs: clownfish/LOOKS.md)
+      let vr = i32(floor(i.sp.y * .5 + .01));
+      if (vr == 0) { // ocellaris: orange, three white bands edged in black (the middle one bulging toward the head), black-rimmed fins
+        alb = vec3f(1., .25, .0);
+        let b1 = abs(x - .29 + .04 * (1. - pow(y / .19, 2.))); let b2 = abs(x - .03 - .06 * (1. - ss(0., .17, abs(y)))); let b3 = abs(x + .3); // head bar bowed back behind the eye; one middle bar with a smooth point toward the head
+        let bd = min(min(b1 - .035, b2 - .045), b3 - .025);
+        alb = mix(alb, vec3f(.01), ss(.016, .008, bd) * f32(!isF));
+        alb = mix(alb, vec3f(.95, .95, .9), ss(.004, -.004, bd) * f32(!isF));
+        if (isF) { alb = mix(alb, vec3f(.02), sat(ss(.35, .6, edge) + select(0., ss(-.42, -.46, x), tail))); } // bold black fin margins
+      } else if (vr == 1) { // pink skunk: peach-pink, a white stripe along the whole back, a thin white bar behind the eye, pale fins
+        alb = mix(vec3f(.92, .4, .38), vec3f(.88, .5, .56), ss(.1, -.15, y));
+        let bk = ss(hb * .7, hb * .8, y) * f32(!isF); // a thin white line on the dorsal ridge, snout to tail base                       // the dorsal stripe, snout to tail
+        let hbar = ss(.016, .01, abs(x - .3 + y * .12)) * f32(!isF);
+        alb = mix(alb, vec3f(.97, .95, .92), max(bk, hbar));
+        if (isF) { alb = mix(vec3f(.95, .55, .55), vec3f(.97, .85, .82), select(.4 * edge, .7, tail)); spec = .25; } // fins pink, paler to the edge; the tail whitish
+      } else { // Clark's: black back, yellow-orange face, chest and belly, two broad white bands, white tail stalk; male tail yellow, female white
+        let face = max(ss(.26, .36, x), ss(-.01, -.1, y) * ss(-.3, .1, x));
+        alb = mix(vec3f(.025, .018, .012), vec3f(1., .42, .02), face);
+        let b1 = abs(x - .27 + y * .15) - .045; let b2 = abs(x + .02 - y * .1) - .045;
+        let wb = max(ss(.004, -.004, min(b1, b2)), ss(.004, -.004, abs(x + .37) - .045)) * f32(!isF); // and a crisp white ring round the tail stalk
+        alb = mix(alb, vec3f(.95, .95, .92), wb);
+        if (isF) {
+          alb = vec3f(1., .45, .02);                                              // pectoral, pelvic and anal fins: yellow-orange
+          if (y > hb * .6) { alb = vec3f(.03, .02, .015); } // the dorsal fin: black like the back
+          if (tail) { alb = select(vec3f(1., .72, .1), vec3f(.95, .93, .85), vr == 3); }
+        }
+      }
     }
     case 1 { // blue-green chromis
       alb = mix(vec3f(.25, .95, .55), vec3f(.45, .85, 1.), ss(-.1, .1, -y));
@@ -780,9 +802,16 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   if (isF) { c += alb * E * sat(-ndl) * .5; }                                   // light through the fins
   c += E * pow(sat(dot(n, normalize(V + L))), 30.) * spec * .9;
   c += (.5 + .5 * cos(TAU * (vec3f(0., .33, .67) + ndv * 1.3 + .45))) * iri * .25 * E * pow(1. - ndv, 2.);
-  if (k == 0) { c += alb * (.06 + .5 * g.mis.w); }                                  // clownfish: keep their orange at depth (the showpiece)
+  if (k == 0) { // clownfish: keep their colour at depth, but shaded (lit from above, belly in shadow) and wet: a sharp glint and a blue rim
+    c += alb * (.015 + .12 * g.mis.w) * (.3 + .7 * sat(n.y * .5 + .5));
+    c *= mix(.5, 1., sat(n.y * .5 + .5));
+    let sc = spots(vec2f(x * 1.6, y), 70., .45); if (!isF) { c *= .92 + .08 * sc; }
+    c += nite() * select(.9, .25, isF) * (.6 + .4 * sc) * .35 * pow(ndv, 48.) * vec3f(1., .95, .9);
+    c += amb(i.wp, n, vv.g, z) * pow(1. - ndv, 3.) * .8;
+    if (isF) { c += alb * E * sat(-ndl) * .6 * mix(1., .5, edge); }
+  }                                  // clownfish: keep their orange at depth (the showpiece)
   // asleep in a mucus cocoon (parrotfish): a milky film over the body
-  if (i.sp.y > .5) { c = mix(c, amb(i.wp, n, vv.g, z) * vec3f(1.6, 1.8, 1.9) + E * .1, .25 + .45 * pow(1. - ndv, 2.)); }
+  if (i.sp.y - 2. * floor(i.sp.y * .5) > .5) { c = mix(c, amb(i.wp, n, vv.g, z) * vec3f(1.6, 1.8, 1.9) + E * .1, .25 + .45 * pow(1. - ndv, 2.)); }
   return fin(fog(c, i.wp, z));
 }
 // sea anemone: a = base position + size, b.x colour seed, b.y how far the tentacles are drawn in (night)
