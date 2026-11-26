@@ -205,7 +205,7 @@ fn ign(p: vec2f) -> f32 { return fract(52.9829189 * fract(dot(p, vec2f(.06711056
 fn hs(x: f32) -> f32 { return fract(sin(x * 127.1) * 43758.5453); }
 // the diver's lamp (L key): a hand torch held low on the right (g.lmp: position, on/off; g.lmd: direction). A bright round spot
 // with a soft edge and a little spill; inside it things show their true colours, like the lights in underwater films
-fn spot(v: vec3f) -> f32 { let c = dot(v, g.lmd.xyz); return .03 + ss(.925, .935, c) * (.8 + .4 * ss(.94, .99, c)); }
+fn spot(v: vec3f) -> f32 { let c = dot(v, g.lmd.xyz); return mix(.03, .09, nite()) * ss(.5, .9, c) + ss(.9, .94, c) * (.8 + .4 * ss(.94, .99, c)); } // softer edge; at night a wider dim spill so things beside the spot still read
 // at night the torch is a blue fluorescence light (as divers use on fluorescence night dives): anemones and corals answer
 // with their own glowing colours (fluo), while rock and sand stay dark. g.mis.w: 1 day .. 0 night
 fn nite() -> f32 { return 1. - ss(.25, .6, g.mis.w); }
@@ -225,7 +225,7 @@ fn beam(rd: vec3f, tmax: f32) -> vec3f {
     let t = (f32(k) + .5) * dt; let q = g.cam.xyz + rd * t; let v = q - g.lmp.xyz; let d = max(length(v), .05);
     s += ss(.9, .94, dot(v / d, g.lmd.xyz)) * exp(-.06 * (d + t)) / (1. + .12 * d * d) * dt;
   }
-  return mix(vec3f(.9, .85, .75), vec3f(.2, .35, 1.), nite()) * s * mix(.07, .035, nite());
+  return mix(vec3f(.9, .85, .75), vec3f(.2, .35, 1.), nite()) * s * mix(.07, .018, nite()); // (night: half the haze, it greyed the colours inside the spot)
 }
 fn kd(z: f32) -> vec3f { return mix(KD, KDZ, z); }
 fn sg(z: f32) -> vec3f { return mix(SIG, vec3f(.034, .026, .022), z); }

@@ -486,10 +486,10 @@ function makeWorld(D, T, flyPts, POSES) {
       cluster(12, 0, 5, 1.0, 1.4, seen(wall), 2.6, [hx + 6, fl + 4, hz - 12]);   // the rock wall to the right (north): a rose-red clump
       cluster(10, 0, 2, 1.0, 1.4, seen(wall), 2.4, [hx + 10, fl + 3, hz - 13]);  // and a second, further along
       cluster(8, 2, 1, 0.7, 1.0, seen(wall), 1.3, [hx + 8, fl + 2, hz - 12]);    // bubble-tips tucked into the same wall
-      cluster(12, 2, 1, 0.7, 1.0, foot, 1.5, [hx + 3.5, fl + 1, hz + 6.5]);     // bubble-tip patch at the south leg's foot
-      cluster(10, 2, 1, 0.7, 1.0, foot, 1.4, [hx + 3.5, fl + 1, hz - 6.5]);     // and the north leg's foot
+      cluster(12, 2, 1, 0.8, 1.1, seen(foot), 1.5, [hx + 3.5, fl + 1, hz + 6.5]);     // bubble-tip patch at the south leg's foot
+      cluster(10, 2, 1, 0.8, 1.1, seen(foot), 1.4, [hx + 3.5, fl + 1, hz - 6.5]);     // and the north leg's foot
       for (const [dx, dz] of [[1, 2], [7, -3], [-5, 4], [10, 2]]) cluster(1, 1, 0, 2.1, 2.5, sand, 0.5, [hx + dx, fl, hz + dz]); // carpets, alone on the sand
-      for (const [dx, dz] of [[6, 3], [4.5, -2], [9, 6], [-2, -3], [12, -4], [3, 0]]) cluster(1, 3, 1, 1.2, 1.5, sand, 0.5, [hx + dx, fl, hz + dz]); // long-tentacle, alone in the sand
+      for (const [dx, dz] of [[6, 3], [4.5, -2], [9, 6], [-2, -3], [12, -4], [3, 0]]) cluster(1, 3, 1, 1.8, 2.2, sand, 0.5, [hx + dx, fl, hz + dz]); // long-tentacle, alone in the sand
       cluster(5, 4, 1, 0.8, 1.0, sand, 2.2, [hx + 8, fl, hz - 1]);              // two loose groups of tube anemones on the open sand
       cluster(4, 4, 1, 0.8, 1.0, sand, 2, [hx + 11, fl, hz + 5]);
     }
@@ -620,12 +620,12 @@ function makeWorld(D, T, flyPts, POSES) {
   // --- ground map: r magenta cover, b purple zone, a sand
   // a pale sand patch under each carpet anemone, so the blue carpet stands out at night instead of melting into the dark floor
   const CARP = anemones.filter((a) => (a[4] | 0) === 1 && hypot(a[0] - HOMEP[0], a[2] - HOMEP[1]) < 16);
-  const carpetSand = (x, z) => { let m = 1; for (const a of CARP) m = min(m, sstep(0.9, 2.4, hypot(x - a[0], z - a[2]))); return m; };
+  const carpetSand = (x, z) => { let m = 1; for (const a of CARP) m = min(m, sstep(1.2, 3, hypot(x - a[0], z - a[2]))); return m; };
   const gm = new Uint8Array(512 * 512 * 4);
   for (let j = 0; j < 512; j++) for (let i = 0; i < 512; i++) {
     const x = (i + 0.5) / 512 * 384 - 192, z = (j + 0.5) / 512 * 384 - 192, o = (i + 512 * j) * 4;
     gm[o] = (inZone(x, z, -1) ? 0 : magAt(x, z)) * 255; gm[o + 1] = sstep(18, 12, hypot(x - HOMEP[0], z - HOMEP[1])) * carpetSand(x, z) * 255; // g: darker garden floor so anemones glow against it
-    gm[o + 2] = zoneP(x, z) * 255; gm[o + 3] = sstep(0.42, 0.6, fbm(x * 0.04, 3, z * 0.04, 3)) * 255; // (no magenta ground in the anemone garden: it fought the anemones)
+    gm[o + 2] = zoneP(x, z) * 255; gm[o + 3] = sstep(0.42, 0.6, fbm(x * 0.04, 3, z * 0.04, 3)) * carpetSand(x, z) * 255; // (no magenta ground in the anemone garden: it fought the anemones)
   }
 
   // --- fish schools + mantas

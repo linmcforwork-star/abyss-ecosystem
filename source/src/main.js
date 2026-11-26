@@ -312,7 +312,7 @@ function anemSort() {
     ANC[j] = o;
     for (let k = 0; k < nAnem; k++) {
       const b = k * 8, kind = AN[b + 4] | 0, d = hypot(AN[b] - F[CX], AN[b + 1] - F[CY], AN[b + 2] - F[CZ]);
-      if (kind * 2 + (d > (11 + 3 * AN[b + 3]) * NEARK) !== j || d > min(75, CLIPD) || k < TANK) continue;
+      if (kind * 2 + (d > (5 + 2 * AN[b + 3]) * NEARK) !== j || d > min(75, CLIPD) || k < TANK) continue;
       for (let q = 0; q < 8; q++) ANd[o * 8 + q] = AN[b + q];
       o++;
     }
