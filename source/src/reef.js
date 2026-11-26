@@ -45,19 +45,19 @@ function meshAnem(kind, lo) {
     // rounded drum, about half as tall as wide; on top a disc with a few broad waves whose rim turns up; finger tentacles
     // cover the disc, the inner ones stand up, the rim ones lean out and droop over the column's edge
     const R = 0.4, H = 0.38, WV = 0.35;
-    m.tube([[0, -0.04, 0], [0, H * 0.3, 0], [0, H * 0.65, 0], [0, H * 0.9, 0], [0, H, 0]], (k) => R * [0.7, 0.98, 1.08, 1.02, 0.94][k], lo ? 14 : 28, false, () => -0.5);
+    m.tube([[0, -0.04, 0], [0, H * 0.3, 0], [0, H * 0.65, 0], [0, H * 0.9, 0], [0, H, 0]], (k) => R * [0.7, 0.98, 1.08, 1.02, 0.94][k], lo ? 10 : 28, false, () => -0.5);
     const top = (a, f) => H + 0.02 + 0.05 * f * f * f * (1 + sin(a * 5 + 0.6)) ;   // the rim turns up in 5 broad waves
-    { const nr = 6, ns = lo ? 28 : 56, rows = [];
+    { const nr = lo ? 4 : 6, ns = lo ? 20 : 56, rows = [];
       for (let r = 0; r <= nr; r++) { const row = [], f = r / nr; for (let k = 0; k < ns; k++) { const a = k / ns * TAU, rq = R * 0.95 * f; row.push(m.v(cos(a) * rq, top(a, f), sin(a) * rq, -0.4)); } rows.push(row); }
       for (let r = 0; r < nr; r++) for (let k = 0; k < ns; k++) { const k2 = (k + 1) % ns; m.quad(rows[r][k2], rows[r][k], rows[r + 1][k], rows[r + 1][k2]); } }
-    const TP = lo ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1];
-    tent(lo ? 280 : 1300, (i, n) => {
+    const TP = lo ? [0, 0.5, 1] : [0, 0.35, 0.68, 1];
+    tent(lo ? 150 : 660, (i, n) => {
       const a = i * 2.39996 + rr(-0.1, 0.1), f = min(1, 0.15 + 0.85 * sqrt((i + 0.5) / n)), rq = R * 0.95 * f, x = cos(a) * rq, z = sin(a) * rq, y = top(a, f);
       const tilt = 0.05 + 1.1 * Math.pow(f, 2) + rr(-0.1, 0.1), L = rr(0.18, 0.26) * (1.35 - 0.45 * f), ph = rr(0, 6.3), w = rr(0.02, 0.04), droop = 0.9 * Math.pow(f, 3), bend = rr(0.4, 1.0) * (0.4 + 0.6 * f);
       const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
-      return { r: rr(0.009, 0.012) * (lo ? 1.5 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t + 0.5 * bend * cos(tilt) * L * t * t, h = cos(tilt) * L * t - 0.5 * bend * sin(tilt) * L * t * t - droop * L * t * t, c = w * sin(t * 3.5 + ph) * t, ld = 0.1 * L * t * t;
+      return { r: rr(0.0115, 0.015) * (lo ? 1.4 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t + 0.5 * bend * cos(tilt) * L * t * t, h = cos(tilt) * L * t - 0.5 * bend * sin(tilt) * L * t * t - droop * L * t * t, c = w * sin(t * 3.5 + ph) * t, ld = 0.1 * L * t * t;
         return [x + ox * o + tx * c + ld, y + h, z + oz * o + tz * c + 0.4 * ld]; }) };
-    }, (t) => 1 - 0.12 * t + 0.08 * Math.exp(-(((t - 0.9) / 0.08) ** 2)), lo ? 5 : 7); // fingers of even thickness, blunt round ends
+    }, (t) => 1 - 0.12 * t + 0.08 * Math.exp(-(((t - 0.9) / 0.08) ** 2)), lo ? 3 : 5); // fingers of even thickness, blunt round ends
   } else if (kind === 1) {
     // carpet (the blue hero): a broad, gently waved mat packed with short tentacles that end in small round beads
     // giant carpet anemone (refs: anatomy/stichodactyla-gigantea): a broad saucer whose rim rises and is thrown into
