@@ -29,7 +29,7 @@ const SPC = [
   { zh: '华丽海葵', la: 'Heteractis magnifica', len: [0.8, 0.8],
     facts: ['小丑鱼的家。触手里有成千上万个刺细胞，能蜇伤靠近的小鱼。', '体内住着能光合作用的共生藻，所以喜欢阳光充足的浅水。'] },
 ];
-// the five kinds of anemone in the garden (kind = integer part of the anemone's colour value, see meshAnem in reef.js)
+// the seven kinds of anemone in the garden (5/6: the beadlet, open/shut) (kind = integer part of the anemone's colour value, see meshAnem in reef.js)
 const ANSP = [SPC[10],
   { zh: '巨型地毯海葵', la: 'Stichodactyla gigantea', short: '地毯海葵',
     facts: ['口盘可宽达 80 厘米，像一张起伏的毯子铺在浅水沙地上，上面密密麻麻全是很短、很黏的触手。', '小丑鱼也会住在它里面，碰到它时触手会黏住手指。'] },
@@ -38,7 +38,10 @@ const ANSP = [SPC[10],
   { zh: '长须海葵', la: 'Macrodactyla doreensis', short: '长须海葵',
     facts: ['身体埋在沙里，只把细长的触手铺在沙面上。', '受惊时会一下子整个缩进沙里，看上去什么都没有了。'] },
   { zh: '管海葵', la: 'Cerianthidae', short: '管海葵',
-    facts: ['住在自己用黏液和刺丝做成的管子里，管子可以深深插进沙里。受惊时一下子缩回管中。', '有两圈触手：外圈长的用来捕捉漂过的食物，内圈短的把食物送进嘴里。它其实不是真正的海葵，是海葵的远亲。'] }];
+    facts: ['住在自己用黏液和刺丝做成的管子里，管子可以深深插进沙里。受惊时一下子缩回管中。', '有两圈触手：外圈长的用来捕捉漂过的食物，内圈短的把食物送进嘴里。它其实不是真正的海葵，是海葵的远亲。'] },
+  { zh: '地中海珠海葵（海番茄）', la: 'Actinia mediterranea', short: '珠海葵',
+    facts: ['只有手心大小：光滑的酒红色身子，粉红色的细触手。受惊或退潮时，触手全缩进去，变成一个红色小圆球，像颗番茄。', '身子顶上藏着一圈钴蓝色的小珠子（领瘤）。碰到挤过来的邻居时，它会鼓起蓝珠去刺对方，抢地盘。', '住在地中海的潮间带岩石上，是冷水海葵。小丑鱼不住在它里面。'] }];
+ANSP[6] = ANSP[5]; // shut into a red dome: the same animal
 // states
 const S_HOVER = 0, S_HIDE = 1, S_TRAVEL = 2, S_GRAZE = 3, S_POSE = 4, S_CLEAN = 5, S_STALK = 6, S_BURST = 7, S_SLEEP = 8, S_PATROL = 9,
   S_GUARD = 10, S_FORAGE = 11, S_HOLE = 12, S_GONE = 13, S_ATE = 14;
@@ -670,13 +673,13 @@ function zoneStep(dt) {
 // ---------------------------------------------------------------- the card's picture: a real photo of the species
 // The 3D models are coloured for looks; the card shows what the animal really looks like. Photos from Wikimedia Commons
 // (free licences), stored next to the page in photos/ and loaded only when a card opens; the author is credited under it.
-const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "clown1": "Diego Delso · CC BY-SA 4.0", "clown2": "Diego Delso · CC BY-SA 4.0", "dasc": "Diego Delso · CC BY-SA 4.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0"}; // photo credits (details and links: SPECIES.md)
+const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "clown1": "Diego Delso · CC BY-SA 4.0", "clown2": "Diego Delso · CC BY-SA 4.0", "dasc": "Diego Delso · CC BY-SA 4.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0", "an5": "Fabrizio P. · CC BY-SA 3.0"}; // photo credits (details and links: SPECIES.md)
 const PKEY = ['clown', 'chromis', 'cleaner', 'parrot', 'idol', 'grouper', 'tang', 'shark', 'moray', 'manta'];
 const cvImg = document.createElement('img'), cvCr = document.createElement('small');
 cvImg.alt = ''; cPic.appendChild(cvImg); cPic.appendChild(cvCr);
 let cvKey = '';
 function cvShow(sp, id) {
-  const k = sp === 10 ? 'an' + (AN[(id - ANEB) * 8 + 4] | 0) : sp === 0 && VR[id] ? (VR[id] === 4 ? 'dasc' : 'clown' + min(VR[id], 2)) : PKEY[sp], c = PHOTOS[k];
+  const k = sp === 10 ? 'an' + min(AN[(id - ANEB) * 8 + 4] | 0, 5) : sp === 0 && VR[id] ? (VR[id] === 4 ? 'dasc' : 'clown' + min(VR[id], 2)) : PKEY[sp], c = PHOTOS[k];
   cPic.style.display = c ? 'block' : 'none';
   if (!c || k === cvKey) return;
   cvKey = k; cvImg.src = 'photos/' + k + '.webp'; cvCr.textContent = '照片：' + c;
