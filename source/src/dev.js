@@ -46,7 +46,7 @@ function tank(x = 3, z = 31, cols = [[1, 0, 1.6], [2, 1, 1.4], [0, 2, 1.3]], s =
   cols.forEach(([kd, col, sz], j) => {
     const hx = x + (j - (cols.length - 1) / 2) * 1.9 * s, hz = z + (j % 2) * 0.4, a = [hx, floorAt(hx, hz), hz, s * sz, kd + (col + 0.5) / 6, 0, 0];
     ANE[nAnem] = a; AN.set([a[0], a[1], a[2], a[3], a[4], 0, 0, 0], nAnem * 8);
-    for (let i = 0, m = 0; i < nA && m < 2; i++) if (SP[i] === 0 && !FROZ[i] && !(i in tank.used)) { tank.used[i] = 1; HM[i] = nAnem; setClown(i, a, m); P[i * 3] = hx; P[i * 3 + 1] = a[1] + 0.4 * s; P[i * 3 + 2] = hz; m++; c++; }
+    for (let i = 0, m = kd > 2 ? 2 : 0; i < nA && m < 2; i++) if (SP[i] === 0 && !FROZ[i] && !(i in tank.used)) { tank.used[i] = 1; HM[i] = nAnem; setClown(i, a, m); P[i * 3] = hx; P[i * 3 + 1] = a[1] + 0.4 * s; P[i * 3 + 2] = hz; m++; c++; }
     if (kd === 0) for (let i = 0, m = 0; i < nA && m < 5; i++) if (SP[i] === 0 && !FROZ[i] && !(i in tank.used)) { tank.used[i] = 1; HM[i] = nAnem; setDasc(i); P[i * 3] = TG[i * 3] = hx + rr(-0.45, 0.45) * a[3]; P[i * 3 + 1] = TG[i * 3 + 1] = a[1] + (0.6 + rr(0.05, 0.3)) * a[3]; P[i * 3 + 2] = TG[i * 3 + 2] = hz + rr(-0.45, 0.45) * a[3]; m++; } // already in place: the headless renders run too few frames for them to swim there
     nAnem++;
   });

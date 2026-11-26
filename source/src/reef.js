@@ -149,14 +149,29 @@ function meshAnem(kind, lo) {
       return { r: rr(0.008, 0.01) * (lo ? 1.6 : 1), pts };
     }, (t) => 1 - 0.5 * t, lo ? 4 : 5); // tapering to a fine tip
   } else {
-    // tube-dwelling: a tall leathery tube, an outer crown of long drooping tentacles and an inner ring of short ones
-    const H = 0.55, Rt = 0.065, ns = lo ? 8 : 12;
-    m.tube([[0, -0.05, 0], [0.01, H * 0.4, 0], [-0.01, H * 0.8, 0.01], [0, H, 0]], (k) => Rt * [1.15, 1, 1, 1.05][k], ns, false, () => -0.5);
-    disc(Rt * 1.05, H, 0.02, 0, 1, ns);
-    tent(lo ? 30 : 120, (i, n) => {
-      const a = i / n * TAU * 3.1 + rr(-0.05, 0.05), inner = i % 3 === 0, r = Rt * (inner ? 0.5 : 0.95), L = inner ? rr(0.1, 0.14) : rr(0.28, 0.4), up = inner ? 1 : rr(0.35, 0.6);
-      return { r: (inner ? 0.01 : 0.014) * (lo ? 1.8 : 1), pts: [0, 0.25, 0.5, 0.75, 1].map((t) => [cos(a) * (r + L * t * (inner ? 0.25 : 0.9)), H + L * t * up - (inner ? 0 : L * t * t * 0.9), sin(a) * (r + L * t * (inner ? 0.25 : 0.9))]) };
-    }, [1, 0.85, 0.7, 0.55, 0.3], 3);
+    // tube-dwelling anemone (Cerianthidae; refs: tube-anemone photos): the felt-like tube is almost all buried, only a short
+    // collar shows; from it a big spray of long, very fine tentacles rises, arches out and droops, curling a little at the
+    // ends; a short inner ring stands up round the dark mouth. Fluorescent cyan-green at night (fsAnem). ~14k triangles near
+    const H = 0.12, Rt = 0.07, ns = lo ? 8 : 14;
+    m.tube([[0, -0.05, 0], [0, H * 0.55, 0], [0, H, 0]], (k) => Rt * [1.2, 1.1, 1.08][k], ns, false, () => -0.5); // felt collar, a little flared
+    disc(Rt * 1.0, H, -0.01, 0, 2, ns);
+    const NP = lo ? 5 : 12;
+    tent(lo ? 30 : 84, (i, n) => { // outer crown: each tentacle rises, arches out and droops, waving sideways and curling at the end
+      const a = i * 2.39996 + rr(-0.1, 0.1), ring = i % 2, r = Rt * (0.8 + 0.12 * ring), L = rr(0.5, 0.7) * (1 - 0.15 * ring);
+      const th0 = rr(0.1, 0.35) + 0.25 * ring, th1 = rr(1.8, 2.6), wv = rr(0.12, 0.3) * (rr(0, 1) < 0.5 ? -1 : 1), ph = rr(0, 6.3), cu = rr(0.4, 0.9) * (rr(0, 1) < 0.5 ? -1 : 1);
+      const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
+      let p = [ox * r, H, oz * r]; const pts = [p.slice()];
+      for (let k = 1; k < NP; k++) { const t = k / (NP - 1), th = th0 + (th1 - th0) * t * t, yaw = wv * sin(t * 2.2 + ph) + cu * sstep(0.45, 1, t);
+        const hx = sin(th) * cos(yaw), hs = sin(th) * sin(yaw), st = L / (NP - 1);
+        p = [p[0] + (ox * hx + tx * hs) * st, max(p[1] + cos(th) * st, 0.012), p[2] + (oz * hx + tz * hs) * st]; pts.push(p.slice()); }
+      return { r: rr(0.0095, 0.012) * (lo ? 1.4 : 1), pts };
+    }, (t) => 1 - 0.72 * t, lo ? 3 : 5);
+    tent(lo ? 0 : 28, (i, n) => { // inner ring round the dark mouth: short, rising then curling in over it
+      const a = i / n * TAU + rr(-0.05, 0.05), r = Rt * 0.5, L = rr(0.08, 0.12), ox = cos(a), oz = sin(a), c = rr(1.6, 2.4);
+      let p = [ox * r, H, oz * r]; const pts = [p.slice()];
+      for (let k = 1; k < 5; k++) { const t = k / 4, th = -0.15 - c * t * t * 0.6; p = [p[0] + ox * sin(th) * L / 4, p[1] + cos(th) * L / 4, p[2] + oz * sin(th) * L / 4]; pts.push(p.slice()); }
+      return { r: 0.0065, pts };
+    }, (t) => 1 - 0.6 * t, 4);
   }
   return m;
 }
