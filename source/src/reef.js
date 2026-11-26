@@ -131,19 +131,23 @@ function meshAnem(kind, lo) {
     m.tube([[0, -0.03, 0], [0, 0.003, 0], [0, 0.03, 0], [0, 0.06, 0], [0, 0.085, 0], [0, 0.1, 0], [0, 0.108, 0]], (k) => R * [1.2, 1.16, 1.06, 0.98, 0.8, 0.45, 0.12][k], lo ? 12 : 28, false, () => -0.5);
     disc(R * 0.12, 0.108, -0.01, 0, 1, lo ? 12 : 28);
   } else if (kind === 7) {
-    // beaded sea anemone (Heteractis aurora; refs: beaded-anemone/LOOKS.md): the column buried in sand, only a flat, slightly
-    // sunken purple disc shows, packed with short, thick tentacles that curl; each is a string of white beads on a dark
-    // brown stalk. The beads are painted (fsAnem), not modelled: ~17k triangles near (performance budget, critic F)
+    // beaded sea anemone (Heteractis aurora; refs: beaded-anemone/LOOKS.md, au03/au06 side by side with renders): the column
+    // buried in sand, only a flat purple disc shows, packed with tentacles that rise, taper to a fine tip and curl over into
+    // hooks and loops at the end; each is ringed with many small beads (painted, fsAnem). ~25k triangles near (budget, F)
     const R = 0.3;
     disc(R * 1.05, -0.005, -0.03, 0.08, 4, lo ? 16 : 32);
-    const TP = lo ? [0, 0.5, 1] : [0, 0.25, 0.5, 0.75, 1];
-    tent(lo ? 70 : 260, (i, n) => {
-      const [a, r] = spiral(i, n, R * 0.97), f = r / R, x = cos(a) * r, z = sin(a) * r, y = -0.03 * (1 - f * f) + 0.004;
-      const L = rr(0.045, 0.07) * (0.85 + 0.3 * f), tilt = min(1.0, 0.1 + 0.85 * f + rr(-0.2, 0.2)), bend = rr(1.0, 2.6), side = rr(-1.4, 1.4);
-      const ox = cos(a), oz = sin(a), tx = -oz, tz = ox;
-      return { r: rr(0.012, 0.015) * (lo ? 1.4 : 1), pts: TP.map((t) => { const o = sin(tilt) * L * t + 0.5 * bend * cos(tilt) * L * t * t, h = cos(tilt) * L * t - 0.5 * bend * sin(tilt) * L * t * t, c = side * L * t * t;
-        return [x + ox * o + tx * c, y + max(h, -0.02 - y), z + oz * o + tz * c]; }) };
-    }, (t) => 1 - 0.25 * t, lo ? 4 : 5); // thick, blunt, curling
+    const NP = lo ? 5 : 9;
+    const rot = (v, k, a) => { const c = cos(a), s2 = sin(a), d = v[0] * k[0] + v[1] * k[1] + v[2] * k[2];   // Rodrigues: v about unit axis k
+      return [v[0] * c + (k[1] * v[2] - k[2] * v[1]) * s2 + k[0] * d * (1 - c), v[1] * c + (k[2] * v[0] - k[0] * v[2]) * s2 + k[1] * d * (1 - c), v[2] * c + (k[0] * v[1] - k[1] * v[0]) * s2 + k[2] * d * (1 - c)]; };
+    tent(lo ? 60 : 200, (i, n) => {
+      const [a, r] = spiral(i, n, R * 0.95), f = r / R, ox = cos(a), oz = sin(a);
+      const L = rr(0.1, 0.17) * (0.9 + 0.2 * f), tilt = 0.05 + 0.5 * f + rr(-0.15, 0.15), curl = rr(6, 9.5), tw = rr(-1, 1);
+      // curl axis: mostly the sideways axis (hook over outward), turned a random amount toward the outward axis (sideways loops)
+      const sx = -oz, sz = ox, k0 = [sx * cos(tw) + ox * sin(tw), 0, sz * cos(tw) + oz * sin(tw)];
+      let p = [ox * r, -0.03 * (1 - f * f) + 0.004, oz * r], d = [ox * sin(tilt), cos(tilt), oz * sin(tilt)]; const pts = [p.slice()];
+      for (let k = 1; k < NP; k++) { const t = k / (NP - 1); d = rot(d, k0, curl * 4 * max(0, t - 0.75) / (NP - 1) * (lo ? 1.6 : 1)); p = [p[0] + d[0] * L / (NP - 1), max(p[1] + d[1] * L / (NP - 1), -0.01), p[2] + d[2] * L / (NP - 1)]; pts.push(p.slice()); }
+      return { r: rr(0.008, 0.01) * (lo ? 1.6 : 1), pts };
+    }, (t) => 1 - 0.5 * t, lo ? 4 : 5); // tapering to a fine tip
   } else {
     // tube-dwelling: a tall leathery tube, an outer crown of long drooping tentacles and an inner ring of short ones
     const H = 0.55, Rt = 0.065, ns = lo ? 8 : 12;
