@@ -235,7 +235,7 @@ function makeWorld(D, T, flyPts, POSES) {
     const k = pickV(), ny = T.wn[k + 1];
     if (ny < 0.72) continue;
     const x = T.wp[k] + rr(-0.45, 0.45), z = T.wp[k + 2] + rr(-0.45, 0.45), y = T.wp[k + 1];
-    if (hypot(x, z) > 170 || nearPose(x, z)) continue;
+    if (hypot(x, z) > 170 || nearPose(x, z) || inZone(x, z, 0)) continue;
     const m = magAt(x, z), zp = zoneP(x, z), u = rnd();
     if (m > 0.3 && u < m * 0.9) for (let j = 0; j < 4; j++) leaf(small, x + rr(-0.1, 0.1), y - 0.05, z + rr(-0.1, 0.1), rr(0.12, 0.34), rnd() * TAU, rr(0.05, 0.75), rr(0.04, 0.08), 0, 5, rnd(), rnd(), rr(0.3, 0.7));
     else if (u < m * 0.9 + 0.5 * max(zp, hot(x, z)) * sstep(0.42, 0.6, fbm(x * 0.09, 9, z * 0.09, 2))) for (let j = 0; j < 3; j++) leaf(small, x + rr(-0.1, 0.1), y - 0.05, z + rr(-0.1, 0.1), rr(0.25, 0.7), rnd() * TAU, rr(0.1, 0.8), rr(0.05, 0.1), 0, 7, rnd(), rnd(), rr(0.3, 0.8));
@@ -433,6 +433,7 @@ function makeWorld(D, T, flyPts, POSES) {
       taken.push([x, z, 3]);
     }
     } // !HOME
+    if (!ARCH) { // (arch home: nothing tall in front of the anemones)
     // between the groups: a few giant sponges and sea fans (1-3 m), small growth underfoot, all kept off the open sand
     const grp = []; for (let i = 0; i < 4000 && grp.length < 5; i++) { const x = rr(bx0 + 2, bx1 - 2), z = rr(bz0 + 2, bz1 - 2); if (onFloor(x, z) && !inner(x, z, 3) && free(x, z, 2) && !grp.some((p) => hypot(p[0] - x, p[1] - z) < 10)) grp.push([x, z]); }
     if (!grp.length) grp.push([g.x + 8, g.z]);
@@ -452,15 +453,16 @@ function makeWorld(D, T, flyPts, POSES) {
       made++; const y = top(x, z);
       solid(rnd() < 0.5 ? 7 : 4 + (rnd() * 3 | 0), x, y - 0.05, z, rr(0.3, 0.8), q(), rnd() < 0.5 ? 5 : 4, rnd(), 1, 0);
     }
+    }
     // one anemone wall on the sunlit rock at the north end (facing +x / -z, toward the sun), after the Red Sea photo
     // --- the clownfish home at the stone arch (user 2026-11-26): anemones grow on the arch's sides and the rock wall
     // beside it and on the sand beneath, never hanging upside down. Placed on the real terrain surface (its points and
     // normals), so nothing ends up inside the rock. By habit: magnificent in clumps on the steep, exposed rock;
     // bubble-tips crowded in a clonal patch at the foot of the wall; carpet, long-tentacle and tube anemones on the sand.
     if (ARCH) {
-      const [hx, hz] = HOMEP, R = 12, V = [];
+      const [hx, hz] = HOMEP, R = 16, V = [];
       for (let k = 0; k < T.nv * 3; k += 3) if (abs(T.wp[k] - hx) < R && abs(T.wp[k + 2] - hz) < R) V.push(k);
-      let fl = 1e9; for (const k of V) if (T.wn[k + 1] > 0.85) fl = min(fl, T.wp[k + 1]);
+      let fl = 1e9; for (const k of V) if (T.wn[k + 1] > 0.85 && abs(T.wp[k] - hx) < 12 && abs(T.wp[k + 2] - hz) < 12) fl = min(fl, T.wp[k + 1]);
       const used = [], free3 = (k, r) => !used.some((p) => hypot(p[0] - T.wp[k], p[1] - T.wp[k + 1], p[2] - T.wp[k + 2]) < p[3] + r);
       const wall = (k) => { const ny = T.wn[k + 1], y = T.wp[k + 1]; return ny > -0.15 && ny < 0.55 && y > fl + 0.8 && y < fl + 9; };
       const foot = (k) => { const ny = T.wn[k + 1], y = T.wp[k + 1]; return ny > 0.3 && ny < 0.88 && y < fl + 2.5; };
@@ -477,16 +479,19 @@ function makeWorld(D, T, flyPts, POSES) {
         return m;
       };
       // arch: ring in the y-z plane at x=hx, legs near z=hz-10 and z=hz+10, opening faces east (+x, toward spawn) and west
-      cluster(10, 0, 2, 1.0, 1.4, wall, 2.6, [hx + 2.6, fl + 3, hz + 9]);  // magnificent clump on the south leg's east face
-      cluster(8, 0, 1, 1.0, 1.4, wall, 2.4, [hx + 2.4, fl + 3.5, hz - 9]); // and on the north leg's east face
-      cluster(6, 0, 2, 1.0, 1.3, wall, 1.4, [hx, fl + 2.5, hz + 7.8]);    // a few on the inner face of the south leg, under the arch
-      cluster(12, 2, 1, 0.7, 1.0, foot, 1.5, [hx + 3.5, fl + 1, hz + 6.5]); // bubble-tip patch at the south leg's foot
-      cluster(10, 2, 1, 0.7, 1.0, foot, 1.4, [hx + 3.5, fl + 1, hz - 6.5]); // and the north leg's foot
-      cluster(1, 1, 0, 2.1, 2.5, sand, 0.5, [hx + 1, fl, hz + 2]);       // carpets, alone on the sand under the arch
-      cluster(1, 1, 0, 2.0, 2.4, sand, 0.5, [hx + 7, fl, hz - 3]);
-      cluster(1, 1, 0, 2.0, 2.4, sand, 0.5, [hx - 5, fl, hz + 4]);
-      for (const [dx, dz] of [[6, 3], [4.5, -2], [9, 6], [-2, -3]]) cluster(1, 3, 1, 1.2, 1.5, sand, 0.5, [hx + dx, fl, hz + dz]); // long-tentacle, alone in the sand
-      cluster(5, 4, 1, 0.8, 1.0, sand, 2.2, [hx + 8, fl, hz - 1]);       // a loose group of tube anemones on the open sand
+      const seen = (test) => (k) => test(k) && T.wn[k] * (-27 - T.wp[k]) + T.wn[k + 2] * (46 - T.wp[k + 2]) > 0; // faces the visitor coming from spawn
+      cluster(14, 0, 2, 1.0, 1.4, seen(wall), 2.8, [hx + 2.6, fl + 3, hz + 9]);  // magnificent clump on the south leg's east face
+      cluster(12, 0, 1, 1.0, 1.4, seen(wall), 2.6, [hx + 2.4, fl + 3.5, hz - 9]); // and on the north leg's east face
+      cluster(6, 0, 2, 1.0, 1.3, wall, 1.4, [hx, fl + 2.5, hz + 7.8]);          // a few on the inner face of the south leg, under the arch
+      cluster(12, 0, 5, 1.0, 1.4, seen(wall), 2.6, [hx + 6, fl + 4, hz - 12]);   // the rock wall to the right (north): a rose-red clump
+      cluster(10, 0, 2, 1.0, 1.4, seen(wall), 2.4, [hx + 10, fl + 3, hz - 13]);  // and a second, further along
+      cluster(8, 2, 1, 0.7, 1.0, seen(wall), 1.3, [hx + 8, fl + 2, hz - 12]);    // bubble-tips tucked into the same wall
+      cluster(12, 2, 1, 0.7, 1.0, foot, 1.5, [hx + 3.5, fl + 1, hz + 6.5]);     // bubble-tip patch at the south leg's foot
+      cluster(10, 2, 1, 0.7, 1.0, foot, 1.4, [hx + 3.5, fl + 1, hz - 6.5]);     // and the north leg's foot
+      for (const [dx, dz] of [[1, 2], [7, -3], [-5, 4], [10, 2]]) cluster(1, 1, 0, 2.1, 2.5, sand, 0.5, [hx + dx, fl, hz + dz]); // carpets, alone on the sand
+      for (const [dx, dz] of [[6, 3], [4.5, -2], [9, 6], [-2, -3], [12, -4], [3, 0]]) cluster(1, 3, 1, 1.2, 1.5, sand, 0.5, [hx + dx, fl, hz + dz]); // long-tentacle, alone in the sand
+      cluster(5, 4, 1, 0.8, 1.0, sand, 2.2, [hx + 8, fl, hz - 1]);              // two loose groups of tube anemones on the open sand
+      cluster(4, 4, 1, 0.8, 1.0, sand, 2, [hx + 11, fl, hz + 5]);
     }
     const walls = [];
     for (let i = 0; i < 600000 && walls.length < (ARCH ? 0 : 1); i++) {
@@ -613,10 +618,13 @@ function makeWorld(D, T, flyPts, POSES) {
   }
 
   // --- ground map: r magenta cover, b purple zone, a sand
+  // a pale sand patch under each carpet anemone, so the blue carpet stands out at night instead of melting into the dark floor
+  const CARP = anemones.filter((a) => (a[4] | 0) === 1 && hypot(a[0] - HOMEP[0], a[2] - HOMEP[1]) < 16);
+  const carpetSand = (x, z) => { let m = 1; for (const a of CARP) m = min(m, sstep(0.9, 2.4, hypot(x - a[0], z - a[2]))); return m; };
   const gm = new Uint8Array(512 * 512 * 4);
   for (let j = 0; j < 512; j++) for (let i = 0; i < 512; i++) {
     const x = (i + 0.5) / 512 * 384 - 192, z = (j + 0.5) / 512 * 384 - 192, o = (i + 512 * j) * 4;
-    gm[o] = (inZone(x, z, -1) ? 0 : magAt(x, z)) * 255; gm[o + 1] = sstep(18, 12, hypot(x - HOMEP[0], z - HOMEP[1])) * 255; // g: darker garden floor so anemones glow against it
+    gm[o] = (inZone(x, z, -1) ? 0 : magAt(x, z)) * 255; gm[o + 1] = sstep(18, 12, hypot(x - HOMEP[0], z - HOMEP[1])) * carpetSand(x, z) * 255; // g: darker garden floor so anemones glow against it
     gm[o + 2] = zoneP(x, z) * 255; gm[o + 3] = sstep(0.42, 0.6, fbm(x * 0.04, 3, z * 0.04, 3)) * 255; // (no magenta ground in the anemone garden: it fought the anemones)
   }
 

@@ -428,8 +428,8 @@ function pkTest(id, x, y, z, rad) {
   const dx = x - F[CX], dy = y - F[CY], dz = z - F[CZ], al = dx * pkX + dy * pkY + dz * pkZ;
   if (al < 0.3 || al > 18) return;
   const px = dx - pkX * al, py = dy - pkY * al, pz = dz - pkZ * al, off = sqrt(px * px + py * py + pz * pz);
-  const tol = rad + al * 0.035; if (off > tol) return;
-  const s = off / tol + al * 0.02; if (s < pkS) { pkS = s; pkB = id; }
+  const tol = rad * 1.3 + al * 0.05; if (off > tol) return; // (generous: what wears the yellow ring should be easy to aim at)
+  const s = (off / tol + al * 0.02) * (id === cardI ? 0.7 : 1); if (s < pkS) { pkS = s; pkB = id; } // the open card wins near-ties, so it does not flicker between neighbours
 }
 function lookPick() {
   // the ray: the screen centre, or where a finger tapped
@@ -468,7 +468,9 @@ function cardStep(dt) {
   if (fol >= 0) { if (cardI !== fol) showCard(fol); }
   else if (frameN % 3 === 0) {
     const b = lookPick();
-    if (b >= 0 && b === candI) candT += dt * 3; else { candI = b; candT = 0; }
+    // aiming time counts while the centre stays on any animal: in a dense anemone clump the pick hops between neighbours,
+    // and resetting the timer on every hop meant the card never opened although the ring was showing
+    if (b >= 0) candT += dt * 3; else candT = 0; candI = b;
     if (b >= 0 && candT > 0.35 && b !== cardI) showCard(b);
     if (b === cardI && b >= 0) lostT = 0; else if (cardI >= 0 && (lostT += dt * 3) > 3) { card.className = ''; cardI = -1; }
     pickOn = false;
