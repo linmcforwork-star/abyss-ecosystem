@@ -976,7 +976,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     let shK = array<f32, 8>(.0, 0., .06, .4, .35, .3, 0., 0.)[u32(kind)] * step(0., i.aux);
     let sheen = mix(alb, vec3f(1., .95, .9), .6) * kb * pow(1. - nv, 1.6) * (.25 + .75 * wrap) * shK * 2.2;
     // the carpet's beads catch the reef light: a bright little highlight on each one makes them read as vivid, not grey
-    let bead = select(0., 1., kind == 1.) * tip * pow(sat(dot(nb, normalize(Ld + V))), 12.) * .9 * vec3f(.45, .85, 1.);
+    let bead = select(0., 1., kind == 1.) * tip * pow(sat(dot(nb, normalize(Ld + V))), 12.) * .9 * vec3f(.45, .85, 1.) * (1. - ss(.2, .7, fq)); // fades with distance: no sparkle
     var lit = (body * mix(1., 1. / (.55 + .45 * nv), shK * 1.6) + term * kb + blue + sp + sheen) * occ + trans + T * tip * kb * .6 * key * key + bead;
     if (kind == 2.) { let lm = dot(lit, vec3f(.3, .59, .11)); lit = max((lit - lm) * 1.35 + lm, vec3f(0.)); } // bubble-tip: livelier peach (contrast, not a new hue)
     if (kind == 3.) { lit += mix(M, T, tip) * .24 * (.08 + .92 * key) * step(0., i.aux) * occ; } // its green fluorescence under the blue light
