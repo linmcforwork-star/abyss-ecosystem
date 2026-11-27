@@ -748,6 +748,7 @@ fn qrot(q: vec4f, v: vec3f) -> vec3f { return v + 2. * cross(q.xyz, cross(q.xyz,
 
 // ---------------------------------------------------------------- solid meshes (terrain, rocks, set pieces, sponges, coral)
 const W_SOLID = S_B + /*wgsl*/`
+override FARP: bool = false; // the far version of a coral or rock: no fine detail layers, one shadow sample
 struct VI { @location(0) p: vec3f, @location(1) n: vec4f, @location(2) a: vec4f, @location(3) b: vec4f, @location(4) c: vec4f };
 struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n: vec3f, @location(2) op: vec3f, @location(3) on: vec3f,
   @location(4) @interpolate(flat) m: vec4f, @location(5) @interpolate(flat) q: vec4f, @location(6) ao: f32 };
@@ -787,7 +788,8 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
   let on = normalize(i.on) * fl_; let n0 = normalize(i.n) * fl_;
   let dist = length(i.wp - g.cam.xyz);
   let ts = select(1., i.m.z, mat >= 2);
-  let A = tri(i.op, on, .1 * ts); let B = tri(i.op, on, .43 * ts); let C = tri(i.op, on, 1.9 * ts); let F = tri(i.op, on, 6.7 * ts); let fk = ss(10., 1.5, dist) * f32(mat <= 1);
+  let A = tri(i.op, on, .1 * ts); let B = tri(i.op, on, .43 * ts); var C = B; var F = B;
+  if (!FARP) { C = tri(i.op, on, 1.9 * ts); F = tri(i.op, on, 6.7 * ts); } let fk = ss(10., 1.5, dist) * f32(mat <= 1);
   let Wd = textureSample(tD, sR, vec2f(i.op.x * .06, (i.op.y + i.op.z) * .7));
   let big = textureSample(tD, sR, i.op.xz * .013 + i.op.y * .021).a;
   let big2 = textureSample(tD, sR, i.op.zx * .031 + i.op.y * .043 + .37).a;
@@ -937,7 +939,8 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
   let v1 = vol(i.wp + n0 * 1.5); let v2 = vol(i.wp + n0 * 4.5);
   let ao = (sat((v1.r - .5) * 8.) * .55 + sat((v2.r - .5) * 2.7) * .45) * vao * ss(.12, .6, hgt);
   let z = zone(i.wp);
-  let E = sunE(i.wp.y, z) * shadow9(i.wp + n0 * .35);
+  var sh = 1.; if (FARP) { sh = shadow1(i.wp + n0 * .35); } else { sh = shadow9(i.wp + n0 * .35); }
+  let E = sunE(i.wp.y, z) * sh;
   let ndl = sat(dot(N, L));
   let am = (amb(i.wp, N, v1.g, z) + side(i.wp, N, sat((v2.r - .5) * 2.7), z)) * ao;
   let dl = E * ndl * (.10 + mix(vec3f(.33), ca, ss(.1, .45, dot(n0, L))) * 2.5);
@@ -3283,7 +3286,7 @@ const ibSnow = { arrayStride: 16, stepMode: 'instance', attributes: [A(0, 0, 'fl
 
 const scenePipe = (m, vsE, fsE, buffers, o = {}) => device.createRenderPipeline({ layout: pl0,
   vertex: { module: m, entryPoint: vsE, buffers, constants: o.constants },
-  fragment: { module: m, entryPoint: fsE, targets: [{ format: HDR, blend: o.blend }] },
+  fragment: { module: m, entryPoint: fsE, targets: [{ format: HDR, blend: o.blend }], constants: o.fconst },
   primitive: { topology: o.strip ? 'triangle-strip' : 'triangle-list', cullMode: o.cull || 'none' },
   depthStencil: { format: DEPTH, depthWriteEnabled: !o.blend, depthCompare: 'greater' }, multisample: { count: AA } });
 const shadowPipe = (m, vsE, buffers, o = {}) => device.createRenderPipeline({ layout: pl0,
@@ -3295,6 +3298,7 @@ await say('正在编译着色器…', 0.05, 300);
 const mSolid = mod(W_SOLID), mLeaf = mod(W_LEAF), mAnim = mod(W_ANIM), mSurf = mod(W_SURF), mSpr = mod(W_SPR);
 const pTerrain = scenePipe(mSolid, 'vs', 'fs', [vbSolid, ibSolid], { cull: 'back' });
 const pSolid = scenePipe(mSolid, 'vs', 'fs', [vbSolid, ibSolid]);
+const pSolidFar = scenePipe(mSolid, 'vs', 'fs', [vbSolid, ibSolid], { fconst: { FARP: 1 } }); // far LOD of corals and rocks
 const pLeaf = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, constants: { ROWS: 9 } });
 const pLeaf5 = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, constants: { ROWS: 5 } });
 const pLeafS = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, constants: { ROWS: 3, FAR: 70 } });
@@ -3705,16 +3709,20 @@ function render() {
   if (!TANK) {
   r.setPipeline(pSolid);
   for (let i = 0; i < 12; i++) { const g = Wd.solids.ranges[i]; if (g[1]) r.drawIndexed(meshes[i].ib.length, g[1], meshes[i].i0, meshes[i].v0, g[0]); }
+  // near (full shader) first, then the far parts with the cheap shader (FARP): Subnautica-style shader LOD
+  const RF = 25, PF = 10;
   for (let i = 0; i < NCHUNK; i++) {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
-    drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, 0, i > 5 ? 30 : big ? 40 : 96);
+    drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, 0, min(RF, i > 5 ? 30 : big ? 40 : 96));
+  }
+  for (let i = 0; i < PM.length; i++) { r.setVertexBuffer(1, ibProp[i]); drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PM[i]], 0, 0, PF); }
+  r.setPipeline(pSolidFar);
+  for (let i = 0; i < NCHUNK; i++) {
+    const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
+    drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, RF, i > 5 ? 30 : big ? 40 : 96);
     if (big) drawCells(r, c.start, c.lo, c.hi, 3, meshes[20 + i], 0, 40, 150);
   }
-  for (let i = 0; i < PM.length; i++) {
-    const lod = PLOD[i]; r.setVertexBuffer(1, ibProp[i]);
-    drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PM[i]], 0, 0, lod ? 10 : 110);
-    if (lod) drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[lod], 0, 10, 110);
-  }
+  for (let i = 0; i < PM.length; i++) { r.setVertexBuffer(1, ibProp[i]); drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PLOD[i] || PM[i]], 0, PF, 110); }
   r.setPipeline(pManta); r.setVertexBuffer(1, ibManta); r.drawIndexed(MANTA.ib.length, nManta, MANTA.i0, MANTA.v0, 0);
   r.setPipeline(pFish); r.setVertexBuffer(1, ibFish); r.drawIndexed(FISH.ib.length, nFish, FISH.i0, FISH.v0, 0);
   }

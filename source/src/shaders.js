@@ -300,6 +300,7 @@ fn qrot(q: vec4f, v: vec3f) -> vec3f { return v + 2. * cross(q.xyz, cross(q.xyz,
 
 // ---------------------------------------------------------------- solid meshes (terrain, rocks, set pieces, sponges, coral)
 const W_SOLID = S_B + /*wgsl*/`
+override FARP: bool = false; // the far version of a coral or rock: no fine detail layers, one shadow sample
 struct VI { @location(0) p: vec3f, @location(1) n: vec4f, @location(2) a: vec4f, @location(3) b: vec4f, @location(4) c: vec4f };
 struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n: vec3f, @location(2) op: vec3f, @location(3) on: vec3f,
   @location(4) @interpolate(flat) m: vec4f, @location(5) @interpolate(flat) q: vec4f, @location(6) ao: f32 };
@@ -339,7 +340,8 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
   let on = normalize(i.on) * fl_; let n0 = normalize(i.n) * fl_;
   let dist = length(i.wp - g.cam.xyz);
   let ts = select(1., i.m.z, mat >= 2);
-  let A = tri(i.op, on, .1 * ts); let B = tri(i.op, on, .43 * ts); let C = tri(i.op, on, 1.9 * ts); let F = tri(i.op, on, 6.7 * ts); let fk = ss(10., 1.5, dist) * f32(mat <= 1);
+  let A = tri(i.op, on, .1 * ts); let B = tri(i.op, on, .43 * ts); var C = B; var F = B;
+  if (!FARP) { C = tri(i.op, on, 1.9 * ts); F = tri(i.op, on, 6.7 * ts); } let fk = ss(10., 1.5, dist) * f32(mat <= 1);
   let Wd = textureSample(tD, sR, vec2f(i.op.x * .06, (i.op.y + i.op.z) * .7));
   let big = textureSample(tD, sR, i.op.xz * .013 + i.op.y * .021).a;
   let big2 = textureSample(tD, sR, i.op.zx * .031 + i.op.y * .043 + .37).a;
@@ -489,7 +491,8 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
   let v1 = vol(i.wp + n0 * 1.5); let v2 = vol(i.wp + n0 * 4.5);
   let ao = (sat((v1.r - .5) * 8.) * .55 + sat((v2.r - .5) * 2.7) * .45) * vao * ss(.12, .6, hgt);
   let z = zone(i.wp);
-  let E = sunE(i.wp.y, z) * shadow9(i.wp + n0 * .35);
+  var sh = 1.; if (FARP) { sh = shadow1(i.wp + n0 * .35); } else { sh = shadow9(i.wp + n0 * .35); }
+  let E = sunE(i.wp.y, z) * sh;
   let ndl = sat(dot(N, L));
   let am = (amb(i.wp, N, v1.g, z) + side(i.wp, N, sat((v2.r - .5) * 2.7), z)) * ao;
   let dl = E * ndl * (.10 + mix(vec3f(.33), ca, ss(.1, .45, dot(n0, L))) * 2.5);

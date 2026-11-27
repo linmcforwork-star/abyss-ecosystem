@@ -86,7 +86,7 @@ const ibSnow = { arrayStride: 16, stepMode: 'instance', attributes: [A(0, 0, 'fl
 
 const scenePipe = (m, vsE, fsE, buffers, o = {}) => device.createRenderPipeline({ layout: pl0,
   vertex: { module: m, entryPoint: vsE, buffers, constants: o.constants },
-  fragment: { module: m, entryPoint: fsE, targets: [{ format: HDR, blend: o.blend }] },
+  fragment: { module: m, entryPoint: fsE, targets: [{ format: HDR, blend: o.blend }], constants: o.fconst },
   primitive: { topology: o.strip ? 'triangle-strip' : 'triangle-list', cullMode: o.cull || 'none' },
   depthStencil: { format: DEPTH, depthWriteEnabled: !o.blend, depthCompare: 'greater' }, multisample: { count: AA } });
 const shadowPipe = (m, vsE, buffers, o = {}) => device.createRenderPipeline({ layout: pl0,
@@ -98,6 +98,7 @@ await say('正在编译着色器…', 0.05, 300);
 const mSolid = mod(W_SOLID), mLeaf = mod(W_LEAF), mAnim = mod(W_ANIM), mSurf = mod(W_SURF), mSpr = mod(W_SPR);
 const pTerrain = scenePipe(mSolid, 'vs', 'fs', [vbSolid, ibSolid], { cull: 'back' });
 const pSolid = scenePipe(mSolid, 'vs', 'fs', [vbSolid, ibSolid]);
+const pSolidFar = scenePipe(mSolid, 'vs', 'fs', [vbSolid, ibSolid], { fconst: { FARP: 1 } }); // far LOD of corals and rocks
 const pLeaf = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, constants: { ROWS: 9 } });
 const pLeaf5 = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, constants: { ROWS: 5 } });
 const pLeafS = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, constants: { ROWS: 3, FAR: 70 } });
@@ -508,16 +509,20 @@ function render() {
   if (!TANK) {
   r.setPipeline(pSolid);
   for (let i = 0; i < 12; i++) { const g = Wd.solids.ranges[i]; if (g[1]) r.drawIndexed(meshes[i].ib.length, g[1], meshes[i].i0, meshes[i].v0, g[0]); }
+  // near (full shader) first, then the far parts with the cheap shader (FARP): Subnautica-style shader LOD
+  const RF = 25, PF = 10;
   for (let i = 0; i < NCHUNK; i++) {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
-    drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, 0, i > 5 ? 30 : big ? 40 : 96);
+    drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, 0, min(RF, i > 5 ? 30 : big ? 40 : 96));
+  }
+  for (let i = 0; i < PM.length; i++) { r.setVertexBuffer(1, ibProp[i]); drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PM[i]], 0, 0, PF); }
+  r.setPipeline(pSolidFar);
+  for (let i = 0; i < NCHUNK; i++) {
+    const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
+    drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, RF, i > 5 ? 30 : big ? 40 : 96);
     if (big) drawCells(r, c.start, c.lo, c.hi, 3, meshes[20 + i], 0, 40, 150);
   }
-  for (let i = 0; i < PM.length; i++) {
-    const lod = PLOD[i]; r.setVertexBuffer(1, ibProp[i]);
-    drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PM[i]], 0, 0, lod ? 10 : 110);
-    if (lod) drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[lod], 0, 10, 110);
-  }
+  for (let i = 0; i < PM.length; i++) { r.setVertexBuffer(1, ibProp[i]); drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PLOD[i] || PM[i]], 0, PF, 110); }
   r.setPipeline(pManta); r.setVertexBuffer(1, ibManta); r.drawIndexed(MANTA.ib.length, nManta, MANTA.i0, MANTA.v0, 0);
   r.setPipeline(pFish); r.setVertexBuffer(1, ibFish); r.drawIndexed(FISH.ib.length, nFish, FISH.i0, FISH.v0, 0);
   }
