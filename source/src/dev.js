@@ -37,6 +37,31 @@
     } else if (/Digit[1-6]/.test(e.code)) stop();
   });
 }
+// P  profile: holds the resolution, measures the GPU time with each part of the scene switched off in turn (~1.5 s each)
+//    and shows what each part costs; stand still at the slow spot while it runs (about 20 s)
+{
+  const PARTS = [['all', 0], ['terrain', 1], ['rocks', 2], ['corals', 4], ['fish', 8], ['anemones+critters', 16], ['kelp+plants', 32], ['ground cover', 64], ['light rays', 128], ['bloom', 256], ['particles', 512]];
+  let k = -1, n = 0, sum = 0, cnt = 0, base = 0; const res = [];
+  const draw2 = render;
+  render = () => {
+    if (k >= 0) {
+      if (++n > 12 && F[GPU] > 0) { sum += F[GPU]; cnt++; }
+      if (n > 90) {
+        const avg = cnt ? sum / cnt : 0; if (k === 0) base = avg;
+        res.push(k === 0 ? `all on: ${avg.toFixed(1)} ms GPU at ${W}x${H}` : `${PARTS[k][0].padEnd(18)} ${(base - avg).toFixed(1)} ms`);
+        k++; n = 0; sum = 0; cnt = 0;
+        if (k >= PARTS.length) { k = -1; OFF = 0; dynT = 0; info.textContent = 'Profile (cost of each part)\n' + res.join('\n'); }
+        else { OFF = PARTS[k][1]; info.textContent = `profiling… ${k}/${PARTS.length - 1}`; }
+      }
+    }
+    draw2();
+  };
+  addEventListener('keydown', (e) => {
+    if (menu || e.repeat || e.code !== 'KeyP') return;
+    if (!hasTS) { info.textContent = 'GPU timing unavailable in this browser'; return; }
+    hud = false; dynT = -Infinity; k = 0; n = 0; sum = 0; cnt = 0; res.length = 0; OFF = 0; info.textContent = 'profiling…';
+  });
+}
 // test hook: lets automated screenshot scripts move the camera, set the time and frame an animal (dev.html only)
 // test tank (dev only): three hero anemones side by side on bare sand, two clownfish each; everything else is hidden,
 // so a close-up renders fast. Same meshes and shaders as the garden.

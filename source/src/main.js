@@ -423,7 +423,7 @@ if (hasTS) {
 }
 
 // ---------------------------------------------------------------- frame
-let hud = false;
+let hud = false, OFF = 0; // OFF: dev profiler, bit mask of skipped parts
 let kf = 0, kb = 0, kl = 0, kr = 0, ku = 0, kd = 0, ks = 0, mdx = 0, mdy = 0, lkx = 0, lky = 0, l2x = 0, l2y = 0, hN = 0, hMax = 0, hMin = 1e9, hPer = 1e9, hLate = 0, hTot = 0, tId = -1, tN = 0, tx0 = 0, ty0 = 0, tx = 0, ty = 0;
 const TANH = 0.6, NEAR = 0.1, EXPO = 0.62, RAYS = 0.54;
 const submitList = [null];
@@ -504,57 +504,63 @@ function render() {
   r = e.beginRenderPass(passScene);
   r.setBindGroup(0, bg0);
   r.setPipeline(pTerrain); r.setVertexBuffer(0, vbTerrain); r.setVertexBuffer(1, ibSolids); r.setIndexBuffer(ibTerrain, 'uint32');
-  drawCells(r, T.start, T.lo, T.hi, 1.5, 1, 0, 0, TANK ? 160 : 240);
+  if (!(OFF & 1)) drawCells(r, T.start, T.lo, T.hi, 1.5, 1, 0, 0, TANK ? 160 : 240);
   r.setVertexBuffer(0, vbMesh); r.setIndexBuffer(ibMesh, 'uint32');
   if (!TANK) {
   r.setPipeline(pSolid);
-  for (let i = 0; i < 12; i++) { const g = Wd.solids.ranges[i]; if (g[1]) r.drawIndexed(meshes[i].ib.length, g[1], meshes[i].i0, meshes[i].v0, g[0]); }
+  if (!(OFF & 2)) for (let i = 0; i < 12; i++) { const g = Wd.solids.ranges[i]; if (g[1]) r.drawIndexed(meshes[i].ib.length, g[1], meshes[i].i0, meshes[i].v0, g[0]); }
   // near (full shader) first, then the far parts with the cheap shader (FARP): Subnautica-style shader LOD
   const RF = 25, PF = [10, 8, 6][LV], PFAR = [110, 85, 65][LV]; // Medium/Low: shorter coral distances
-  for (let i = 0; i < NCHUNK; i++) {
+  for (let i = 0; i < NCHUNK && !(OFF & 2); i++) {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
     drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, 0, min(RF, i > 5 ? 30 : big ? 40 : 96));
   }
-  for (let i = 0; i < PM.length; i++) { r.setVertexBuffer(1, ibProp[i]); drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PM[i]], 0, 0, PF); }
+  for (let i = 0; i < PM.length && !(OFF & 4); i++) { r.setVertexBuffer(1, ibProp[i]); drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PM[i]], 0, 0, PF); }
   r.setPipeline(pSolidFar);
-  for (let i = 0; i < NCHUNK; i++) {
+  for (let i = 0; i < NCHUNK && !(OFF & 2); i++) {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
     drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, RF, i > 5 ? 30 : big ? 40 : 96);
     if (big) drawCells(r, c.start, c.lo, c.hi, 3, meshes[20 + i], 0, 40, 150);
   }
-  for (let i = 0; i < PM.length; i++) { r.setVertexBuffer(1, ibProp[i]); drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PLOD[i] || PM[i]], 0, PF, PFAR); }
-  r.setPipeline(pManta); r.setVertexBuffer(1, ibManta); r.drawIndexed(MANTA.ib.length, nManta, MANTA.i0, MANTA.v0, 0);
-  r.setPipeline(pFish); r.setVertexBuffer(1, ibFish); r.drawIndexed(FISH.ib.length, nFish, FISH.i0, FISH.v0, 0);
+  for (let i = 0; i < PM.length && !(OFF & 4); i++) { r.setVertexBuffer(1, ibProp[i]); drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PLOD[i] || PM[i]], 0, PF, PFAR); }
+  if (!(OFF & 8)) { r.setPipeline(pManta); r.setVertexBuffer(1, ibManta); r.drawIndexed(MANTA.ib.length, nManta, MANTA.i0, MANTA.v0, 0);
+  r.setPipeline(pFish); r.setVertexBuffer(1, ibFish); r.drawIndexed(FISH.ib.length, nFish, FISH.i0, FISH.v0, 0); }
   }
-  if (nEcoF + nEcoS + nEcoE) {
+  if (nEcoF + nEcoS + nEcoE && !(OFF & 8)) {
     Q.writeBuffer(ibEco, 0, EB, 0, (nEcoF + nEcoS + nEcoE) * 8);
     r.setPipeline(pReef); r.setVertexBuffer(1, ibEco);
     if (nEcoF) r.drawIndexed(meshes[28].ib.length, nEcoF, meshes[28].i0, meshes[28].v0, 0);
     if (nEcoS && !TANK) r.drawIndexed(meshes[29].ib.length, nEcoS, meshes[29].i0, meshes[29].v0, nEcoF);
     if (nEcoE) r.drawIndexed(meshes[30].ib.length, nEcoE, meshes[30].i0, meshes[30].v0, nEcoF + nEcoS);
   }
-  if (nAnem) {
+  if (nAnem && !(OFF & 16)) {
     anemSort(); Q.writeBuffer(ibAnem, 0, ANd, 0, ANC[20] * 8); r.setPipeline(pAnem); r.setVertexBuffer(1, ibAnem);
     for (let j = 0; j < 20; j++) { if (j === 16) r.setPipeline(pCrit); const n = ANC[j + 1] - ANC[j], M = meshes[31 + j]; if (n) r.drawIndexed(M.ib.length, n, M.i0, M.v0, ANC[j]); }
   }
   // kelp and plants: 9-row blades up close, 5 rows mid-range, a decimated set far away
   if (!TANK) {
+  if (!(OFF & 32)) {
   r.setPipeline(pLeaf); r.setVertexBuffer(0, ibBig); drawCells(r, Wd.big.start, Wd.big.lo, Wd.big.hi, 5, false, 18, 0, 24);
   r.setPipeline(pLeaf5); drawCells(r, Wd.big.start, Wd.big.lo, Wd.big.hi, 5, false, 10, 24, 58);
   r.setPipeline(pLeafF); r.setVertexBuffer(0, ibBigF); drawCells(r, Wd.bigF.start, Wd.bigF.lo, Wd.bigF.hi, 5, false, 6, 58, 150);
-  r.setPipeline(pLeafS); r.setVertexBuffer(0, ibSmall); drawCells(r, Wd.small.start, Wd.small.lo, Wd.small.hi, 1.5, false, 6, 0, 70);
+  }
+  if (!(OFF & 64)) { r.setPipeline(pLeafS); r.setVertexBuffer(0, ibSmall); drawCells(r, Wd.small.start, Wd.small.lo, Wd.small.hi, 1.5, false, 6, 0, 70); }
   }
   r.setPipeline(pSurf); r.draw(4);
   r.setPipeline(pBack); r.draw(4);
+  if (!(OFF & 512)) {
   r.setPipeline(pBub); r.setVertexBuffer(0, ibBubbles); r.draw(4, nBub);
   r.setPipeline(pGl); r.setVertexBuffer(0, ibGl); r.draw(4, nGl);
   r.setPipeline(pSnow); r.setVertexBuffer(0, ibSnowB); r.draw(4, nSnow);
+  }
   r.end();
   // light shafts
+  if (!(OFF & 128)) {
   r = e.beginRenderPass(passRays); r.setPipeline(pRays); r.setBindGroup(0, bgRays); r.draw(3); r.end();
   r = e.beginRenderPass(passBlur); r.setPipeline(pRB); r.setBindGroup(0, bgBlur); r.draw(3); r.end();
+  }
   // bloom
-  for (let i = 0; i < bloomPass.length; i++) {
+  for (let i = 0; i < bloomPass.length && !(OFF & 256); i++) {
     r = e.beginRenderPass(bloomPass[i]); r.setPipeline(i === 0 ? pDown0 : i < NB ? pDown : pUp); r.setBindGroup(0, bloomBG[i]); r.draw(3); r.end();
   }
   // composite
