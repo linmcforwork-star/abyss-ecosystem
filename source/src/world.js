@@ -110,7 +110,7 @@ function makeWorld(D, T, flyPts, POSES) {
   };
   const SEAFAN = false; // the sea fan did not pass review (owner 2026-11-27): its spots get a staghorn thicket until it is redone
   const MATOF = { 4: 4, 5: 9, 6: 9, 7: 5, 8: 8, 9: 4 };   // the coral species decide their own material (barrel sponge 4, leather 9, staghorn 5, sea fan 8)
-  const solid = (mesh, x, y, z, sc, q, mat, seed, ts = 1, bob = 0) => { if (mesh === 8 && !SEAFAN) { mesh = 5 + (fract(seed * 4.3) < 0.5 ? 0 : 1); sc *= 0.6; } if (mesh === 7) sc = min(sc, 2.2); if (MATOF[mesh]) mat = MATOF[mesh]; const g = propGroup(mesh, seed); if (g >= 0) { const gs = sqrt(-2 * Math.log(0.001 + 0.998 * fract(seed * 3.71 + 0.5))) * cos(TAU * fract(seed * 5.13 + 0.2)); sc *= clamp(exp(0.35 * gs - 0.06), 0.45, 1.6); y -= sc * 0.08 * fract(seed * 9.1); } (g >= 0 ? props[g][cellOf(x, z)] : (solids[mesh] ||= [])).push(x, y, z, sc, q[0], q[1], q[2], q[3], mat, seed, ts, bob); };
+  const solid = (mesh, x, y, z, sc, q, mat, seed, ts = 1, bob = 0) => { if (mesh === 8 && !SEAFAN) { mesh = 5 + (fract(seed * 4.3) < 0.5 ? 0 : 1); sc *= 0.6; } if (mesh === 7) sc = min(sc, 2.2); if (MATOF[mesh]) mat = MATOF[mesh]; const g = propGroup(mesh, seed); if (g >= 0 && fract(seed * 23.9) < [0, 0.25, 0.45][LV]) return; /* Medium/Low: fewer corals */ if (g >= 0) { const gs = sqrt(-2 * Math.log(0.001 + 0.998 * fract(seed * 3.71 + 0.5))) * cos(TAU * fract(seed * 5.13 + 0.2)); sc *= clamp(exp(0.35 * gs - 0.06), 0.45, 1.6); y -= sc * 0.08 * fract(seed * 9.1); } (g >= 0 ? props[g][cellOf(x, z)] : (solids[mesh] ||= [])).push(x, y, z, sc, q[0], q[1], q[2], q[3], mat, seed, ts, bob); };
   const chunks = Array.from({ length: NCHUNK }, () => Array.from({ length: nCells }, () => []));
   const glints = [];
   const rel = (i, f, r) => { const p = POSES[i]; let fx = p[3] - p[0], fz = p[5] - p[2]; const l = hypot(fx, fz); fx /= l; fz /= l; return [p[0] + fx * f - fz * r, p[2] + fz * f + fx * r]; };
@@ -741,7 +741,7 @@ function makeWorld(D, T, flyPts, POSES) {
   { const add = [];
     props.forEach((P, g) => { for (const c of P) for (let i = 0; i < c.length; i += 12) {
       const x = c[i], y = c[i + 1], z = c[i + 2], sc = c[i + 3], sd = c[i + 9];
-      if (sc < 1.1 || fract(sd * 13.3) > 0.5) continue;
+      if (sc < 1.1 || fract(sd * 13.3) > [0.5, 0.25, 0][LV]) continue;
       const n = 1 + (fract(sd * 17.7) * 3 | 0);
       for (let k = 0; k < n; k++) {
         const a = TAU * fract(sd * 23.1 + k * 0.37), r = sc * (0.7 + 0.9 * fract(sd * 31.7 + k * 0.53)), x2 = x + cos(a) * r, z2 = z + sin(a) * r, y2 = gy(x2, z2);
