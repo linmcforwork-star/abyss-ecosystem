@@ -110,7 +110,7 @@ function makeWorld(D, T, flyPts, POSES) {
   };
   const SEAFAN = false; // the sea fan did not pass review (owner 2026-11-27): its spots get a staghorn thicket until it is redone
   const MATOF = { 4: 4, 5: 9, 6: 9, 7: 5, 8: 8, 9: 4 };   // the coral species decide their own material (barrel sponge 4, leather 9, staghorn 5, sea fan 8)
-  const solid = (mesh, x, y, z, sc, q, mat, seed, ts = 1, bob = 0) => { if (mesh === 8 && !SEAFAN) { mesh = 7; sc *= 0.7; } if (mesh === 7) sc = min(sc * 1.3, 2.4); if (MATOF[mesh]) mat = MATOF[mesh]; const g = propGroup(mesh, seed); if (g >= 0) { const gs = sqrt(-2 * Math.log(0.001 + 0.998 * fract(seed * 3.71 + 0.5))) * cos(TAU * fract(seed * 5.13 + 0.2)); sc *= clamp(exp(0.35 * gs - 0.06), 0.45, 1.6); y -= sc * 0.08 * fract(seed * 9.1); } (g >= 0 ? props[g][cellOf(x, z)] : (solids[mesh] ||= [])).push(x, y, z, sc, q[0], q[1], q[2], q[3], mat, seed, ts, bob); };
+  const solid = (mesh, x, y, z, sc, q, mat, seed, ts = 1, bob = 0) => { if (mesh === 8 && !SEAFAN) { mesh = 5 + (fract(seed * 4.3) < 0.5 ? 0 : 1); sc *= 0.6; } if (mesh === 7) sc = min(sc, 2.2); if (MATOF[mesh]) mat = MATOF[mesh]; const g = propGroup(mesh, seed); if (g >= 0) { const gs = sqrt(-2 * Math.log(0.001 + 0.998 * fract(seed * 3.71 + 0.5))) * cos(TAU * fract(seed * 5.13 + 0.2)); sc *= clamp(exp(0.35 * gs - 0.06), 0.45, 1.6); y -= sc * 0.08 * fract(seed * 9.1); } (g >= 0 ? props[g][cellOf(x, z)] : (solids[mesh] ||= [])).push(x, y, z, sc, q[0], q[1], q[2], q[3], mat, seed, ts, bob); };
   const chunks = Array.from({ length: NCHUNK }, () => Array.from({ length: nCells }, () => []));
   const glints = [];
   const rel = (i, f, r) => { const p = POSES[i]; let fx = p[3] - p[0], fz = p[5] - p[2]; const l = hypot(fx, fz); fx /= l; fz /= l; return [p[0] + fx * f - fz * r, p[2] + fz * f + fx * r]; };
@@ -842,15 +842,17 @@ function meshCoral(fan, lo = LV > 1, form = 0) {
   const m = new Mesh();
   const nrm = (v) => { const l = hypot(...v) || 1; return v.map((c) => c / l); };
   if (!fan) {
-    const sides = lo ? 4 : 5, seg = lo ? 3 : 5;
+    // the far version (lo) is the same colony, branch for branch (same random stream), only with every other point of
+    // each branch and three-sided tubes: no visible pop when it swaps at the LOD distance
+    const sides = lo ? 3 : 4, seg = 4;
     const branch = (p, d, r, len, depth) => {
       const pts = [p]; let q = p;
       for (let i = 0; i < seg; i++) { d = nrm([d[0] + rr(-0.18, 0.18), d[1] + rr(0.02, 0.22), d[2] + rr(-0.18, 0.18)]); q = [q[0] + d[0] * len / seg, q[1] + d[1] * len / seg, q[2] + d[2] * len / seg]; pts.push(q); }
-      const knob = pts.map(() => rr(0.85, 1.15));
-      m.tube(pts, (k) => r * (1 - 0.25 * k / seg) * (k === seg ? 1.15 : knob[k]), sides, 'round', (k) => clamp(0.3 + 0.7 * (1 - depth / 3) * (k / seg) + (k === seg ? 0.3 : 0), 0, 1));
-      if (depth > 0) { const n = lo ? 1 : 1 + (rnd() < 0.6) + (rnd() < 0.3); for (let i = 0; i < n; i++) { const at = pts[1 + ((rnd() * (seg - 1)) | 0)]; branch(at, nrm([d[0] + rr(-0.9, 0.9), d[1] + rr(0, 0.6), d[2] + rr(-0.9, 0.9)]), r * 0.85, len * rr(0.55, 0.8), depth - 1); } }
+      const knob = pts.map(() => rr(0.85, 1.15)), st = lo ? 2 : 1, tp = pts.filter((_, k) => k % st === 0), ns = tp.length - 1;
+      m.tube(tp, (k) => r * (1 - 0.25 * k / ns) * (k === ns ? 1.15 : knob[k * st]), sides, 'round', (k) => clamp(0.3 + 0.7 * (1 - depth / 3) * (k / ns) + (k === ns ? 0.3 : 0), 0, 1));
+      if (depth > 0) { const n = 1 + (rnd() < 0.6) + (rnd() < 0.3); for (let i = 0; i < n; i++) { const at = pts[1 + ((rnd() * (seg - 1)) | 0)]; branch(at, nrm([d[0] + rr(-0.9, 0.9), d[1] + rr(0, 0.6), d[2] + rr(-0.9, 0.9)]), r * 0.85, len * rr(0.55, 0.8), depth - 1); } }
     };
-    const n0 = [lo ? 12 : 30, lo ? 6 : 13, lo ? 14 : 34][form], L0 = [0.4, 0.75, 0.24][form], L1 = [0.65, 1.05, 0.4][form], up = [[0.5, 1.1], [0.7, 1.3], [0.2, 0.6]][form];
+    const n0 = [22, 11, 24][form], L0 = [0.4, 0.75, 0.24][form], L1 = [0.65, 1.05, 0.4][form], up = [[0.5, 1.1], [0.7, 1.3], [0.2, 0.6]][form];
     for (let i = 0; i < n0; i++) { const a = i / n0 * TAU + rr(-0.3, 0.3); branch([cos(a) * rr(0.05, 0.6), 0, sin(a) * rr(0.05, 0.6)], nrm([cos(a) * rr(0.6, 1.2), rr(up[0], up[1]), sin(a) * rr(0.6, 1.2)]), form === 1 ? 0.036 : 0.042, rr(L0, L1), 2); }
     return m;
   }
