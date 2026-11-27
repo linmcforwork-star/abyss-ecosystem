@@ -873,7 +873,7 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
   } else if (mat == 8) {
     // giant sea fan: mostly tan-beige, some rust-red; main branches darker; light passes through the fine net
     let hue = fract(sd * 5.73);
-    var base = mix(vec3f(.66, .30, .14), vec3f(.72, .42, .18), fract(hue * 3.));
+    var base = mix(vec3f(.50, .20, .09), vec3f(.56, .28, .12), fract(hue * 3.));
     if (hue > .75) { base = vec3f(.70, .56, .36); }
     if (i.ao > .93) {
       // the membrane: keep only a fine irregular net (cell edges of a jittered grid, ~3 cm cells)
@@ -881,10 +881,10 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
       for (var a = -1; a <= 1; a++) { for (var b = -1; b <= 1; b++) {
         let c = ip + vec2f(f32(a), f32(b)); let pn = c + vec2f(hs(c.x * 7.1 + c.y * 3.3), hs(c.x * 1.7 + c.y * 9.2));
         let dd = length(g - pn); if (dd < d1) { d2 = d1; d1 = dd; } else if (dd < d2) { d2 = dd; } } }
-      if (d2 - d1 > .3) { discard; }
+      if (d2 - d1 > .16) { discard; }
     }
     alb = mix(base * .62, base, ss(.5, .75, i.ao)) * (.8 + .3 * C.h);
-    flu = .35; gloss = .1; bump = .6; vao = 1.;
+    flu = .1; gloss = .1; bump = .6; vao = 1.;
   } else if (mat == 9) {
     // leather coral: a velvety cap (tan, olive, yellow-brown, or blue-lavender grey with a paler rim) over a cream stalk
     let hue = fract(sd * 6.11);
@@ -1896,8 +1896,9 @@ function makeWorld(D, T, flyPts, POSES) {
   const glint = (...a) => { nth++ % THIN || glints.push(...a); };
   const solids = []; // per mesh id: arrays of 12 floats
   const props = Array.from({ length: 8 }, () => Array.from({ length: nCells }, () => []));
+  const SEAFAN = false; // the sea fan did not pass review (owner 2026-11-27): its spots get a staghorn thicket until it is redone
   const MATOF = { 4: 4, 5: 9, 6: 9, 7: 5, 8: 8, 9: 4 };   // the coral species decide their own material (barrel sponge 4, leather 9, staghorn 5, sea fan 8)
-  const solid = (mesh, x, y, z, sc, q, mat, seed, ts = 1, bob = 0) => { if (MATOF[mesh]) mat = MATOF[mesh]; (mesh > 3 && mesh < 10 ? props[mesh - 4][cellOf(x, z)] : mesh > 25 ? props[mesh - 20][cellOf(x, z)] : (solids[mesh] ||= [])).push(x, y, z, sc, q[0], q[1], q[2], q[3], mat, seed, ts, bob); };
+  const solid = (mesh, x, y, z, sc, q, mat, seed, ts = 1, bob = 0) => { if (mesh === 8 && !SEAFAN) { mesh = 7; sc *= 0.7; } if (MATOF[mesh]) mat = MATOF[mesh]; (mesh > 3 && mesh < 10 ? props[mesh - 4][cellOf(x, z)] : mesh > 25 ? props[mesh - 20][cellOf(x, z)] : (solids[mesh] ||= [])).push(x, y, z, sc, q[0], q[1], q[2], q[3], mat, seed, ts, bob); };
   const chunks = Array.from({ length: NCHUNK }, () => Array.from({ length: nCells }, () => []));
   const glints = [];
   const rel = (i, f, r) => { const p = POSES[i]; let fx = p[3] - p[0], fz = p[5] - p[2]; const l = hypot(fx, fz); fx /= l; fz /= l; return [p[0] + fx * f - fz * r, p[2] + fz * f + fx * r]; };

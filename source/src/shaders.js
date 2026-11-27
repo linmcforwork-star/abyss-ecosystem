@@ -425,7 +425,7 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
   } else if (mat == 8) {
     // giant sea fan: mostly tan-beige, some rust-red; main branches darker; light passes through the fine net
     let hue = fract(sd * 5.73);
-    var base = mix(vec3f(.66, .30, .14), vec3f(.72, .42, .18), fract(hue * 3.));
+    var base = mix(vec3f(.50, .20, .09), vec3f(.56, .28, .12), fract(hue * 3.));
     if (hue > .75) { base = vec3f(.70, .56, .36); }
     if (i.ao > .93) {
       // the membrane: keep only a fine irregular net (cell edges of a jittered grid, ~3 cm cells)
@@ -433,10 +433,10 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
       for (var a = -1; a <= 1; a++) { for (var b = -1; b <= 1; b++) {
         let c = ip + vec2f(f32(a), f32(b)); let pn = c + vec2f(hs(c.x * 7.1 + c.y * 3.3), hs(c.x * 1.7 + c.y * 9.2));
         let dd = length(g - pn); if (dd < d1) { d2 = d1; d1 = dd; } else if (dd < d2) { d2 = dd; } } }
-      if (d2 - d1 > .3) { discard; }
+      if (d2 - d1 > .16) { discard; }
     }
     alb = mix(base * .62, base, ss(.5, .75, i.ao)) * (.8 + .3 * C.h);
-    flu = .35; gloss = .1; bump = .6; vao = 1.;
+    flu = .1; gloss = .1; bump = .6; vao = 1.;
   } else if (mat == 9) {
     // leather coral: a velvety cap (tan, olive, yellow-brown, or blue-lavender grey with a paler rim) over a cream stalk
     let hue = fract(sd * 6.11);
