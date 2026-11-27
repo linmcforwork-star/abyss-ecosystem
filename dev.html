@@ -1233,8 +1233,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     }
     default { // giant moray: brown with dense dark leopard spots, a black gill patch
       alb = vec3f(.42, .34, .16) * (.8 + .4 * ss(-.02, .03, y));
-      alb = mix(alb, vec3f(.05, .04, .02), spots(vec2f(x * 2., y + i.op.z), 55., .38) * .85);
-      alb = mix(alb, vec3f(.02), ss(.02, .01, length(vec2f(x - .4, y + .005)) - .012));
+      alb = mix(alb, vec3f(.05, .04, .02), spots(vec2f(x, y * 1.1 + i.op.z * .6), 42., .4) * .85);   // round leopard spots, about 3-4 rows down each flank
+      alb = mix(alb, vec3f(.02), ss(.006, .0, length(vec2f((x - .385) * .8, y + .008)) - .012));    // the black gill patch
       let mouth = ss(.004, .0, abs(y + .004 + .0 * x)) * ss(.43, .46, x);
       alb = mix(alb, vec3f(.01), mouth);
       spec = .4;
@@ -1283,7 +1283,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   // a lodger moves about (its position changes), so its look can't hang on where it stands: heading from b.x, no stretch
   let hsh = select(fract(sin(dot(i.a.xz, vec2f(12.9898, 78.233))) * 43758.55), fract(i.b.x * 7.31 + .17), crit);
   var yaw = select(hsh * 6.2832, -fract(i.b.x) * 6.2832, crit);
-  if (crit && kind < 8.5) { yaw += .55 * sin(t * 2.6 + hsh * 20.) * (1. - ss(.0, .2, cl)); } // the shrimp's side-to-side "dance" (stops while it walks)
+  if (crit && kind < 8.5) { yaw += .42 * sin(t * 7. + hsh * 20.) * (1. - ss(.0, .2, cl)); } // the shrimp's side-to-side "dance" (stops while it walks)
   let cs = cos(yaw); let sn = sin(yaw);
   if (crit) { // poses: legs step while walking, the crab's claws thrust when shoving, the shrimp's claw-legs peck at the tentacles
     let tg = i.n.w; let walk = select(cl * 2., 0., cl >= .5); let shv = select(0., (cl - .5) * 2., cl >= .5);
@@ -1497,18 +1497,18 @@ fn critHash(c: vec2f) -> f32 { return fract(sin(dot(c, vec2f(127.1, 311.7))) * 4
     var tov = 0.;
     if (abs(tg + .22) < .015) { let d = length(vec2f((p.x + .07) * .8, abs(p.z) - .006)) / .0034; tov = ss(1., .75, d); w = max(w, ss(1.35, 1.15, d) * ss(.85, 1., d) + ss(.074, .078, -p.x)); } // tail fan: orange-brown ovals edged white, white tips
     alb = mix(alb, vec3f(1., .98, .95), w); alb = mix(alb, vec3f(.95, .55, .25), o * (1. - w)); alb = mix(alb, vec3f(.75, .3, .08), tov); glass *= 1. - max(max(w, o), tov);
-    if (abs(tg + .3) < .03) { let b = fract(length(p.xz) * 75. + p.y * 45.); alb = mix(vec3f(.55, .58, .68), vec3f(.35, .2, .85), ss(.8, .86, b) * ss(.98, .92, b)); glass = .6; } // clear legs, small violet bands at the joints
-    if (abs(tg + .35) < .02) { alb = vec3f(.75, .75, .82); glass = .5; }
+    if (abs(tg + .3) < .03) { let b = fract(length(p.xz) * 75. + p.y * 45.); alb = mix(vec3f(.28, .3, .38), vec3f(.42, .12, .85), ss(.75, .83, b) * ss(.99, .9, b)); glass = .45; } // (darker clear legs so the white saddles carry the read; saturated violet joints) // clear legs, small violet bands at the joints
+    if (abs(tg + .35) < .02) { alb = vec3f(.5, .5, .58); glass = .4; }
     if (abs(tg + .4) < .02) { alb = vec3f(.07, .045, .02); }
   } else {
     // porcelain crab (refs cr01/cr02): porcelain white, densely freckled with small red-brown dots; legs and fans paler
-    alb = vec3f(.7, .67, .62); glass = .2;                      // (glass here: a little porcelain gloss) cream, kept below white so the torch can't burn it out
+    alb = vec3f(.78, .68, .52); glass = .2;                      // (glass here: a little porcelain gloss) cream, kept below white so the torch can't burn it out
     var dt = 0.;
     for (var g2 = 0; g2 < 2; g2++) { // dense fine pepper dots: two offset jittered grids, so no rows show
       let q = p * (480. + 170. * f32(g2)) + f32(g2) * .37; let cl = floor(q.xz + q.y * .7); let f = fract(q.xz + q.y * .7) - .5; let h1 = critHash(cl + f32(g2) * 31.); let h2 = critHash(cl + 17.);
       dt = max(dt, ss(.16 + .12 * h2, .08 + .12 * h2, length(f - (vec2f(h1, h2) - .5) * .6)) * step(.25, h1)); }
     let nb = sin(p.x * 160. + sin(p.z * 210.) * 1.7) * sin(p.z * 150. + sin(p.x * 190.) * 1.5); let big = ss(.55, .75, nb) * ss(.012, .028, length(p.xz)); // a few irregular ochre blotches toward the rim
-    let red = vec3f(.55, .13, .06);
+    let red = vec3f(.4, .09, .03);   // dark red-brown: under the blue light a lighter red turns grey
     if (tg > -.53) { alb = mix(alb, vec3f(.78, .55, .18), big * step(abs(tg + .45), .02)); alb = mix(alb, red, dt); }
     if (abs(tg + .5) < .02) { glass = .45; }
     if (abs(tg + .55) < .02) { alb = mix(vec3f(.72, .66, .63), red, dt * .8); glass = .1; }
@@ -1525,9 +1525,10 @@ fn critHash(c: vec2f) -> f32 { return fract(sin(dot(c, vec2f(127.1, 311.7))) * 4
     let Ld = normalize(vec3f(.25, 1., .15) + V * .35 - ld * .2); let ndl = dot(n, Ld); let key = sat(ndl);
     let body = alb * .7 * (.04 + 1.5 * key * key) * (.55 + .45 * nv);
     let sp = min((pow(sat(dot(n, normalize(Ld + V))), 90.) * 1. + pow(sat(dot(n, normalize(Ld + V))), 12.) * .08) * (.3 + .9 * glass), .5) * vec3f(.9, .95, 1.); // a tight wet highlight and a soft sheen
-    let rim = fr * vec3f(.7, .8, 1.) * (glass * .9 + .12);  // glass edges (and a faint cool edge on the crab's shell)
+    let rim = fr * vec3f(.7, .8, 1.) * (glass * .5 + .12);  // glass edges (and a faint cool edge on the crab's shell)
     let blue = vec3f(.2, .26, 1.) * sat((ndl + .6) / 1.6) * (1. - key) * .12 * (1. - .7 * glass);
-    c += (body + sp + rim + blue) * (.35 + tI) * nite();
+    let warm = select(vec3f(1.), vec3f(1.25, 1., .78), kind > 8.5);   // the crab keeps its warm cream and red dots under the blue light
+    c += (body * warm + sp + rim + blue) * (.35 + tI) * nite();
   }
   { c = max(c, vec3f(0.)); let mx = max(c.r, max(c.g, c.b)); c *= mix(1. / (1. + 2. * max(mx - .3, 0.)), 1. / (1. + .8 * max(mx - .5, 0.)), nite()); }
   { let fc = floor(i.sp.y * .5); // the near/far cross-fade (as in fsAnem)
@@ -2264,9 +2265,12 @@ function makeWorld(D, T, flyPts, POSES) {
       for (const [h, dz] of [[6, 9.5], [9, 8.5], [6, -9.5], [9, -8.5]]) cluster(6, 0, dz > 0 ? 2 : 5, 1.0, 1.3, seen(wall), 1.8, [hx + 1.5, fl + h, hz + dz]);
       // the centrepiece in the doorway, a little behind the middle: carpets (cyan-blue, a colour of its own here) ringed by
       // long-tentacles and a tube patch, so the arch frames one rich group instead of an empty floor
-      for (const [dx, dz] of [[-1.5, 0], [-0.5, -2.6], [-0.5, 2.6]]) cluster(1, 1, 0, 1.4, 1.7, sand, 0.6, [hx + dx, fl, hz + dz]);
-      cluster(5, 3, 1, 1.4, 1.8, sand, 1.6, [hx - 3, fl, hz]);
-      cluster(6, 4, 1, 0.8, 1.0, sand, 1.4, [hx - 2, fl, hz + 4.5]);
+      for (const [dx, dz] of [[0.8, 0], [-0.6, -2], [-0.6, 2]]) cluster(1, 1, 0, 2.0, 2.3, sand, 0.6, [hx + dx, fl, hz + dz]); // (a tight trio, right where the torch lands)
+      cluster(10, 3, 1, 1.4, 1.8, sand, 2.4, [hx - 2.5, fl, hz]);
+      cluster(12, 4, 1, 0.8, 1.0, sand, 2.2, [hx + 2.5, fl, hz + 3.5]);
+      cluster(8, 4, 1, 0.8, 1.0, sand, 1.8, [hx + 2.5, fl, hz - 3.5]);
+      // the crown runs on over the north shoulder into the right leg's band (the frame in one unbroken line)
+      for (const [h, dz] of [[11, -7], [12.5, -5.5], [10, -8.2]]) cluster(5, 0, 5, 1.0, 1.3, (k) => wall(k) || T.wn[k + 1] > 0.35, 1.6, [hx + 1, fl + h, hz + dz]);
       for (const [dx, dz, kd] of [[14, 8, 3], [15, -8, 2], [-9, 10, 3], [13, 12, 4], [-8, -11, 4]]) cluster(kd === 2 ? 3 : 2, kd, 1, kd === 3 ? 1.4 : 0.8, kd === 3 ? 1.8 : 1.05, kd === 2 ? foot : sand, 1.2, [hx + dx, fl + (kd === 2 ? 1 : 0), hz + dz]);
       // carpets: big and solitary, so a "carpet beach" on the sand in front of the arch, each with room around it
       for (const [dx, dz] of [[1, 2], [4, -1.5], [7, -3], [6.5, 3.5], [9.5, 0.5], [3, 5], [10, -4], [-5, 4]]) cluster(1, 1, 0, 1.3, 1.6, sand, 0.6, [hx + dx, fl, hz + dz]);
@@ -2277,7 +2281,7 @@ function makeWorld(D, T, flyPts, POSES) {
       // lodgers: porcelain crabs in pairs on the carpets, anemone shrimps on carpets and bubble-tips (sitting on the tentacles,
       // along the host's own up direction)
       const onTop = (a, r, h, kind, n) => { const nx = a[5] || 0, nz = a[6] || 0, ny = Math.sqrt(max(0, 1 - nx * nx - nz * nz)); for (let j = 0; j < n; j++) {
-        const an = (j === 0 ? (onTop.a0 = rnd() * TAU) : onTop.a0 + PI * j / n * 2 + rr(-0.4, 0.4)), ox = cos(an) * r * a[3], oz = sin(an) * r * a[3]; ane(a[0] + ox + nx * h * a[3], a[1] + ny * h * a[3] - (nx * ox + nz * oz), a[2] + oz + nz * h * a[3], 1.4 * rr(0.9, 1.1), kind, 0, nx, nz); } };
+        const an = (j === 0 ? (onTop.a0 = rnd() * TAU) : onTop.a0 + PI * j / n * 2 + rr(-0.4, 0.4)), ox = cos(an) * r * a[3], oz = sin(an) * r * a[3]; ane(a[0] + ox + nx * h * a[3], a[1] + ny * h * a[3] - (nx * ox + nz * oz), a[2] + oz + nz * h * a[3], (kind === 8 ? 1.9 : 1.4) * rr(0.9, 1.1), kind, 0, nx, nz); } }; // (the shrimp larger still: it must read from a few metres)
       const near = (kd) => anemones.filter((a) => (a[4] | 0) === kd && hypot(a[0] - hx, a[2] - hz) < 16);
       near(1).slice(0, 5).forEach((a) => onTop(a, 0.14, 0.15, 9, 2));
       near(1).slice(0, 6).forEach((a, j) => onTop(a, 0.34, 0.13, 8, 1 + (j % 2))); // (further out than the crabs, so they never overlap)
@@ -3879,22 +3883,22 @@ function critStep(dt) {
   for (const c of CRIT) {
     const o = c.k * 8, px = c.b[0] + c.t1[0] * c.u + c.t2[0] * c.v, py = c.b[1] + c.t1[1] * c.u + c.t2[1] * c.v, pz = c.b[2] + c.t1[2] * c.u + c.t2[2] * c.v;
     const cam = hypot(F[CX] - px, F[CY] - py, F[CZ] - pz), crab = c.kd === 9, big = c.roam > 0.2;
-    let speed = crab ? 0.2 : 0.14;
+    let speed = crab ? 0.3 : 0.2;
     if (cam < 2.2 && big) { // you are close: off to the far side of the host, fast
       const cx = (F[CX] - c.b[0]) * c.t1[0] + (F[CY] - c.b[1]) * c.t1[1] + (F[CZ] - c.b[2]) * c.t1[2], cz = (F[CX] - c.b[0]) * c.t2[0] + (F[CY] - c.b[1]) * c.t2[1] + (F[CZ] - c.b[2]) * c.t2[2];
       const ax = c.hc[0] - cx, az = c.hc[1] - cz, al = hypot(ax, az) || 1;
       c.tu = c.hc[0] + ax / al * c.roam; c.tv = c.hc[1] + az / al * c.roam; speed = crab ? 0.7 : 0.45; c.wT = rr(3, 6); c.shove = 0;
     } else if ((c.wT -= dt) < 0) { // wander: a new spot on the host every few seconds
-      const a = rnd() * TAU, r = c.roam * Math.sqrt(rnd()); c.tu = c.hc[0] * 0.5 + cos(a) * r * 0.8; c.tv = c.hc[1] * 0.5 + sin(a) * r * 0.8; c.wT = rr(1.5, 4.5);
+      for (let t = 0; t < 8; t++) { const a = rnd() * TAU, r = c.roam * Math.sqrt(rnd()); c.tu = c.hc[0] * 0.5 + cos(a) * r * 0.8; c.tv = c.hc[1] * 0.5 + sin(a) * r * 0.8; if (hypot(c.tu - c.u, c.tv - c.v) > min(0.25, c.roam * 0.8)) break; } c.wT = rr(1.5, 3); // (a real walk each time, not a shuffle)
     }
-    c.sink += ((cam < 1.3 ? (crab ? 0.07 : 0.09) : 0) - c.sink) * min(1, dt * (cam < 1.3 ? 6 : 0.8)); // duck into the tentacles, come up slowly
+    c.sink += ((cam < 1.3 ? (crab ? 0.1 : 0.12) : 0) - c.sink) * min(1, dt * (cam < 1.3 ? 6 : 0.8)); // duck into the tentacles, come up slowly
     // the crab pair: every so often they face each other and shove claws (~1.5 s)
-    if (crab && c.mate >= 0 && cam >= 2.2 && (c.sT -= dt) < 0 && c.shove === 0) { c.shove = 1e-3; const m = CRIT[c.mate]; if (m.shove === 0) { m.shove = 1e-3; m.sT = rr(5, 10); } c.sT = rr(5, 10); }
+    if (crab && c.mate >= 0 && cam >= 2.2 && (c.sT -= dt) < 0 && c.shove === 0) { c.shove = 1e-3; const m = CRIT[c.mate]; if (m.shove === 0) { m.shove = 1e-3; m.sT = rr(4, 7); } c.sT = rr(4, 7); }
     let du = c.tu - c.u, dv = c.tv - c.v; const dl = hypot(du, dv), step = min(dl, speed * dt);
     if (c.shove > 0) {
       const m = CRIT[c.mate], mx = (m.b[0] + m.t1[0] * m.u + m.t2[0] * m.v - px) * c.t1[0] + (m.b[2] + m.t1[2] * m.u + m.t2[2] * m.v - pz) * c.t1[2], mz = (m.b[0] + m.t1[0] * m.u + m.t2[0] * m.v - px) * c.t2[0] + (m.b[2] + m.t1[2] * m.u + m.t2[2] * m.v - pz) * c.t2[2];
       c.ty = Math.atan2(mz, mx); c.shove += dt / 1.6; if (c.shove >= 1) c.shove = 0;
-      const lunge = 0.1 * sin(PI * min(1, c.shove * 2.2)) * (c.shove < 0.5 ? 1 : 0); c.u += cos(c.ty) * lunge * dt * 6; c.v += sin(c.ty) * lunge * dt * 6;
+      const lunge = 0.16 * sin(PI * min(1, c.shove * 2.2)) * (c.shove < 0.5 ? 1 : 0); c.u += cos(c.ty) * lunge * dt * 6; c.v += sin(c.ty) * lunge * dt * 6;
     } else if (dl > 0.005) {
       c.u += du / dl * step; c.v += dv / dl * step;
       c.ty = Math.atan2(dv, du) + (crab ? PI / 2 * (sin(c.seed * 50) > 0 ? 1 : -1) : 0); // a crab walks sideways

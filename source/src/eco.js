@@ -198,22 +198,22 @@ function critStep(dt) {
   for (const c of CRIT) {
     const o = c.k * 8, px = c.b[0] + c.t1[0] * c.u + c.t2[0] * c.v, py = c.b[1] + c.t1[1] * c.u + c.t2[1] * c.v, pz = c.b[2] + c.t1[2] * c.u + c.t2[2] * c.v;
     const cam = hypot(F[CX] - px, F[CY] - py, F[CZ] - pz), crab = c.kd === 9, big = c.roam > 0.2;
-    let speed = crab ? 0.2 : 0.14;
+    let speed = crab ? 0.3 : 0.2;
     if (cam < 2.2 && big) { // you are close: off to the far side of the host, fast
       const cx = (F[CX] - c.b[0]) * c.t1[0] + (F[CY] - c.b[1]) * c.t1[1] + (F[CZ] - c.b[2]) * c.t1[2], cz = (F[CX] - c.b[0]) * c.t2[0] + (F[CY] - c.b[1]) * c.t2[1] + (F[CZ] - c.b[2]) * c.t2[2];
       const ax = c.hc[0] - cx, az = c.hc[1] - cz, al = hypot(ax, az) || 1;
       c.tu = c.hc[0] + ax / al * c.roam; c.tv = c.hc[1] + az / al * c.roam; speed = crab ? 0.7 : 0.45; c.wT = rr(3, 6); c.shove = 0;
     } else if ((c.wT -= dt) < 0) { // wander: a new spot on the host every few seconds
-      const a = rnd() * TAU, r = c.roam * Math.sqrt(rnd()); c.tu = c.hc[0] * 0.5 + cos(a) * r * 0.8; c.tv = c.hc[1] * 0.5 + sin(a) * r * 0.8; c.wT = rr(1.5, 4.5);
+      for (let t = 0; t < 8; t++) { const a = rnd() * TAU, r = c.roam * Math.sqrt(rnd()); c.tu = c.hc[0] * 0.5 + cos(a) * r * 0.8; c.tv = c.hc[1] * 0.5 + sin(a) * r * 0.8; if (hypot(c.tu - c.u, c.tv - c.v) > min(0.25, c.roam * 0.8)) break; } c.wT = rr(1.5, 3); // (a real walk each time, not a shuffle)
     }
-    c.sink += ((cam < 1.3 ? (crab ? 0.07 : 0.09) : 0) - c.sink) * min(1, dt * (cam < 1.3 ? 6 : 0.8)); // duck into the tentacles, come up slowly
+    c.sink += ((cam < 1.3 ? (crab ? 0.1 : 0.12) : 0) - c.sink) * min(1, dt * (cam < 1.3 ? 6 : 0.8)); // duck into the tentacles, come up slowly
     // the crab pair: every so often they face each other and shove claws (~1.5 s)
-    if (crab && c.mate >= 0 && cam >= 2.2 && (c.sT -= dt) < 0 && c.shove === 0) { c.shove = 1e-3; const m = CRIT[c.mate]; if (m.shove === 0) { m.shove = 1e-3; m.sT = rr(5, 10); } c.sT = rr(5, 10); }
+    if (crab && c.mate >= 0 && cam >= 2.2 && (c.sT -= dt) < 0 && c.shove === 0) { c.shove = 1e-3; const m = CRIT[c.mate]; if (m.shove === 0) { m.shove = 1e-3; m.sT = rr(4, 7); } c.sT = rr(4, 7); }
     let du = c.tu - c.u, dv = c.tv - c.v; const dl = hypot(du, dv), step = min(dl, speed * dt);
     if (c.shove > 0) {
       const m = CRIT[c.mate], mx = (m.b[0] + m.t1[0] * m.u + m.t2[0] * m.v - px) * c.t1[0] + (m.b[2] + m.t1[2] * m.u + m.t2[2] * m.v - pz) * c.t1[2], mz = (m.b[0] + m.t1[0] * m.u + m.t2[0] * m.v - px) * c.t2[0] + (m.b[2] + m.t1[2] * m.u + m.t2[2] * m.v - pz) * c.t2[2];
       c.ty = Math.atan2(mz, mx); c.shove += dt / 1.6; if (c.shove >= 1) c.shove = 0;
-      const lunge = 0.1 * sin(PI * min(1, c.shove * 2.2)) * (c.shove < 0.5 ? 1 : 0); c.u += cos(c.ty) * lunge * dt * 6; c.v += sin(c.ty) * lunge * dt * 6;
+      const lunge = 0.16 * sin(PI * min(1, c.shove * 2.2)) * (c.shove < 0.5 ? 1 : 0); c.u += cos(c.ty) * lunge * dt * 6; c.v += sin(c.ty) * lunge * dt * 6;
     } else if (dl > 0.005) {
       c.u += du / dl * step; c.v += dv / dl * step;
       c.ty = Math.atan2(dv, du) + (crab ? PI / 2 * (sin(c.seed * 50) > 0 ? 1 : -1) : 0); // a crab walks sideways

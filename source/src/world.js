@@ -515,9 +515,12 @@ function makeWorld(D, T, flyPts, POSES) {
       for (const [h, dz] of [[6, 9.5], [9, 8.5], [6, -9.5], [9, -8.5]]) cluster(6, 0, dz > 0 ? 2 : 5, 1.0, 1.3, seen(wall), 1.8, [hx + 1.5, fl + h, hz + dz]);
       // the centrepiece in the doorway, a little behind the middle: carpets (cyan-blue, a colour of its own here) ringed by
       // long-tentacles and a tube patch, so the arch frames one rich group instead of an empty floor
-      for (const [dx, dz] of [[-1.5, 0], [-0.5, -2.6], [-0.5, 2.6]]) cluster(1, 1, 0, 1.4, 1.7, sand, 0.6, [hx + dx, fl, hz + dz]);
-      cluster(5, 3, 1, 1.4, 1.8, sand, 1.6, [hx - 3, fl, hz]);
-      cluster(6, 4, 1, 0.8, 1.0, sand, 1.4, [hx - 2, fl, hz + 4.5]);
+      for (const [dx, dz] of [[0.8, 0], [-0.6, -2], [-0.6, 2]]) cluster(1, 1, 0, 2.0, 2.3, sand, 0.6, [hx + dx, fl, hz + dz]); // (a tight trio, right where the torch lands)
+      cluster(10, 3, 1, 1.4, 1.8, sand, 2.4, [hx - 2.5, fl, hz]);
+      cluster(12, 4, 1, 0.8, 1.0, sand, 2.2, [hx + 2.5, fl, hz + 3.5]);
+      cluster(8, 4, 1, 0.8, 1.0, sand, 1.8, [hx + 2.5, fl, hz - 3.5]);
+      // the crown runs on over the north shoulder into the right leg's band (the frame in one unbroken line)
+      for (const [h, dz] of [[11, -7], [12.5, -5.5], [10, -8.2]]) cluster(5, 0, 5, 1.0, 1.3, (k) => wall(k) || T.wn[k + 1] > 0.35, 1.6, [hx + 1, fl + h, hz + dz]);
       for (const [dx, dz, kd] of [[14, 8, 3], [15, -8, 2], [-9, 10, 3], [13, 12, 4], [-8, -11, 4]]) cluster(kd === 2 ? 3 : 2, kd, 1, kd === 3 ? 1.4 : 0.8, kd === 3 ? 1.8 : 1.05, kd === 2 ? foot : sand, 1.2, [hx + dx, fl + (kd === 2 ? 1 : 0), hz + dz]);
       // carpets: big and solitary, so a "carpet beach" on the sand in front of the arch, each with room around it
       for (const [dx, dz] of [[1, 2], [4, -1.5], [7, -3], [6.5, 3.5], [9.5, 0.5], [3, 5], [10, -4], [-5, 4]]) cluster(1, 1, 0, 1.3, 1.6, sand, 0.6, [hx + dx, fl, hz + dz]);
@@ -528,7 +531,7 @@ function makeWorld(D, T, flyPts, POSES) {
       // lodgers: porcelain crabs in pairs on the carpets, anemone shrimps on carpets and bubble-tips (sitting on the tentacles,
       // along the host's own up direction)
       const onTop = (a, r, h, kind, n) => { const nx = a[5] || 0, nz = a[6] || 0, ny = Math.sqrt(max(0, 1 - nx * nx - nz * nz)); for (let j = 0; j < n; j++) {
-        const an = (j === 0 ? (onTop.a0 = rnd() * TAU) : onTop.a0 + PI * j / n * 2 + rr(-0.4, 0.4)), ox = cos(an) * r * a[3], oz = sin(an) * r * a[3]; ane(a[0] + ox + nx * h * a[3], a[1] + ny * h * a[3] - (nx * ox + nz * oz), a[2] + oz + nz * h * a[3], 1.4 * rr(0.9, 1.1), kind, 0, nx, nz); } };
+        const an = (j === 0 ? (onTop.a0 = rnd() * TAU) : onTop.a0 + PI * j / n * 2 + rr(-0.4, 0.4)), ox = cos(an) * r * a[3], oz = sin(an) * r * a[3]; ane(a[0] + ox + nx * h * a[3], a[1] + ny * h * a[3] - (nx * ox + nz * oz), a[2] + oz + nz * h * a[3], (kind === 8 ? 1.9 : 1.4) * rr(0.9, 1.1), kind, 0, nx, nz); } }; // (the shrimp larger still: it must read from a few metres)
       const near = (kd) => anemones.filter((a) => (a[4] | 0) === kd && hypot(a[0] - hx, a[2] - hz) < 16);
       near(1).slice(0, 5).forEach((a) => onTop(a, 0.14, 0.15, 9, 2));
       near(1).slice(0, 6).forEach((a, j) => onTop(a, 0.34, 0.13, 8, 1 + (j % 2))); // (further out than the crabs, so they never overlap)

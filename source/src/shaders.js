@@ -785,8 +785,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     }
     default { // giant moray: brown with dense dark leopard spots, a black gill patch
       alb = vec3f(.42, .34, .16) * (.8 + .4 * ss(-.02, .03, y));
-      alb = mix(alb, vec3f(.05, .04, .02), spots(vec2f(x * 2., y + i.op.z), 55., .38) * .85);
-      alb = mix(alb, vec3f(.02), ss(.02, .01, length(vec2f(x - .4, y + .005)) - .012));
+      alb = mix(alb, vec3f(.05, .04, .02), spots(vec2f(x, y * 1.1 + i.op.z * .6), 42., .4) * .85);   // round leopard spots, about 3-4 rows down each flank
+      alb = mix(alb, vec3f(.02), ss(.006, .0, length(vec2f((x - .385) * .8, y + .008)) - .012));    // the black gill patch
       let mouth = ss(.004, .0, abs(y + .004 + .0 * x)) * ss(.43, .46, x);
       alb = mix(alb, vec3f(.01), mouth);
       spec = .4;
@@ -835,7 +835,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   // a lodger moves about (its position changes), so its look can't hang on where it stands: heading from b.x, no stretch
   let hsh = select(fract(sin(dot(i.a.xz, vec2f(12.9898, 78.233))) * 43758.55), fract(i.b.x * 7.31 + .17), crit);
   var yaw = select(hsh * 6.2832, -fract(i.b.x) * 6.2832, crit);
-  if (crit && kind < 8.5) { yaw += .55 * sin(t * 2.6 + hsh * 20.) * (1. - ss(.0, .2, cl)); } // the shrimp's side-to-side "dance" (stops while it walks)
+  if (crit && kind < 8.5) { yaw += .42 * sin(t * 7. + hsh * 20.) * (1. - ss(.0, .2, cl)); } // the shrimp's side-to-side "dance" (stops while it walks)
   let cs = cos(yaw); let sn = sin(yaw);
   if (crit) { // poses: legs step while walking, the crab's claws thrust when shoving, the shrimp's claw-legs peck at the tentacles
     let tg = i.n.w; let walk = select(cl * 2., 0., cl >= .5); let shv = select(0., (cl - .5) * 2., cl >= .5);
@@ -1049,18 +1049,18 @@ fn critHash(c: vec2f) -> f32 { return fract(sin(dot(c, vec2f(127.1, 311.7))) * 4
     var tov = 0.;
     if (abs(tg + .22) < .015) { let d = length(vec2f((p.x + .07) * .8, abs(p.z) - .006)) / .0034; tov = ss(1., .75, d); w = max(w, ss(1.35, 1.15, d) * ss(.85, 1., d) + ss(.074, .078, -p.x)); } // tail fan: orange-brown ovals edged white, white tips
     alb = mix(alb, vec3f(1., .98, .95), w); alb = mix(alb, vec3f(.95, .55, .25), o * (1. - w)); alb = mix(alb, vec3f(.75, .3, .08), tov); glass *= 1. - max(max(w, o), tov);
-    if (abs(tg + .3) < .03) { let b = fract(length(p.xz) * 75. + p.y * 45.); alb = mix(vec3f(.55, .58, .68), vec3f(.35, .2, .85), ss(.8, .86, b) * ss(.98, .92, b)); glass = .6; } // clear legs, small violet bands at the joints
-    if (abs(tg + .35) < .02) { alb = vec3f(.75, .75, .82); glass = .5; }
+    if (abs(tg + .3) < .03) { let b = fract(length(p.xz) * 75. + p.y * 45.); alb = mix(vec3f(.28, .3, .38), vec3f(.42, .12, .85), ss(.75, .83, b) * ss(.99, .9, b)); glass = .45; } // (darker clear legs so the white saddles carry the read; saturated violet joints) // clear legs, small violet bands at the joints
+    if (abs(tg + .35) < .02) { alb = vec3f(.5, .5, .58); glass = .4; }
     if (abs(tg + .4) < .02) { alb = vec3f(.07, .045, .02); }
   } else {
     // porcelain crab (refs cr01/cr02): porcelain white, densely freckled with small red-brown dots; legs and fans paler
-    alb = vec3f(.7, .67, .62); glass = .2;                      // (glass here: a little porcelain gloss) cream, kept below white so the torch can't burn it out
+    alb = vec3f(.78, .68, .52); glass = .2;                      // (glass here: a little porcelain gloss) cream, kept below white so the torch can't burn it out
     var dt = 0.;
     for (var g2 = 0; g2 < 2; g2++) { // dense fine pepper dots: two offset jittered grids, so no rows show
       let q = p * (480. + 170. * f32(g2)) + f32(g2) * .37; let cl = floor(q.xz + q.y * .7); let f = fract(q.xz + q.y * .7) - .5; let h1 = critHash(cl + f32(g2) * 31.); let h2 = critHash(cl + 17.);
       dt = max(dt, ss(.16 + .12 * h2, .08 + .12 * h2, length(f - (vec2f(h1, h2) - .5) * .6)) * step(.25, h1)); }
     let nb = sin(p.x * 160. + sin(p.z * 210.) * 1.7) * sin(p.z * 150. + sin(p.x * 190.) * 1.5); let big = ss(.55, .75, nb) * ss(.012, .028, length(p.xz)); // a few irregular ochre blotches toward the rim
-    let red = vec3f(.55, .13, .06);
+    let red = vec3f(.4, .09, .03);   // dark red-brown: under the blue light a lighter red turns grey
     if (tg > -.53) { alb = mix(alb, vec3f(.78, .55, .18), big * step(abs(tg + .45), .02)); alb = mix(alb, red, dt); }
     if (abs(tg + .5) < .02) { glass = .45; }
     if (abs(tg + .55) < .02) { alb = mix(vec3f(.72, .66, .63), red, dt * .8); glass = .1; }
@@ -1077,9 +1077,10 @@ fn critHash(c: vec2f) -> f32 { return fract(sin(dot(c, vec2f(127.1, 311.7))) * 4
     let Ld = normalize(vec3f(.25, 1., .15) + V * .35 - ld * .2); let ndl = dot(n, Ld); let key = sat(ndl);
     let body = alb * .7 * (.04 + 1.5 * key * key) * (.55 + .45 * nv);
     let sp = min((pow(sat(dot(n, normalize(Ld + V))), 90.) * 1. + pow(sat(dot(n, normalize(Ld + V))), 12.) * .08) * (.3 + .9 * glass), .5) * vec3f(.9, .95, 1.); // a tight wet highlight and a soft sheen
-    let rim = fr * vec3f(.7, .8, 1.) * (glass * .9 + .12);  // glass edges (and a faint cool edge on the crab's shell)
+    let rim = fr * vec3f(.7, .8, 1.) * (glass * .5 + .12);  // glass edges (and a faint cool edge on the crab's shell)
     let blue = vec3f(.2, .26, 1.) * sat((ndl + .6) / 1.6) * (1. - key) * .12 * (1. - .7 * glass);
-    c += (body + sp + rim + blue) * (.35 + tI) * nite();
+    let warm = select(vec3f(1.), vec3f(1.25, 1., .78), kind > 8.5);   // the crab keeps its warm cream and red dots under the blue light
+    c += (body * warm + sp + rim + blue) * (.35 + tI) * nite();
   }
   { c = max(c, vec3f(0.)); let mx = max(c.r, max(c.g, c.b)); c *= mix(1. / (1. + 2. * max(mx - .3, 0.)), 1. / (1. + .8 * max(mx - .5, 0.)), nite()); }
   { let fc = floor(i.sp.y * .5); // the near/far cross-fade (as in fsAnem)
