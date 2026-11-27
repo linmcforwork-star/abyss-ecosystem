@@ -794,7 +794,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   }
   // eyes: a dark pupil in a lighter ring
   if (!isF && k < 9) {
-    let ex = select(select(.39, .41, k == 7), .45, k == 8); let ey = select(select(.055, .025, k == 7), .012, k == 8);
+    let ex = select(select(.39, .41, k == 7), .45, k == 8); let ey = select(select(.055, .025, k == 7), .019, k == 8);
     let er = select(select(.032, .016, k == 7), .009, k == 8) * select(1., 1.25, k == 4 || k == 6 || k == 1) * select(1., .7, k == 0);
     let de = length(vec2f(x - ex, y - ey));
     alb = mix(alb, select(vec3f(.9, .75, .3), vec3f(.75), k > 6), ss(er * 1.45, er * 1.25, de) * f32(k != 7));
@@ -831,9 +831,21 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   // b.y: how far it is closed (0..1) + 2 * a fade code while it crosses between its near and far mesh (main.js anemSort)
   let fcode = floor(i.b.y * .5); let cl = i.b.y - 2. * fcode;
   // b.x: kind (integer part, see meshAnem) + colour; each one also gets its own turn and stretch from where it sits
-  let kind = floor(i.b.x); let hsh = fract(sin(dot(i.a.xz, vec2f(12.9898, 78.233))) * 43758.55);
-  let yaw = hsh * 6.2832; let cs = cos(yaw); let sn = sin(yaw);
-  l = vec3f(l.x * cs - l.z * sn, l.y, l.x * sn + l.z * cs) * vec3f(.88 + .24 * fract(hsh * 7.), .8 + .4 * fract(hsh * 13.), .88 + .24 * fract(hsh * 7.));
+  let kind = floor(i.b.x); let crit = kind > 7.5;
+  // a lodger moves about (its position changes), so its look can't hang on where it stands: heading from b.x, no stretch
+  let hsh = select(fract(sin(dot(i.a.xz, vec2f(12.9898, 78.233))) * 43758.55), fract(i.b.x * 7.31 + .17), crit);
+  var yaw = select(hsh * 6.2832, -fract(i.b.x) * 6.2832, crit);
+  if (crit && kind < 8.5) { yaw += .55 * sin(t * 2.6 + hsh * 20.) * (1. - ss(.0, .2, cl)); } // the shrimp's side-to-side "dance" (stops while it walks)
+  let cs = cos(yaw); let sn = sin(yaw);
+  if (crit) { // poses: legs step while walking, the crab's claws thrust when shoving, the shrimp's claw-legs peck at the tentacles
+    let tg = i.n.w; let walk = select(cl * 2., 0., cl >= .5); let shv = select(0., (cl - .5) * 2., cl >= .5);
+    let side = sign(l.z + 1e-4); let lp = l.x * 160. + select(0., 3.1416, side < 0.);
+    if (abs(tg + .55) < .03 || (abs(tg + .3) < .03 && l.x < .033)) { l.y += walk * .012 * max(0., sin(t * 16. + lp)) * ss(.0, .025, abs(l.z)); l.x += walk * .006 * cos(t * 16. + lp) * ss(.0, .025, abs(l.z)); }
+    if (abs(tg + .5) < .03) { let f = ss(.02, .06, l.x); let th = sin(3.1416 * min(1., shv * 2.2)) * select(0., 1., shv > 0.);
+      l.x += f * (.03 * th + .006 * sin(t * .9 + hsh * 9.) * (1. - th)); l.y += f * (.02 * th + .004 * max(0., sin(t * .9 + hsh * 9.))); l.z -= side * f * .012 * th; }
+    if (abs(tg + .3) < .03 && l.x >= .033) { let pk = max(0., sin(t * 3.3 + side * 1.6 + hsh * 7.)); l.x += .012 * pk * ss(.04, .07, l.x); l.y -= .014 * pk * ss(.04, .07, l.x); }
+  }
+  l = vec3f(l.x * cs - l.z * sn, l.y, l.x * sn + l.z * cs) * select(vec3f(.88 + .24 * fract(hsh * 7.), .8 + .4 * fract(hsh * 13.), .88 + .24 * fract(hsh * 7.)), vec3f(1.), crit);
   // the violet-and-coral magnificent anemone: taller, more upright tentacles (reference: purple-column Heteractis magnifica)
 
   if (i.n.w > -.1) {

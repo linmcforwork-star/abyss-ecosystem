@@ -128,9 +128,15 @@ svg { width: 1.5em; height: 1.5em; fill: currentColor; }
 #cd {
   position: absolute; left: 1em; bottom: 1em; max-width: min(34em, 70vw); padding: .9em 1.1em; border-radius: .8em;
   background: #03131cc4; box-shadow: inset 0 0 0 1px #7ff3ff55, 0 .3em 1.5em #0008; font-weight: 500; line-height: 1.5;
-  opacity: 0; visibility: hidden; transform: translateY(.6em); transition: opacity .4s, visibility .4s, transform .4s; cursor: pointer;
+  opacity: 0; visibility: hidden; transform: translateY(.6em); transition: opacity 1.2s, visibility 1.2s, transform 1.2s; cursor: pointer;
 }
-.g #cd.on { opacity: 1; visibility: visible; transform: none; }
+.g #cd.on { opacity: 1; visibility: visible; transform: none; transition: opacity .25s, visibility .25s, transform .25s; }
+/* the aiming mark at the screen centre (soft, Subnautica-like): what it rests on gets the card; it warms up on a target */
+#xh { position: absolute; left: 50%; top: 50%; width: 22px; height: 22px; margin: -11px 0 0 -11px; border-radius: 50%; display: none; pointer-events: none;
+  box-shadow: 0 0 0 1.5px #e8fbffaa, 0 0 6px #0009; transition: transform .2s, box-shadow .2s; }
+#xh::after { content: ''; position: absolute; left: 50%; top: 50%; width: 4px; height: 4px; margin: -2px 0 0 -2px; border-radius: 50%; background: #e8fbffcc; }
+.g #xh { display: block; }
+#xh.on { transform: scale(.75); box-shadow: 0 0 0 2px #ffd36b, 0 0 8px #000a; }
 #cpic { display: none; float: right; width: 10em; height: 6em; margin-bottom: 1em; margin: -.3em -.4em .3em .9em; border-radius: .5em; background: radial-gradient(#1b4a5c, #0a2633); }
 #cpic img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: .5em; }
 #cpic small { display: block; margin-top: .15em; font-size: .55em; line-height: 1.2; opacity: .6; text-align: right; }
@@ -159,7 +165,7 @@ svg { width: 1.5em; height: 1.5em; fill: currentColor; }
 </style>
 </head>
 <body class=l>
-<canvas id=c></canvas>
+<canvas id=c></canvas><div id=xh></div>
 <div id=m>
   <h1>珊瑚之窗</h1>
   <p id=sub>一片印度-太平洋珊瑚礁 · 白天黑夜 · 鱼儿们各忙各的</p>

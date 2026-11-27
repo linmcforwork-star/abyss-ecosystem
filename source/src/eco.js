@@ -22,7 +22,7 @@ const SPC = [
     facts: ['尾柄两侧各藏着一根锋利的"手术刀"棘，受威胁时用来自卫。', '受惊时会钻进珊瑚缝里躲起来。'] },
   { zh: '黑鳍礁鲨', la: 'Carcharhinus melanopterus', len: [1.2, 1.6],
     facts: ['背鳍和尾鳍尖端是醒目的黑色。', '常在浅水礁区巡游，黄昏和夜里更活跃。对人很胆怯，通常会主动避开潜水员。'] },
-  { zh: '爪哇裸胸鳝（巨海鳝）', la: 'Gymnothorax javanicus', len: [1.5, 2.2],
+  { zh: '爪哇裸胸鳝（巨海鳝）', la: 'Gymnothorax javanicus', len: [2.0, 2.7], size: '真实体长：通常 1.5–2.5 米，最大约 3 米，身体有成人大腿那么粗',
     facts: ['白天藏在礁石洞里，只露出头。嘴一张一合不是要咬人，是在让水流过鳃来呼吸。', '夜里出洞觅食。是最大的海鳝之一，体长可超过 2.5 米。'] },
   { zh: '阿氏前口蝠鲼（珊瑚礁蝠鲼）', la: 'Mobula alfredi', len: [3, 3],
     facts: ['张大嘴滤食水里的浮游生物，翼展可达 5 米。', '每条蝠鲼腹部的斑点都不一样，研究者靠它认出每一个个体。'] },
@@ -51,9 +51,10 @@ ANSP[9] = { zh: '斑点瓷蟹', la: 'Neopetrolisthes maculatus', short: '瓷蟹'
   facts: ['白色扁平的身子和一对大螯上，布满红褐色的小斑点，像一只瓷器。', '它不用螯捉吃的，而是挥动嘴边两把羽毛似的小扇子，从水里滤食浮游生物。', '常常一对住在一只地毯海葵上，靠海葵的刺保护自己。甲壳只有 2 厘米左右，这里放大了。'] };
 // states
 const S_HOVER = 0, S_HIDE = 1, S_TRAVEL = 2, S_GRAZE = 3, S_POSE = 4, S_CLEAN = 5, S_STALK = 6, S_BURST = 7, S_SLEEP = 8, S_PATROL = 9,
-  S_GUARD = 10, S_FORAGE = 11, S_HOLE = 12, S_GONE = 13, S_ATE = 14;
+  S_GUARD = 10, S_FORAGE = 11, S_HOLE = 12, S_GONE = 13, S_ATE = 14, S_VISIT = 15, S_LOOK = 16, S_DIP = 17, S_SCAT = 18, S_CIRC = 19;
 const DOING = {
-  0: { [S_HOVER]: '在海葵上方来回游动', [S_HIDE]: '发现危险，躲进了海葵的触手里', [S_GUARD]: '冲向靠近的你：它在保卫自己的海葵', [S_SLEEP]: '在海葵的触手里过夜' },
+  0: { [S_HOVER]: '在海葵上方来回游动', [S_HIDE]: '发现危险，躲进了海葵的触手里', [S_GUARD]: '冲向靠近的你：它在保卫自己的海葵', [S_SLEEP]: '在海葵的触手里过夜',
+    [S_VISIT]: '游去隔壁的海葵串门', [S_LOOK]: '好奇地游过来看你', [S_DIP]: '钻进触手里蹭一蹭', [S_SCAT]: '受惊，一下子散开了', [S_CIRC]: '绕着海葵转圈' },
   1: { [S_HOVER]: '在珊瑚上方啄食浮游生物，头朝着水流', [S_HIDE]: '发现危险，钻进了珊瑚枝杈里', [S_SLEEP]: '躲在珊瑚枝杈里过夜' },
   2: { [S_HOVER]: '在清洁站上来回游动，等"顾客"上门', [S_CLEAN]: '正在给一条 {c} 清理寄生虫', [S_SLEEP]: '藏在礁石缝里睡觉' },
   3: { [S_TRAVEL]: '游向下一块珊瑚岩', [S_GRAZE]: '正在用"鸟嘴"刮食礁石上的藻类', [S_POSE]: '停在清洁站摆好姿势，等清洁鱼来清理', [S_SLEEP]: '裹在自己吐出的黏液"睡袋"里睡觉' },
@@ -173,6 +174,59 @@ let nG = 0;
 for (let k = 0; k < ANE.length && k < 400; k++) { const a = ANE[k]; AN.set([a[0], a[1], a[2], a[3], a[4], 0, a[5] || 0, a[6] || 0], k * 8); }
 nAnem = min(ANE.length, 400);
 
+// ---------------------------------------------------------------- the anemones' lodgers: porcelain crabs and anemone shrimps
+// They stay on their host but act big enough to be noticed from a few metres: they wander about the host, the two crabs
+// of a pair now and then square up and shove claws, and when you come close they scurry to the far side of the host and,
+// closer still, duck down into its tentacles (never through it, never gone). Position and heading are written into the
+// anemone instance (AN): xyz moves, kind's fraction carries the heading, slot 5 the pose (walking 0..0.49, shoving 0.5..1).
+const CRIT = [];
+for (let k = 0; k < nAnem; k++) {
+  const kd = AN[k * 8 + 4] | 0; if (kd < 8) continue;
+  const x = AN[k * 8], y = AN[k * 8 + 1], z = AN[k * 8 + 2], nx = AN[k * 8 + 6], nz = AN[k * 8 + 7], ny = sqrt(max(0, 1 - nx * nx - nz * nz));
+  let h = -1, hd = 1e9; for (let j = 0; j < nAnem; j++) { if ((AN[j * 8 + 4] | 0) > 7) continue; const d = hypot(AN[j * 8] - x, AN[j * 8 + 2] - z); if (d < hd) { hd = d; h = j; } }
+  const hk = h >= 0 ? AN[h * 8 + 4] | 0 : 1, hs = h >= 0 ? AN[h * 8 + 3] : 1;
+  let t1 = [ny, -nx, 0]; if (hypot(...t1) < 0.3) t1 = [0, -nz, ny]; const l1 = hypot(...t1); t1 = t1.map((v) => v / l1);
+  const t2 = [ny * t1[2] - nz * t1[1], nz * t1[0] - nx * t1[2], nx * t1[1] - ny * t1[0]];
+  // centre of the host projected into the lodger's tangent plane: where "home" is, and how far it may roam
+  const hc = h >= 0 ? [(AN[h * 8] - x) * t1[0] + (AN[h * 8 + 1] - y) * t1[1] + (AN[h * 8 + 2] - z) * t1[2], (AN[h * 8] - x) * t2[0] + (AN[h * 8 + 1] - y) * t2[1] + (AN[h * 8 + 2] - z) * t2[2]] : [0, 0];
+  const roam = hk === 1 ? 0.42 * hs : 0.15 * hs;
+  CRIT.push({ k, kd, b: [x, y, z], n: [nx, ny, nz], t1, t2, hc, roam, u: 0, v: 0, tu: 0, tv: 0, yaw: rnd() * TAU, ty: 0, sink: 0, walk: 0, shove: 0, sT: rr(3, 9), wT: rr(1, 5), cd: 9, mate: -1, seed: rnd() });
+}
+for (const c of CRIT) if (c.kd === 9) { let b = -1, bd = 1.2; CRIT.forEach((o, j) => { if (o !== c && o.kd === 9) { const d = hypot(o.b[0] - c.b[0], o.b[2] - c.b[2]); if (d < bd) { bd = d; b = j; } } }); c.mate = b; }
+function critStep(dt) {
+  dt = min(dt, 0.1);
+  for (const c of CRIT) {
+    const o = c.k * 8, px = c.b[0] + c.t1[0] * c.u + c.t2[0] * c.v, py = c.b[1] + c.t1[1] * c.u + c.t2[1] * c.v, pz = c.b[2] + c.t1[2] * c.u + c.t2[2] * c.v;
+    const cam = hypot(F[CX] - px, F[CY] - py, F[CZ] - pz), crab = c.kd === 9, big = c.roam > 0.2;
+    let speed = crab ? 0.2 : 0.14;
+    if (cam < 2.2 && big) { // you are close: off to the far side of the host, fast
+      const cx = (F[CX] - c.b[0]) * c.t1[0] + (F[CY] - c.b[1]) * c.t1[1] + (F[CZ] - c.b[2]) * c.t1[2], cz = (F[CX] - c.b[0]) * c.t2[0] + (F[CY] - c.b[1]) * c.t2[1] + (F[CZ] - c.b[2]) * c.t2[2];
+      const ax = c.hc[0] - cx, az = c.hc[1] - cz, al = hypot(ax, az) || 1;
+      c.tu = c.hc[0] + ax / al * c.roam; c.tv = c.hc[1] + az / al * c.roam; speed = crab ? 0.7 : 0.45; c.wT = rr(3, 6); c.shove = 0;
+    } else if ((c.wT -= dt) < 0) { // wander: a new spot on the host every few seconds
+      const a = rnd() * TAU, r = c.roam * Math.sqrt(rnd()); c.tu = c.hc[0] * 0.5 + cos(a) * r * 0.8; c.tv = c.hc[1] * 0.5 + sin(a) * r * 0.8; c.wT = rr(1.5, 4.5);
+    }
+    c.sink += ((cam < 1.3 ? (crab ? 0.07 : 0.09) : 0) - c.sink) * min(1, dt * (cam < 1.3 ? 6 : 0.8)); // duck into the tentacles, come up slowly
+    // the crab pair: every so often they face each other and shove claws (~1.5 s)
+    if (crab && c.mate >= 0 && cam >= 2.2 && (c.sT -= dt) < 0 && c.shove === 0) { c.shove = 1e-3; const m = CRIT[c.mate]; if (m.shove === 0) { m.shove = 1e-3; m.sT = rr(5, 10); } c.sT = rr(5, 10); }
+    let du = c.tu - c.u, dv = c.tv - c.v; const dl = hypot(du, dv), step = min(dl, speed * dt);
+    if (c.shove > 0) {
+      const m = CRIT[c.mate], mx = (m.b[0] + m.t1[0] * m.u + m.t2[0] * m.v - px) * c.t1[0] + (m.b[2] + m.t1[2] * m.u + m.t2[2] * m.v - pz) * c.t1[2], mz = (m.b[0] + m.t1[0] * m.u + m.t2[0] * m.v - px) * c.t2[0] + (m.b[2] + m.t1[2] * m.u + m.t2[2] * m.v - pz) * c.t2[2];
+      c.ty = Math.atan2(mz, mx); c.shove += dt / 1.6; if (c.shove >= 1) c.shove = 0;
+      const lunge = 0.1 * sin(PI * min(1, c.shove * 2.2)) * (c.shove < 0.5 ? 1 : 0); c.u += cos(c.ty) * lunge * dt * 6; c.v += sin(c.ty) * lunge * dt * 6;
+    } else if (dl > 0.005) {
+      c.u += du / dl * step; c.v += dv / dl * step;
+      c.ty = Math.atan2(dv, du) + (crab ? PI / 2 * (sin(c.seed * 50) > 0 ? 1 : -1) : 0); // a crab walks sideways
+    }
+    c.walk += ((dl > 0.01 && c.shove === 0 ? min(1, speed * 4) : 0) - c.walk) * min(1, dt * 8);
+    let dy = c.ty - c.yaw; dy -= TAU * Math.round(dy / TAU); c.yaw += dy * min(1, dt * (speed > 0.3 ? 10 : 3));
+    const sx = c.n[0] * c.sink, sy = c.n[1] * c.sink, sz = c.n[2] * c.sink;
+    AN[o] = px - sx; AN[o + 1] = py - sy; AN[o + 2] = pz - sz;
+    AN[o + 4] = c.kd + 0.005 + 0.99 * (((c.yaw / TAU) % 1 + 1) % 1) * 0.99;
+    AN[o + 5] = c.shove > 0 ? 0.5 + 0.49 * c.shove : 0.49 * c.walk;
+  }
+}
+
 // ---------------------------------------------------------------- movement helpers
 const PRED = [];                // indices of the predators (trout, sharks) for the prey's threat checks
 for (let i = 0; i < nA; i++) if (SP[i] === 5 || SP[i] === 7) PRED.push(i);
@@ -232,7 +286,8 @@ function ecoFrame(dtIn) {
     }
     BEAT[i] = min(2, 0.35 + speedOf(i) / LEN[i] * 0.45);
   }
-  for (let k = 0; k < nAnem; k++) AN[k * 8 + 5] += ((night() ? 0.7 : 0) - AN[k * 8 + 5]) * min(1, dtIn * 0.3);
+  for (let k = 0; k < nAnem; k++) if (AN[k * 8 + 4] < 8) AN[k * 8 + 5] += ((night() ? 0.7 : 0) - AN[k * 8 + 5]) * min(1, dtIn * 0.3);
+  critStep(dtIn);
   // instances: fish, then sharks, then eels
   let n = 0;
   const put = (i) => {
@@ -252,21 +307,61 @@ function ecoFrame(dtIn) {
 }
 
 const CROWN = [0.55, 0.16, 0.2, 0.2, 0.45, 0.2, 0.12, 0.08]; // height of each anemone kind's tentacle crown above its base (x size)
+// clownfish and the dascyllus over their anemone. Each fish follows an intent for a while (hover, circle the crown, dip
+// into the tentacles, visit a neighbouring host and come back), with its own timing, so a group never moves in step.
+// The diver: far off, ignored; nearer, the curious ones (about a third) swim out to look, then go home; the big
+// clownfish (the females) defend; very close, clownfish dive into the tentacles and the dascyllus scatter.
+// Personality by PH: < .35 curious, < .7 indifferent, else shy (shy ones react from further away).
+const NBR = [];   // per anemone: hosts within 4 m that a fish may visit
+const nbrOf = (k) => NBR[k] || (NBR[k] = ANE.map((b, j) => j).filter((j) => j !== k && (ANE[j][4] | 0) <= 3 && hypot(ANE[j][0] - ANE[k][0], ANE[j][1] - ANE[k][1], ANE[j][2] - ANE[k][2]) < 4));
+const LOOKCD = new Float32Array(NA);
+function crownPt(i, a, r, o, t) {
+  const nx = a[5] || 0, nz = a[6] || 0, ny = sqrt(max(0, 1 - nx * nx - nz * nz)), ax = a[0] + nx * 0.1 * a[3], ay = a[1] + ny * 0.1 * a[3], az = a[2] + nz * 0.1 * a[3];
+  setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny + sin(t) * r * (1 - ny), az + sin(t) * r * ny + nz * o);
+}
 function clown(i, dt) {
-  const a = ANE[HM[i]], nx = a[5] || 0, nz = a[6] || 0, ny = sqrt(max(0, 1 - nx * nx - nz * nz)), ax = a[0] + nx * 0.1 * a[3], ay = a[1] + ny * 0.1 * a[3], az = a[2] + nz * 0.1 * a[3], camD = hypot(F[CX] - ax, F[CY] - ay, F[CZ] - az);
-  const big = LEN[i] > 0.33 && VR[i] !== 4, dsc = VR[i] === 4, thr = threat(i, 0);
+  const home = ANE[HM[i]], o3 = i * 3, dsc = VR[i] === 4, big = LEN[i] > 0.33 && !dsc, pers = PH[i] < 0.35 ? 0 : PH[i] < 0.7 ? 1 : 2;
+  const hx = home[0], hy = home[1] + 0.2 * home[3], hz = home[2], camD = hypot(F[CX] - hx, F[CY] - hy, F[CZ] - hz), meD = sqrt(d2(i, F[CX], F[CY], F[CZ]));
+  const thr = threat(i, 0);
+  LOOKCD[i] -= dt; T2[i] -= dt;
+  const st0 = ST[i];
   if (night()) ST[i] = S_SLEEP;
   else if (thr < 4) ST[i] = S_HIDE;
+  else if (meD < (pers === 2 ? 1.8 : 1.1) && ST[i] !== S_GUARD) { ST[i] = dsc ? S_SCAT : S_HIDE; T2[i] = rr(2.5, 5); }     // too close: hide or scatter
   else if (big && camD < 2.2 && camD > 0.9) ST[i] = S_GUARD;
-  else ST[i] = S_HOVER;
-  if ((TM[i] -= dt) < 0 || ST[i] === S_GUARD) {
-    TM[i] = dsc ? rr(0.4, 1.4) : rr(0.6, 2);
-    if (ST[i] === S_HOVER) { const r = (dsc ? rr(0.05, 0.45) : rr(0, 0.4)) * a[3], t = rnd() * TAU; { const o = (CROWN[a[4] | 0] + (dsc ? rr(0.05, 0.3) : rr(0.04, 0.22))) * a[3]; /* dascyllus: a loose cloud higher up */ /* above the tentacle crown, never down among the column */ setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny + sin(t) * r * (1 - ny), az + sin(t) * r * ny + nz * o); } }
-    else if (ST[i] === S_GUARD) { const k = 0.8 / camD; setT(i, ax + (F[CX] - ax) * k, ay + (F[CY] - ay) * k, az + (F[CZ] - az) * k); }
-    else { const r = rr(0, 0.2) * a[3], t = rnd() * TAU, o = (CROWN[a[4] | 0] + rr(-0.06, 0.02)) * a[3]; /* hide or sleep: nestled into the top of the crown */ setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny, az + sin(t) * r * ny + nz * o); }
+  else if ((ST[i] === S_HIDE || ST[i] === S_SCAT) && T2[i] > 0) { /* stay put a little, then come out slowly */ }
+  else if (ST[i] === S_LOOK && (T2[i] < 0 || camD > 6)) { ST[i] = S_HOVER; T2[i] = rr(3, 8); LOOKCD[i] = rr(12, 25); }
+  else if (ST[i] !== S_LOOK && pers === 0 && camD > 1.8 && camD < 5 && LOOKCD[i] < 0 && rnd() < dt * 0.25) { ST[i] = S_LOOK; T2[i] = rr(2, 6); } // curious: out to have a look
+  else if (ST[i] === S_SLEEP || ST[i] === S_HIDE || ST[i] === S_SCAT || ST[i] === S_GUARD || T2[i] < 0) {
+    // a new intent, each fish on its own clock
+    const u = rnd(), nb = nbrOf(HM[i]);
+    if (ST[i] === S_VISIT) { ST[i] = S_HOVER; XI[i] = -1; T2[i] = rr(6, 14); }                            // back home after a visit
+    else if (u < 0.12 && nb.length && !big) { ST[i] = S_VISIT; XI[i] = nb[(rnd() * nb.length) | 0]; T2[i] = rr(4, 9); }
+    else if (u < 0.3) { ST[i] = S_CIRC; T2[i] = rr(4, 9); }
+    else if (u < 0.42 && !dsc) { ST[i] = S_DIP; T2[i] = rr(2, 4); }
+    else { ST[i] = S_HOVER; T2[i] = rr(4, 12); }
   }
-  steer(i, ST[i] === S_GUARD ? 1.2 : ST[i] === S_HIDE ? (dsc ? 1.2 : 0.8) : dsc ? 0.5 : 0.35, dt, 3, 0, false);
-  face(i, dt, ST[i] === S_GUARD ? F[CX] - P[i * 3] : 0, ST[i] === S_GUARD ? F[CY] - P[i * 3 + 1] : 0, ST[i] === S_GUARD ? F[CZ] - P[i * 3 + 2] : 0);
+  const s = ST[i], A = s === S_VISIT && XI[i] >= 0 ? ANE[XI[i]] : home, K = A[4] | 0, crown = CROWN[K] * A[3];
+  if (s !== st0) TM[i] = 0;
+  if ((TM[i] -= dt) < 0 || s === S_GUARD || s === S_LOOK || s === S_CIRC) {
+    TM[i] = dsc ? rr(0.5, 1.8) : rr(0.8, 2.6) * (0.7 + 0.6 * PH[i]);
+    if (s === S_HOVER || s === S_VISIT) crownPt(i, A, (dsc ? rr(0.05, 0.45) : rr(0.05, 0.4)) * A[3], crown + (dsc ? rr(0.05, 0.35) : rr(0.04, 0.24)) * A[3], rnd() * TAU);
+    else if (s === S_CIRC) crownPt(i, A, (dsc ? 0.4 : 0.32) * A[3], crown + 0.1 * A[3], ecoT * (0.5 + 0.3 * PH[i]) * (PH[i] > 0.5 ? 1 : -1) + PH[i] * 20);
+    else if (s === S_GUARD) { const k = 0.8 / camD; setT(i, hx + (F[CX] - hx) * k, hy + (F[CY] - hy) * k, hz + (F[CZ] - hz) * k); }
+    else if (s === S_LOOK) { const k = min(dsc ? 2.2 : 1.4, max(0, camD - 1.2)) / camD; setT(i, hx + (F[CX] - hx) * k, hy + 0.2 + (F[CY] - hy) * k, hz + (F[CZ] - hz) * k); } // stop ~1.2 m from you, never far from home
+    else if (s === S_SCAT) { const ax = P[o3] - F[CX], ay = P[o3 + 1] - F[CY], az = P[o3 + 2] - F[CZ], l = hypot(ax, ay, az) || 1; setT(i, hx + ax / l * 1.6, hy + 0.4 + max(0, ay / l) * 0.6, hz + az / l * 1.6); }
+    else crownPt(i, A, rr(0, 0.2) * A[3], crown + rr(-0.08, 0.0) * A[3], rnd() * TAU);                   // hide / sleep / dip: nestled into the crown
+  }
+  const sp = s === S_GUARD ? 1.2 : s === S_SCAT ? 1.6 : s === S_HIDE ? (dsc ? 1.2 : 0.9) : s === S_LOOK ? 0.45 : s === S_VISIT ? 0.5 : s === S_CIRC ? 0.4 : dsc ? 0.5 : 0.35;
+  steer(i, sp * (0.85 + 0.3 * PH[i]), dt, 3, 0, false);
+  // keep a little apart from the others (a group never piles into one spot)
+  for (let j = 0; j < nA; j++) {
+    if (j === i || SP[j] !== 0 || FROZ[j]) continue;
+    const dx = P[o3] - P[j * 3], dy = P[o3 + 1] - P[j * 3 + 1], dz = P[o3 + 2] - P[j * 3 + 2], q = dx * dx + dy * dy + dz * dz, R = (LEN[i] + LEN[j]) * 0.45;
+    if (q < R * R && q > 1e-6) { const l = sqrt(q), f = (R - l) / l * min(1, dt * 4); P[o3] += dx * f; P[o3 + 1] += dy * f * 0.5; P[o3 + 2] += dz * f; }
+  }
+  const look = s === S_GUARD || (s === S_LOOK && d2(i, TG[o3], TG[o3 + 1], TG[o3 + 2]) < 0.04);
+  face(i, dt, look ? F[CX] - P[o3] : 0, look ? F[CY] - P[o3 + 1] : 0, look ? F[CZ] - P[o3 + 2] : 0);
 }
 function chromis(i, dt) {
   if (ST[i] === S_GONE) { if ((TM[i] -= dt) < 0 && d2(i, F[CX], F[CY], F[CZ]) > 100) { ST[i] = S_HIDE; TM[i] = 2; } return; }
@@ -402,7 +497,7 @@ function moray(i, dt) {
   else if (ST[i] === S_FORAGE) { ST[i] = 15; } // heading home
   if (ST[i] === S_HOLE) {
     // head out of the hole along its normal, body back in the rock; slowly in and out
-    const e = 0.3 + 0.12 * sin(ecoT * 0.25 + PH[i] * 9), hx = h[3], hz = h[4], hy = 0.28, hl = hypot(hx, hy, hz);
+    const e = 0.45 + 0.15 * sin(ecoT * 0.25 + PH[i] * 9), hx = h[3], hz = h[4], hy = 0.28, hl = hypot(hx, hy, hz);
     Hd[o] = hx / hl; Hd[o + 1] = hy / hl; Hd[o + 2] = hz / hl;
     P[o] = h[0] + hx * e - Hd[o] * L * 0.5; P[o + 1] = h[1] + 0.05 - Hd[o + 1] * L * 0.5 + hy * e * 0.3; P[o + 2] = h[2] + hz * e - Hd[o + 2] * L * 0.5;
     Vv[o] = Vv[o + 1] = Vv[o + 2] = 0; return;
@@ -426,7 +521,7 @@ function manta(i) {
 }
 
 // ---------------------------------------------------------------- the info card: what you are looking at
-const cPic = $('cpic'), card = $('cd'), cN = $('cn'), cL = $('cl'), cF = $('cf'), cD = $('cg'), clock = $('ck');
+const xh = $('xh'), cPic = $('cpic'), card = $('cd'), cN = $('cn'), cL = $('cl'), cF = $('cf'), cD = $('cg'), clock = $('ck');
 let cardI = -1, candI = -1, candT = 0, lostT = 0, fol = -1, tour = false, tourT = 0, pickX = 0, pickY = 0, pickOn = false;
 const ANEB = 1000; // card index for anemone k: ANEB + k
 let pkX = 0, pkY = 0, pkZ = 0, pkB = -1, pkS = 1e9;
@@ -435,7 +530,7 @@ function pkTest(id, x, y, z, rad) {
   if (al < 0.3 || al > 18) return;
   const px = dx - pkX * al, py = dy - pkY * al, pz = dz - pkZ * al, off = sqrt(px * px + py * py + pz * pz);
   const tol = rad * 1.3 + al * 0.05; if (off > tol) return; // (generous: what wears the yellow ring should be easy to aim at)
-  const s = (off / tol + al * 0.02) * (id === cardI ? 0.7 : 1); if (s < pkS) { pkS = s; pkB = id; } // the open card wins near-ties, so it does not flicker between neighbours
+  const s = (off / tol + al * 0.02) * (id === cardI ? 0.7 : 1) + (id >= ANEB ? 0.8 : 0); // (a fish in front of an anemone wins) if (s < pkS) { pkS = s; pkB = id; } // the open card wins near-ties, so it does not flicker between neighbours
 }
 function lookPick() {
   // the ray: the screen centre, or where a finger tapped
@@ -449,8 +544,8 @@ function lookPick() {
   for (let i = 0; i < nA; i++) if (ST[i] !== S_GONE) {
     const L = LEN[i], o = i * 3;
     // morays: test the head, the part you see
-    if (SP[i] === 8) pkTest(i, P[o] + Hd[o] * L * 0.4, P[o + 1] + Hd[o + 1] * L * 0.4, P[o + 2] + Hd[o + 2] * L * 0.4, 0.15);
-    else pkTest(i, P[o], P[o + 1], P[o + 2], SP[i] === 9 ? L * 0.5 : L * 0.45);
+    if (SP[i] === 8) pkTest(i, P[o] + Hd[o] * L * 0.4, P[o + 1] + Hd[o + 1] * L * 0.4, P[o + 2] + Hd[o + 2] * L * 0.4, 0.25);
+    else pkTest(i, P[o], P[o + 1], P[o + 2], SP[i] === 9 ? L * 0.5 : max(L * 0.45, 0.14)); // (small fish: a floor, so they are not fiddly to aim at)
   }
   for (let k = 0; k < nAnem; k++) pkTest(ANEB + k, AN[k * 8], AN[k * 8 + 1] + 0.15, AN[k * 8 + 2], 0.35 * AN[k * 8 + 3]);
   return pkB;
@@ -459,7 +554,7 @@ const spOf = (id) => id >= ANEB ? 10 : SP[id];
 const stOf = (id) => id >= ANEB ? S_HOVER : ST[id];
 function showCard(id) {
   const sp = spOf(id), s = id >= ANEB ? ANSP[AN[(id - ANEB) * 8 + 4] | 0] : sp === 0 ? CLOWNS[VR[id]] : SPC[sp];
-  cN.textContent = s.zh; cL.textContent = s.la; cvShow(sp, id); cF.textContent = s.facts.join(' ');
+  cN.textContent = s.zh; cL.textContent = s.la; cvShow(sp, id); cF.textContent = (s.size ? s.size + '。' : '') + s.facts.join(' ');
   card.className = 'on'; cardI = id; lastDo = '';
 }
 let lastDo = '';
@@ -477,8 +572,10 @@ function cardStep(dt) {
     // aiming time counts while the centre stays on any animal: in a dense anemone clump the pick hops between neighbours,
     // and resetting the timer on every hop meant the card never opened although the ring was showing
     if (b >= 0) candT += dt * 3; else candT = 0; candI = b;
-    if (b >= 0 && candT > 0.35 && b !== cardI) showCard(b);
-    if (b === cardI && b >= 0) lostT = 0; else if (cardI >= 0 && (lostT += dt * 3) > 3) { card.className = ''; cardI = -1; }
+    if (b >= 0 && candT > 0.15 && b !== cardI) showCard(b);  // a new target switches the card at once
+    // aimed at nothing: the card stays ~3.5 s (a fish may swim off while you read), then fades out slowly
+    if (b >= 0) lostT = 0; else if (cardI >= 0 && (lostT += dt * 3) > 3.5) { card.className = ''; cardI = -1; }
+    xh.className = b >= 0 ? 'on' : '';
     pickOn = false;
   }
   if (cardI >= 0 && (frameN % 10 === 0 || lastDo === '')) {
@@ -621,6 +718,10 @@ function mapStep() {
   mx.fillStyle = '#03131ccc'; mx.fillRect(MS - 196, MS - 32, 190, 26);
   mx.fillStyle = '#fff'; mx.font = 'bold 15px system-ui,sans-serif'; mx.textAlign = 'center'; mx.textBaseline = 'middle';
   mx.fillText(`你在 ${gridOf(F[CX], F[CZ])} · 水深 ${(-F[CY]).toFixed(0)} 米`, MS - 101, MS - 19);
+  if (devOn) { // developer mode: the exact position and view, so a screenshot tells where it was taken
+    mx.fillStyle = '#03131ccc'; mx.fillRect(MS - 296, MS - 62, 290, 26); mx.fillStyle = '#ffe08a'; mx.font = 'bold 14px ui-monospace,monospace';
+    mx.fillText(`x ${F[CX].toFixed(1)}  y ${F[CY].toFixed(1)}  z ${F[CZ].toFixed(1)}  朝向 ${((F[YAW] * 180 / PI + 360) % 360).toFixed(0)}°`, MS - 151, MS - 49);
+  }
 }
 addEventListener('keydown', (e) => { if (!menu && !e.repeat && e.code === 'KeyM') mapToggle(); });
 

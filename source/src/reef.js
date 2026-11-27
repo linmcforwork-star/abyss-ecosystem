@@ -293,18 +293,22 @@ function meshShark() {
   for (const sz of [-1, 1]) { tri([0.2, -0.05, sz * 0.07], [0.12, -0.06, sz * 0.08], [0.02, -0.11, sz * 0.27], 0.8); tri([-0.12, -0.05, sz * 0.05], [-0.16, -0.05, sz * 0.05], [-0.18, -0.08, sz * 0.12], 0.8); }
   return m;
 }
-// moray eel: a long compressed tube with a low continuous fin; aux = 1 body, .6 fin; x from +0.5 (snout) back
+// giant moray (Gymnothorax javanicus): a heavy, deep body (about 1/11 of its length; arm-to-thigh thick on a 2.5 m eel),
+// a big blunt head with bulging jaw muscles behind the eyes, the body staying deep for its first 60% then a flattened,
+// tapering tail; a low continuous fin along the back and belly. aux = 1 body, .6/.55 fins; x from +0.5 (snout) back
 function meshEel() {
-  const m = new Mesh(), N = 30, S = 10, rings = [];
-  for (let i = 0; i <= N; i++) {
-    const t = i / N, x = 0.5 - t, h = t < 0.06 ? 0.012 + 0.3 * t : 0.03 * (1 - 0.75 * pow(t, 2.2)) + 0.002, r = [];
-    for (let k = 0; k < S; k++) { const a = k / S * TAU; r.push(m.v(x, sin(a) * h, cos(a) * h * 0.8, 1)); }
+  const m = new Mesh(), N = 40, S = 12, rings = [];
+  const ht = (t) => t < 0.035 ? 0.014 + 0.6 * t : t < 0.13 ? 0.035 + 0.012 * sstep(0.035, 0.13, t) : t < 0.6 ? 0.047 - 0.004 * (t - 0.13) / 0.47 : 0.043 * pow(1 - (t - 0.6) / 0.4, 1.3) + 0.004;
+  const wt = (t) => t < 0.13 ? 0.78 : t < 0.6 ? 0.72 : 0.72 - 0.34 * (t - 0.6) / 0.4;
+  const T = []; for (let i = 0; i <= N; i++) { const u = i / N; T.push(u < 0.25 ? u * u / 0.25 * 0.5 : u - 0.125); } // denser rings at the head
+  const tm = T[N]; for (let i = 0; i <= N; i++) T[i] /= tm;
+  for (const t of T) {
+    const x = 0.5 - t, h = ht(t), w = h * wt(t), jaw = t < 0.13 ? 0.006 * sin(PI * t / 0.13) : 0, r = [];
+    for (let k = 0; k < S; k++) { const a = k / S * TAU, sy = sin(a), cz = cos(a); r.push(m.v(x, sy * h - (sy < 0 ? jaw : 0), cz * w * (1 + 0.12 * (1 - sy * sy)), 1)); }
     rings.push(r);
   }
   for (let i = 0; i < N; i++) for (let k = 0; k < S; k++) { const k2 = (k + 1) % S; m.quad(rings[i][k], rings[i + 1][k], rings[i + 1][k2], rings[i][k2]); }
-  let p = null;
-  for (let i = 3; i <= N; i++) { const t = i / N, x = 0.5 - t, h = 0.03 * (1 - 0.75 * pow(t, 2.2)), q = [m.v(x, h * 0.8, 0, 0.6), m.v(x, h + 0.014, 0, 0.6)]; if (p) m.quad(p[0], q[0], q[1], p[1]); p = q; }
-  p = null;
-  for (let i = 14; i <= N; i++) { const t = i / N, x = 0.5 - t, h = 0.03 * (1 - 0.75 * pow(t, 2.2)), q = [m.v(x, -h * 0.8, 0, 0.55), m.v(x, -h - 0.01, 0, 0.55)]; if (p) m.quad(p[0], q[0], q[1], p[1]); p = q; }
+  const fin = (t0, sg, fh, aux) => { let p = null; for (const t of T) { if (t < t0) continue; const x = 0.5 - t, h = ht(t), e = fh * sstep(t0, t0 + 0.08, t) * (0.6 + 0.4 * sstep(1, 0.7, t)) + (t > 0.97 ? 0.01 : 0), q = [m.v(x, sg * h * 0.85, 0, aux), m.v(x, sg * (h + e), 0, aux)]; if (p) m.quad(p[0], q[0], q[1], p[1]); p = q; } };
+  fin(0.1, 1, 0.016, 0.6); fin(0.45, -1, 0.012, 0.55);
   return m;
 }

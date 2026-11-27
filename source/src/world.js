@@ -132,7 +132,7 @@ function makeWorld(D, T, flyPts, POSES) {
   const tangent = (n) => { let t = abs(n[1]) < 0.9 ? [n[2], 0, -n[0]] : [1, 0, 0]; const l = hypot(...t); t = t.map((v) => v / l); return [t, [n[1] * t[2] - n[2] * t[1], n[2] * t[0] - n[0] * t[2], n[0] * t[1] - n[1] * t[0]]]; };
   const nearFly = (x, y, z, r) => { for (const p of flyPts) if (hypot(x - p[0], z - p[2]) < r && y < p[1] + 3 && y > p[1] - 13) return true; return false; };
   // the exhibits: small themed areas on open sand, kept clear of the generic scatter and dressed by hand below
-  const ZONES = [{ zh: '小丑鱼之家', sub: '石拱门边的海葵和住在里面的小丑鱼', x: HOMEP[0], z: HOMEP[1], r: 10, box: [HOMEP[0] - 9, HOMEP[0] + 13, HOMEP[1] - 12, HOMEP[1] + 12] }]; // box: the arch and the sand east of it, kept free of other props
+  const ZONES = [{ zh: '小丑鱼之家', sub: '石拱门边的海葵和住在里面的小丑鱼', x: HOMEP[0], z: HOMEP[1], r: 10, box: [HOMEP[0] - 9, HOMEP[0] + 18, HOMEP[1] - 12, HOMEP[1] + 12] }]; // box: the arch and the sand east of it, kept free of other props
   const inZone = (x, z, pad = 0) => { for (const { box: b } of ZONES) if (x > b[0] - pad && x < b[1] + pad && z > b[2] - pad && z < b[3] + pad) return true; return false; };
   const nearPose = (x, z, r = 3) => { for (const p of POSES) if (hypot(x - p[0], z - p[2]) < r) return true; return false; };
   // --- kelp columns
@@ -166,8 +166,13 @@ function makeWorld(D, T, flyPts, POSES) {
   };
   const occ = new Set();
   rseed(1);
+  // kelp is a cold-water plant, not a coral-reef one: switched back on (owner's request, 2026-11-27) to judge the look;
+  // KELP = false removes it again. It keeps clear of the anemone sites, and the corals under it go (see the end).
+  const KELP = true;
+  const KELPFREE = [[HOMEP[0], HOMEP[1], 24], [ARCHES[1][0], ARCHES[1][2], 24], [HOLES[1][0], HOLES[1][2], 14], [HOLES[1][4], HOLES[1][6], 14]];
+  const kelpCols = [];
   const tryColumn = (x, z, kind, force, dens = 1) => {
-    return; // no kelp on a coral reef
+    if (!KELP || KELPFREE.some((p) => hypot(x - p[0], z - p[1]) < p[2])) return;
     const key = floor(x / 2.3) * 4096 + floor(z / 2.3);
     if (occ.has(key)) return;
     const f = floorsAt(x, z); const c = [];
@@ -176,7 +181,7 @@ function makeWorld(D, T, flyPts, POSES) {
     const i = c[(rnd() * c.length) | 0], y = f[i];
     if (grad(x, y, z)[1] < 0.55) return;
     if (!force && flyPts.some((p) => hypot(x - p[0], z - p[2]) < 5)) return;
-    occ.add(key);
+    occ.add(key); kelpCols.push(x, z);
     column(x, y - 0.3, z, min(f[i + 1] - rr(0.8, 5), force ? rr(30, 42) : rr(15, 40)), kind, dens);
   };
   // hand-placed columns framing the viewpoints: x, z, kind, density
@@ -496,6 +501,24 @@ function makeWorld(D, T, flyPts, POSES) {
       cluster(8, 2, 1, 0.8, 1.1, seen(wall), 1.3, [hx + 3, fl + 2, hz + 12]);
       cluster(8, 0, 1, 1.0, 1.3, wall, 2, [hx - 2.6, fl + 3, hz + 9]);
       cluster(8, 0, 5, 1.0, 1.3, wall, 2, [hx - 2.6, fl + 3, hz - 9]);
+      // the reviewer's macro pass (2026-11-27): the doorway is the focal point, so the densest, brightest group sits under the
+      // arch (both legs' inner faces and their feet, a long-tentacle group on the sand between), a crown on top of the arch
+      // gives it a silhouette from afar, and a few stragglers further out make the edge of the sight fade instead of stopping
+      cluster(8, 0, 1, 1.0, 1.3, wall, 1.6, [hx, fl + 2.5, hz - 7.8]);                 // inner face of the north leg
+      cluster(8, 2, 1, 0.8, 1.1, foot, 1.3, [hx, fl + 0.8, hz + 7]);                  // bubble-tips at both legs' inner feet
+      cluster(8, 2, 1, 0.8, 1.1, foot, 1.3, [hx, fl + 0.8, hz - 7]);
+      cluster(6, 3, 1, 1.5, 1.9, sand, 1.8, [hx - 0.5, fl, hz + 1]);                  // long-tentacles in the doorway
+      const top = (k) => T.wn[k + 1] > 0.55 && T.wp[k + 1] > fl + 9;
+      // a continuous crown along the whole top of the arch (rose-red and pink alternating), outlining it from afar
+      [[-7, 5], [-4, 2], [-1, 5], [2, 2], [5, 5], [7.5, 2]].forEach(([dz, c]) => cluster(6, 0, c, 1.0, 1.4, (k) => T.wn[k + 1] > 0.35 && T.wp[k + 1] > fl + 8, 2, [hx, fl + 14, hz + dz]));
+      // bands climbing both legs' visitor-facing faces up to the crown, so colour runs right round the doorframe
+      for (const [h, dz] of [[6, 9.5], [9, 8.5], [6, -9.5], [9, -8.5]]) cluster(6, 0, dz > 0 ? 2 : 5, 1.0, 1.3, seen(wall), 1.8, [hx + 1.5, fl + h, hz + dz]);
+      // the centrepiece in the doorway, a little behind the middle: carpets (cyan-blue, a colour of its own here) ringed by
+      // long-tentacles and a tube patch, so the arch frames one rich group instead of an empty floor
+      for (const [dx, dz] of [[-1.5, 0], [-0.5, -2.6], [-0.5, 2.6]]) cluster(1, 1, 0, 1.4, 1.7, sand, 0.6, [hx + dx, fl, hz + dz]);
+      cluster(5, 3, 1, 1.4, 1.8, sand, 1.6, [hx - 3, fl, hz]);
+      cluster(6, 4, 1, 0.8, 1.0, sand, 1.4, [hx - 2, fl, hz + 4.5]);
+      for (const [dx, dz, kd] of [[14, 8, 3], [15, -8, 2], [-9, 10, 3], [13, 12, 4], [-8, -11, 4]]) cluster(kd === 2 ? 3 : 2, kd, 1, kd === 3 ? 1.4 : 0.8, kd === 3 ? 1.8 : 1.05, kd === 2 ? foot : sand, 1.2, [hx + dx, fl + (kd === 2 ? 1 : 0), hz + dz]);
       // carpets: big and solitary, so a "carpet beach" on the sand in front of the arch, each with room around it
       for (const [dx, dz] of [[1, 2], [4, -1.5], [7, -3], [6.5, 3.5], [9.5, 0.5], [3, 5], [10, -4], [-5, 4]]) cluster(1, 1, 0, 1.3, 1.6, sand, 0.6, [hx + dx, fl, hz + dz]);
       // long-tentacle: solitary in nature but often several in one sandy patch; three loose groups
@@ -671,6 +694,41 @@ function makeWorld(D, T, flyPts, POSES) {
   const snow = new Float32Array(9000 * 4);
   for (let i = 0; i < snow.length; i++) snow[i] = rnd();
 
+  // --- keep every anemone in view: no fixed object (coral, sponge, fan, rock, rubble, kelp) may overlap one or stand right in
+  // front of it (along the way it faces, or beside it and taller on open ground). Fish swim off, so they don't count.
+  {
+    const AQ = anemones.filter((a) => (a[4] | 0) < 8).map((a) => { const nx = a[5] || 0, nz = a[6] || 0; return [a[0], a[1], a[2], 0.35 * a[3], nx, Math.sqrt(max(0, 1 - nx * nx - nz * nz)), nz]; });
+    const G = new Map(); for (const a of AQ) { const k = ((a[0] / 6) | 0) + ',' + ((a[2] / 6) | 0); (G.get(k) || G.set(k, []).get(k)).push(a); }
+    const blocks = (x, y, z, so) => {
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) for (const a of G.get((((x / 6) | 0) + i) + ',' + (((z / 6) | 0) + j)) || []) {
+        const dx = x - a[0], dy = y - a[1], dz = z - a[2];
+        if (dy < -1.2 || dy > 2.5) continue;
+        if (hypot(dx, dy, dz) < a[3] + 0.4 * so) return true;                                         // overlaps it
+        const al = dx * a[4] + dy * a[5] + dz * a[6], lx = dx - a[4] * al, ly = dy - a[5] * al, lz = dz - a[6] * al;
+        if (al > -0.2 && al < 2.2 && hypot(lx, ly, lz) < a[3] + 0.35 * so + 0.2) return true;          // in front of it, the way it faces
+        if (a[5] > 0.8 && hypot(dx, dz) < a[3] + 0.5 + 0.3 * so && dy + so > 0.3) return true;       // beside it on open ground, and taller
+      }
+      return false;
+    };
+    let cut = 0;
+    const sweep = (L, sMul = 1) => { for (let c = 0; c < L.length; c++) { const a = L[c], o = []; for (let i = 0; i < a.length; i += 12) { if (blocks(a[i], a[i + 1], a[i + 2], a[i + 3] * sMul)) { cut++; continue; } for (let j = 0; j < 12; j++) o.push(a[i + j]); } L[c] = o; } };
+    for (const P of props) sweep(P);
+    for (const C of chunks) sweep(C);
+    sweep(big, 0.5);                                         // (a leaf's 4th value is its length)
+    for (let m = 0; m < 10; m++) if (solids[m]) { const o = [solids[m]]; sweep(o); solids[m] = o[0]; } // (10, 11: the whale fluke and the ship hull stay)
+    if (typeof window !== 'undefined') window.__cleared = cut; // (dev: how many objects made way)
+  }
+  // --- under the kelp: no coral (a kelp bed is rock and sand); everything within 1.6 m of a stem and in the dense beds goes
+  if (kelpCols.length) {
+    const KG = new Map(); for (let i = 0; i < kelpCols.length; i += 2) { const k = ((kelpCols[i] / 4) | 0) + ',' + ((kelpCols[i + 1] / 4) | 0); (KG.get(k) || KG.set(k, []).get(k)).push(kelpCols[i], kelpCols[i + 1]); }
+    const underKelp = (x, z) => {
+      if (kelpDens(x, z) > 0.55) return true;
+      for (let i = -1; i <= 1; i++) for (let j = -1; j <= 1; j++) { const c = KG.get((((x / 4) | 0) + i) + ',' + (((z / 4) | 0) + j)) || []; for (let k = 0; k < c.length; k += 2) if (hypot(x - c[k], z - c[k + 1]) < 1.6) return true; }
+      return false;
+    };
+    const keep = (a) => { const o = []; for (let i = 0; i < a.length; i += 12) if (!underKelp(a[i], a[i + 2])) for (let j = 0; j < 12; j++) o.push(a[i + j]); return o; };
+    for (const m of [4, 5, 6, 7, 8, 9, 26, 27]) { if (m > 25) { const P = props[m - 20]; for (let c = 0; c < P.length; c++) P[c] = keep(P[c]); } else if (m < 10 && m > 3) { const P = props[m - 4]; for (let c = 0; c < P.length; c++) P[c] = keep(P[c]); } }
+  }
   const sol = { data: [], ranges: [] }; let si = 0;
   for (let m = 0; m < 12; m++) { const a = solids[m] || []; sol.ranges.push([si, a.length / 12]); si += a.length / 12; for (let i = 0; i < a.length; i++) sol.data.push(a[i]); }
   const packC = (L) => {

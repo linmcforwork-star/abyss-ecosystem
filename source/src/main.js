@@ -523,7 +523,7 @@ function render() {
     r.setPipeline(pReef); r.setVertexBuffer(1, ibEco);
     if (nEcoF) r.drawIndexed(meshes[28].ib.length, nEcoF, meshes[28].i0, meshes[28].v0, 0);
     if (nEcoS && !TANK) r.drawIndexed(meshes[29].ib.length, nEcoS, meshes[29].i0, meshes[29].v0, nEcoF);
-    if (nEcoE && !TANK) r.drawIndexed(meshes[30].ib.length, nEcoE, meshes[30].i0, meshes[30].v0, nEcoF + nEcoS);
+    if (nEcoE) r.drawIndexed(meshes[30].ib.length, nEcoE, meshes[30].i0, meshes[30].v0, nEcoF + nEcoS);
   }
   if (nAnem) {
     anemSort(); Q.writeBuffer(ibAnem, 0, ANd, 0, ANC[20] * 8); r.setPipeline(pAnem); r.setVertexBuffer(1, ibAnem);
