@@ -22,18 +22,53 @@ const SPC = [
     facts: ['尾柄两侧各藏着一根锋利的"手术刀"棘，受威胁时用来自卫。', '受惊时会钻进珊瑚缝里躲起来。'] },
   { zh: '黑鳍礁鲨', la: 'Carcharhinus melanopterus', len: [1.2, 1.6],
     facts: ['背鳍和尾鳍尖端是醒目的黑色。', '常在浅水礁区巡游，黄昏和夜里更活跃。对人很胆怯，通常会主动避开潜水员。'] },
-  { zh: '爪哇裸胸鳝（巨海鳝）', la: 'Gymnothorax javanicus', len: [1.5, 2.2],
+  { zh: '爪哇裸胸鳝（巨海鳝）', la: 'Gymnothorax javanicus', len: [2.0, 2.7], size: '真实体长：通常 1.5–2.5 米，最大约 3 米，身体有成人大腿那么粗',
     facts: ['白天藏在礁石洞里，只露出头。嘴一张一合不是要咬人，是在让水流过鳃来呼吸。', '夜里出洞觅食。是最大的海鳝之一，体长可超过 2.5 米。'] },
   { zh: '阿氏前口蝠鲼（珊瑚礁蝠鲼）', la: 'Mobula alfredi', len: [3, 3],
     facts: ['张大嘴滤食水里的浮游生物，翼展可达 5 米。', '每条蝠鲼腹部的斑点都不一样，研究者靠它认出每一个个体。'] },
   { zh: '华丽海葵', la: 'Heteractis magnifica', len: [0.8, 0.8],
     facts: ['小丑鱼的家。触手里有成千上万个刺细胞，能蜇伤靠近的小鱼。', '体内住着能光合作用的共生藻，所以喜欢阳光充足的浅水。'] },
 ];
+// the seven kinds of anemone in the garden (5/6: the beadlet, open/shut) (kind = integer part of the anemone's colour value, see meshAnem in reef.js)
+const ANSP = [SPC[10],
+  { zh: '巨型地毯海葵', la: 'Stichodactyla gigantea', short: '地毯海葵',
+    facts: ['口盘可宽达 80 厘米，像一张起伏的毯子铺在浅水沙地上，上面密密麻麻全是很短、很黏的触手。', '小丑鱼也会住在它里面，碰到它时触手会黏住手指。'] },
+  { zh: '奶嘴海葵（气泡海葵）', la: 'Entacmaea quadricolor', short: '气泡海葵',
+    facts: ['触手末端常常鼓成一个个小泡泡，为什么会鼓起来，科学家还没有完全弄清楚。', '身子常藏在礁石缝里，只露出触手。会一分为二地繁殖，所以常常一小片挨在一起。'] },
+  { zh: '长须海葵', la: 'Macrodactyla doreensis', short: '长须海葵',
+    facts: ['身体埋在沙里，只把细长的触手铺在沙面上。', '受惊时会一下子整个缩进沙里，看上去什么都没有了。'] },
+  { zh: '管海葵', la: 'Cerianthidae', short: '管海葵',
+    facts: ['住在自己用黏液和刺丝做成的管子里，管子可以深深插进沙里。受惊时一下子缩回管中。', '有两圈触手：外圈长的用来捕捉漂过的食物，内圈短的把食物送进嘴里。它其实不是真正的海葵，是海葵的远亲。'] },
+  { zh: '地中海珠海葵（海番茄）', la: 'Actinia mediterranea', short: '珠海葵',
+    facts: ['只有手心大小：光滑的酒红色身子，粉红色的细触手。受惊或退潮时，触手全缩进去，变成一个红色小圆球，像颗番茄。', '身子顶上藏着一圈钴蓝色的小珠子（领瘤）。碰到挤过来的邻居时，它会鼓起蓝珠去刺对方，抢地盘。', '住在地中海的潮间带岩石上，是冷水海葵。小丑鱼不住在它里面。'] }];
+ANSP[6] = ANSP[5]; // shut into a red dome: the same animal
+ANSP[7] = { zh: '珠光海葵', la: 'Heteractis aurora', short: '珠光海葵',
+  facts: ['每根触手上都有一圈圈白色的"珠子"，像一串串珍珠，所以叫珠光海葵。', '身子埋在沙里，只露出铺满触手的口盘；受惊时整个缩进沙里。', '克氏小丑最爱住它，三点白小鱼也常躲在里面。'] };
+// the anemones' little lodgers (kinds 8, 9: drawn with the anemones, but shaded as animals, see fsCrit)
+ANSP[8] = { zh: '短腕岩虾（海葵虾）', la: 'Ancylocaris brevicarpalis', short: '海葵虾',
+  facts: ['身体几乎透明，背上和尾扇上有镶橙边的白斑，腿上是一圈圈紫蓝色的环纹。', '住在地毯海葵、奶嘴海葵这些大海葵的触手之间，不会被蜇。', '真身只有 2–3 厘米，这里放大了几倍，好让你看得见。'] };
+ANSP[9] = { zh: '斑点瓷蟹', la: 'Neopetrolisthes maculatus', short: '瓷蟹',
+  facts: ['白色扁平的身子和一对大螯上，布满红褐色的小斑点，像一只瓷器。', '它不用螯捉吃的，而是挥动嘴边两把羽毛似的小扇子，从水里滤食浮游生物。', '常常一对住在一只地毯海葵上，靠海葵的刺保护自己。甲壳只有 2 厘米左右，这里放大了。'] };
+// the corals and sponges (by mesh, see world.js): no animal state, shown on the card when aimed at
+const CORSP = {};
+CORSP[4] = CORSP[9] = { zh: '桶状海绵', la: 'Xestospongia testudinaria', size: '真实高度：常见 0.5–1.5 米，最大可近 2 米',
+  facts: ['它不是珊瑚，是海绵：最古老、最简单的动物之一，没有嘴、没有内脏。', '海水从体壁上无数小孔被吸进去，过滤掉里面的食物颗粒，再从顶上的大口排出去。', '长得很慢，大的个体可能已经活了上百年。'] };
+CORSP[5] = CORSP[6] = { zh: '肉质软珊瑚（皮革珊瑚）', la: 'Sarcophyton', size: '真实宽度：通常 20–80 厘米',
+  facts: ['没有坚硬的石灰骨骼，摸起来软而有韧性，像皮革。', '张开时顶上布满细小的珊瑚虫，像一层绒毛；受惊时全部缩回去，表面一下子变得光滑。', '身体里有难吃的化学物质，所以很少有动物吃它。'] };
+CORSP[7] = { zh: '鹿角珊瑚', la: 'Acropora muricata', size: '真实大小：一丛可宽达数米，枝条粗约 1–2 厘米',
+  facts: ['枝条像鹿角，是长得最快的珊瑚之一，一年能长 10 厘米以上。', '枝尖上颜色较浅的部分，就是正在生长的地方。', '它是造礁的主力，也最怕海水变暖：水温太高时会白化死去。'] };
+CORSP[8] = { zh: '大海扇', la: 'Annella mollis', size: '真实大小：可宽达 2–3 米，却只有几厘米厚',
+  facts: ['一种柳珊瑚，长成一张巨大的网。', '总是横着对着水流生长，这样漂过的浮游生物更容易被网上的珊瑚虫抓住。'] };
+CORSP[26] = { zh: '脑珊瑚（扁脑珊瑚）', la: 'Platygyra', size: '真实大小：一个珊瑚头常见 0.5–1 米，大的可达数米',
+  facts: ['表面弯弯曲曲的沟回像大脑，每条沟里住着连成一串的珊瑚虫。', '长得很慢，一年大约 1 厘米，大的珊瑚头可能已经有几百岁。'] };
+CORSP[27] = { zh: '桌面珊瑚', la: 'Acropora hyacinthus', size: '真实大小：桌面宽可达 2–3 米',
+  facts: ['无数细小的枝条横着长，连成一张平台，像一张桌子。', '桌面下面的阴影，是小鱼躲避捕食者的好地方。'] };
 // states
 const S_HOVER = 0, S_HIDE = 1, S_TRAVEL = 2, S_GRAZE = 3, S_POSE = 4, S_CLEAN = 5, S_STALK = 6, S_BURST = 7, S_SLEEP = 8, S_PATROL = 9,
-  S_GUARD = 10, S_FORAGE = 11, S_HOLE = 12, S_GONE = 13, S_ATE = 14;
+  S_GUARD = 10, S_FORAGE = 11, S_HOLE = 12, S_GONE = 13, S_ATE = 14, S_VISIT = 15, S_LOOK = 16, S_DIP = 17, S_SCAT = 18, S_CIRC = 19;
 const DOING = {
-  0: { [S_HOVER]: '在海葵上方来回游动', [S_HIDE]: '发现危险，躲进了海葵的触手里', [S_GUARD]: '冲向靠近的你：它在保卫自己的海葵', [S_SLEEP]: '在海葵的触手里过夜' },
+  0: { [S_HOVER]: '在海葵上方来回游动', [S_HIDE]: '发现危险，躲进了海葵的触手里', [S_GUARD]: '冲向靠近的你：它在保卫自己的海葵', [S_SLEEP]: '在海葵的触手里过夜',
+    [S_VISIT]: '游去隔壁的海葵串门', [S_LOOK]: '好奇地游过来看你', [S_DIP]: '钻进触手里蹭一蹭', [S_SCAT]: '受惊，一下子散开了', [S_CIRC]: '绕着海葵转圈' },
   1: { [S_HOVER]: '在珊瑚上方啄食浮游生物，头朝着水流', [S_HIDE]: '发现危险，钻进了珊瑚枝杈里', [S_SLEEP]: '躲在珊瑚枝杈里过夜' },
   2: { [S_HOVER]: '在清洁站上来回游动，等"顾客"上门', [S_CLEAN]: '正在给一条 {c} 清理寄生虫', [S_SLEEP]: '藏在礁石缝里睡觉' },
   3: { [S_TRAVEL]: '游向下一块珊瑚岩', [S_GRAZE]: '正在用"鸟嘴"刮食礁石上的藻类', [S_POSE]: '停在清洁站摆好姿势，等清洁鱼来清理', [S_SLEEP]: '裹在自己吐出的黏液"睡袋"里睡觉' },
@@ -75,12 +110,31 @@ function rockGrad(x, y, z) {
 }
 
 // ---------------------------------------------------------------- the animals
+const FROZ = new Uint8Array(NA); // dev only: animals held still for a portrait (dev.js lineup)
+const VR = new Int8Array(NA); // clownfish species: 0 ocellaris, 1 pink (perideraion), 2 Clark's male, 3 Clark's female (white tail); 4 three-spot dascyllus (not a clownfish, shares the anemone)
 const SP = new Int8Array(NA), ST = new Int8Array(NA), HM = new Int16Array(NA), GR = new Int16Array(NA), XI = new Int16Array(NA);
 const P = new Float64Array(NA * 3), Vv = new Float64Array(NA * 3), Hd = new Float64Array(NA * 3), TG = new Float64Array(NA * 3), OF = new Float64Array(NA * 3);
 const LEN = new Float32Array(NA), PH = new Float32Array(NA), TM = new Float32Array(NA), T2 = new Float32Array(NA), BEAT = new Float32Array(NA);
 let nA = 0;
 // shown bigger than life so you can tell them apart from the background fish at a glance (the small ones the most)
 const SHOW = [1, 3, 3, 1.7, 2.2, 1.3, 2, 1, 1, 1];
+// which clownfish lives in which anemone (refs: clownfish/LOOKS.md): the pink one in the violet magnificent anemones,
+// Clark's in the bubble-tips (and some carpets), ocellaris in the other magnificent and carpet anemones
+const CLOWNS = [
+  { zh: '眼斑双锯鱼（公子小丑）', short: '公子小丑', la: 'Amphiprion ocellaris', facts: ['橙色身体上三条白带，白带和鳍边都有细细的黑边。', '和海葵共生：身上的黏液让它不被海葵的刺细胞蜇伤，海葵的触手又替它挡住捕食者。', '一群里最大的是雌鱼。雌鱼不在了，最大的雄鱼会变成雌鱼。'] },
+  { zh: '颈环双锯鱼（粉红小丑）', short: '粉红小丑', la: 'Amphiprion perideraion', facts: ['粉桃色的身体，一条白线沿着背脊从嘴拉到尾巴，眼后一道细白带。', '最小的小丑鱼之一，最长约 10 厘米，几乎只住在华丽海葵里。', '是唯一主要吃藻类的小丑鱼。'] },
+  { zh: '克氏双锯鱼（克氏小丑）', short: '克氏小丑', la: 'Amphiprion clarkii', facts: ['背部黑色，脸、胸和鳍是黄橙色，两条宽白带。雄鱼尾巴黄色，雌鱼尾巴发白。', '最不挑的小丑鱼：十种能住的海葵它都住。', '雌鱼可长到 15 厘米，是这里最大、最大胆的小丑鱼。'] },
+];
+CLOWNS[3] = CLOWNS[2];
+CLOWNS[4] = { zh: '三斑宅泥鱼（三点白）', short: '三点白', la: 'Dascyllus trimaculatus', facts: ['小鱼全身乌黑，身体两侧各有一个白点，额头上还有一个，所以叫"三点白"。', '小时候成群住在大海葵上方，和小丑鱼共用一个海葵；有危险就一起钻进触手里。', '长大后离开海葵，身体变成灰褐色，白点慢慢变淡，最长约 14 厘米。'] };
+// three-spot dascyllus juveniles: a little school hovering higher above a big magnificent anemone
+function setDasc(i) { VR[i] = 4; LEN[i] = rr(0.18, 0.23); }
+function setClown(i, a, j) {
+  const kd = a[4] | 0, col = ((a[4] % 1) * 6) | 0;
+  let v = kd === 2 || kd === 3 || kd === 7 ? 2 : kd === 0 ? (col === 2 ? 1 : 0) : ((abs(a[0] * 7 + a[2] * 3) | 0) % 2 ? 2 : 0);
+  if (v === 2 && j === 0) v = 3;
+  VR[i] = v; if (v === 3) LEN[i] *= 1.2; if (v === 1) LEN[i] *= 0.92;
+}
 const add = (sp, x, y, z, home, grp = -1) => {
   if (nA >= NA) return -1;
   const i = nA++, L = SPC[sp].len;
@@ -93,6 +147,7 @@ const add = (sp, x, y, z, home, grp = -1) => {
 const near = (list, x, z, r) => list.filter((p) => hypot(p[0] - x, p[2] - z) < r);
 const pick = (list) => list[(rnd() * list.length) | 0];
 const ANE = Wd.anemones, STA = Wd.stations, HOL = Wd.holes;
+const CORL = Wd.corals, nCor = CORL.length / 5, CORB = 100000; // card index for coral k: CORB + k
 const HEADS = [];                 // chromis homes: coral heads spread over the reef, nearest to the viewpoints first
 // groups (parrotfish, tangs, idols): a shared target, state and timer
 const NG = 24, GT = new Float64Array(NG * 3), GH = new Float64Array(NG * 3), GS = new Int8Array(NG), GTM = new Float32Array(NG), GST = new Int16Array(NG), GSP = new Int8Array(NG), GN = new Int8Array(NG);
@@ -103,7 +158,10 @@ let nG = 0;
   for (const h of all) if (HEADS.length < 16 && !HEADS.some((q) => hypot(q[0] - h[0], q[2] - h[2]) < 9)) HEADS.push(h);
   if (!HEADS.length) HEADS.push([0, floorAt(0, 0) + 1, 0, 1]);
   // clownfish: a big female, a smaller male, sometimes a juvenile, in every anemone
-  ANE.forEach((a, k) => { const n = 2 + (rnd() < 0.5); for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) LEN[i] = [0.26, 0.2, 0.15][j]; } }); // ~2.5x life size, so you can see them
+  let fams = 0; // at most 22 clownfish families: a dense clump has many anemones but only some hold fish, and the fish budget (NA) must leave room for sharks and eels
+  ANE.map((a, k) => k).sort((p, q) => hypot(ANE[p][0] - HOMEP[0], ANE[p][2] - HOMEP[1]) - hypot(ANE[q][0] - HOMEP[0], ANE[q][2] - HOMEP[1])).forEach((k, r) => { const a = ANE[k]; if ((a[4] | 0) > 3 || (r > 3 && rnd() > 0.35) || fams >= 28) return; fams++; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) { LEN[i] = [0.3, 0.27, 0.24][j]; setClown(i, a, j); } } }); // ~3.5x life size (the hosts are big too), so you can see them
+  // three-spot dascyllus: 4-6 juveniles over the bigger magnificent anemones (at most 7 anemones)
+  { let m = 0; ANE.forEach((a, k) => { if ((a[4] | 0) !== 0 || a[3] < 1.3 || m >= 7) return; m++; const n = 4 + (rnd() * 3 | 0); for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.4, 0.4), a[1] + 0.6, a[2] + rr(-0.4, 0.4), k); if (i >= 0) setDasc(i); } }); }
   // chromis: a cloud over each coral head
   HEADS.forEach((h, k) => { const n = 10 + (rnd() * 10 | 0); for (let j = 0; j < n; j++) add(1, h[0] + rr(-0.5, 0.5), h[1] + rr(0.2, 0.9), h[2] + rr(-0.5, 0.5), k); });
   // cleaner wrasse at every station
@@ -127,8 +185,62 @@ let nG = 0;
   for (let k = 0; k < Wd.mantas.length / 8; k++) { const i = add(9, 0, -20, 0, k); if (i >= 0) LEN[i] = Wd.mantas[k * 8 + 6] * 2; }
 }
 // anemone instances (static apart from closing at night)
-for (let k = 0; k < ANE.length && k < 32; k++) { const a = ANE[k]; AN.set([a[0], a[1], a[2], a[3], a[4], 0, 0, 0], k * 8); }
-nAnem = min(ANE.length, 32);
+// (instance: position, size, colour seed, night closing, and the tilt for the ones on rock walls: normal x, z)
+for (let k = 0; k < ANE.length && k < 400; k++) { const a = ANE[k]; AN.set([a[0], a[1], a[2], a[3], a[4], 0, a[5] || 0, a[6] || 0], k * 8); }
+nAnem = min(ANE.length, 400);
+
+// ---------------------------------------------------------------- the anemones' lodgers: porcelain crabs and anemone shrimps
+// They stay on their host but act big enough to be noticed from a few metres: they wander about the host, the two crabs
+// of a pair now and then square up and shove claws, and when you come close they scurry to the far side of the host and,
+// closer still, duck down into its tentacles (never through it, never gone). Position and heading are written into the
+// anemone instance (AN): xyz moves, kind's fraction carries the heading, slot 5 the pose (walking 0..0.49, shoving 0.5..1).
+const CRIT = [];
+for (let k = 0; k < nAnem; k++) {
+  const kd = AN[k * 8 + 4] | 0; if (kd < 8) continue;
+  const x = AN[k * 8], y = AN[k * 8 + 1], z = AN[k * 8 + 2], nx = AN[k * 8 + 6], nz = AN[k * 8 + 7], ny = sqrt(max(0, 1 - nx * nx - nz * nz));
+  let h = -1, hd = 1e9; for (let j = 0; j < nAnem; j++) { if ((AN[j * 8 + 4] | 0) > 7) continue; const d = hypot(AN[j * 8] - x, AN[j * 8 + 2] - z); if (d < hd) { hd = d; h = j; } }
+  const hk = h >= 0 ? AN[h * 8 + 4] | 0 : 1, hs = h >= 0 ? AN[h * 8 + 3] : 1;
+  let t1 = [ny, -nx, 0]; if (hypot(...t1) < 0.3) t1 = [0, -nz, ny]; const l1 = hypot(...t1); t1 = t1.map((v) => v / l1);
+  const t2 = [ny * t1[2] - nz * t1[1], nz * t1[0] - nx * t1[2], nx * t1[1] - ny * t1[0]];
+  // centre of the host projected into the lodger's tangent plane: where "home" is, and how far it may roam
+  const hc = h >= 0 ? [(AN[h * 8] - x) * t1[0] + (AN[h * 8 + 1] - y) * t1[1] + (AN[h * 8 + 2] - z) * t1[2], (AN[h * 8] - x) * t2[0] + (AN[h * 8 + 1] - y) * t2[1] + (AN[h * 8 + 2] - z) * t2[2]] : [0, 0];
+  const roam = hk === 1 ? 0.42 * hs : 0.15 * hs;
+  CRIT.push({ k, kd, b: [x, y, z], n: [nx, ny, nz], t1, t2, hc, roam, u: 0, v: 0, tu: 0, tv: 0, yaw: rnd() * TAU, ty: 0, sink: 0, walk: 0, shove: 0, sT: rr(3, 9), wT: rr(1, 5), cd: 9, mate: -1, seed: rnd() });
+}
+for (const c of CRIT) if (c.kd === 9) { let b = -1, bd = 1.2; CRIT.forEach((o, j) => { if (o !== c && o.kd === 9) { const d = hypot(o.b[0] - c.b[0], o.b[2] - c.b[2]); if (d < bd) { bd = d; b = j; } } }); c.mate = b; }
+function critStep(dt) {
+  dt = min(dt, 0.1);
+  for (const c of CRIT) {
+    const o = c.k * 8, px = c.b[0] + c.t1[0] * c.u + c.t2[0] * c.v, py = c.b[1] + c.t1[1] * c.u + c.t2[1] * c.v, pz = c.b[2] + c.t1[2] * c.u + c.t2[2] * c.v;
+    const cam = hypot(F[CX] - px, F[CY] - py, F[CZ] - pz), crab = c.kd === 9, big = c.roam > 0.2;
+    let speed = crab ? 0.3 : 0.2;
+    if (cam < 2.2 && big) { // you are close: off to the far side of the host, fast
+      const cx = (F[CX] - c.b[0]) * c.t1[0] + (F[CY] - c.b[1]) * c.t1[1] + (F[CZ] - c.b[2]) * c.t1[2], cz = (F[CX] - c.b[0]) * c.t2[0] + (F[CY] - c.b[1]) * c.t2[1] + (F[CZ] - c.b[2]) * c.t2[2];
+      const ax = c.hc[0] - cx, az = c.hc[1] - cz, al = hypot(ax, az) || 1;
+      c.tu = c.hc[0] + ax / al * c.roam; c.tv = c.hc[1] + az / al * c.roam; speed = crab ? 0.7 : 0.45; c.wT = rr(3, 6); c.shove = 0;
+    } else if ((c.wT -= dt) < 0) { // wander: a new spot on the host every few seconds
+      for (let t = 0; t < 8; t++) { const a = rnd() * TAU, r = c.roam * Math.sqrt(rnd()); c.tu = c.hc[0] * 0.5 + cos(a) * r * 0.8; c.tv = c.hc[1] * 0.5 + sin(a) * r * 0.8; if (hypot(c.tu - c.u, c.tv - c.v) > min(0.25, c.roam * 0.8)) break; } c.wT = rr(1.5, 3); // (a real walk each time, not a shuffle)
+    }
+    c.sink += ((cam < 1.3 ? (crab ? 0.1 : 0.12) : 0) - c.sink) * min(1, dt * (cam < 1.3 ? 6 : 0.8)); // duck into the tentacles, come up slowly
+    // the crab pair: every so often they face each other and shove claws (~1.5 s)
+    if (crab && c.mate >= 0 && cam >= 2.2 && (c.sT -= dt) < 0 && c.shove === 0) { c.shove = 1e-3; const m = CRIT[c.mate]; if (m.shove === 0) { m.shove = 1e-3; m.sT = rr(4, 7); } c.sT = rr(4, 7); }
+    let du = c.tu - c.u, dv = c.tv - c.v; const dl = hypot(du, dv), step = min(dl, speed * dt);
+    if (c.shove > 0) {
+      const m = CRIT[c.mate], mx = (m.b[0] + m.t1[0] * m.u + m.t2[0] * m.v - px) * c.t1[0] + (m.b[2] + m.t1[2] * m.u + m.t2[2] * m.v - pz) * c.t1[2], mz = (m.b[0] + m.t1[0] * m.u + m.t2[0] * m.v - px) * c.t2[0] + (m.b[2] + m.t1[2] * m.u + m.t2[2] * m.v - pz) * c.t2[2];
+      c.ty = Math.atan2(mz, mx); c.shove += dt / 1.6; if (c.shove >= 1) c.shove = 0;
+      const lunge = 0.16 * sin(PI * min(1, c.shove * 2.2)) * (c.shove < 0.5 ? 1 : 0); c.u += cos(c.ty) * lunge * dt * 6; c.v += sin(c.ty) * lunge * dt * 6;
+    } else if (dl > 0.005) {
+      c.u += du / dl * step; c.v += dv / dl * step;
+      c.ty = Math.atan2(dv, du) + (crab ? PI / 2 * (sin(c.seed * 50) > 0 ? 1 : -1) : 0); // a crab walks sideways
+    }
+    c.walk += ((dl > 0.01 && c.shove === 0 ? min(1, speed * 4) : 0) - c.walk) * min(1, dt * 8);
+    let dy = c.ty - c.yaw; dy -= TAU * Math.round(dy / TAU); c.yaw += dy * min(1, dt * (speed > 0.3 ? 10 : 3));
+    const sx = c.n[0] * c.sink, sy = c.n[1] * c.sink, sz = c.n[2] * c.sink;
+    AN[o] = px - sx; AN[o + 1] = py - sy; AN[o + 2] = pz - sz;
+    AN[o + 4] = c.kd + 0.005 + 0.99 * (((c.yaw / TAU) % 1 + 1) % 1) * 0.99;
+    AN[o + 5] = c.shove > 0 ? 0.5 + 0.49 * c.shove : 0.49 * c.walk;
+  }
+}
 
 // ---------------------------------------------------------------- movement helpers
 const PRED = [];                // indices of the predators (trout, sharks) for the prey's threat checks
@@ -159,7 +271,8 @@ function steer(i, speed, dt, acc = 2.5, minAlt = 0.05, avoid = true) {
 function face(i, dt, hx = 0, hy = 0, hz = 0, rate = 4) {
   const o = i * 3; let x = hx, y = hy, z = hz;
   if (!x && !y && !z) { const sp = sqrt(Vv[o] * Vv[o] + Vv[o + 1] * Vv[o + 1] + Vv[o + 2] * Vv[o + 2]); if (sp < 0.03) return; x = Vv[o] / sp; y = Vv[o + 1] / sp; z = Vv[o + 2] / sp; }
-  const lim = hy ? 0.95 : 0.6; y = y > lim ? lim : y < -lim ? -lim : y;
+  const lim = hy ? 0.95 : 0.45; y = y > lim ? lim : y < -lim ? -lim : y;
+  { let h = sqrt(x * x + z * z); if (h < 1e-3) { x = Hd[o]; z = Hd[o + 2]; h = sqrt(x * x + z * z) || 1; } const q = sqrt(1 - y * y) / h; x *= q; z *= q; } // keep a level-ish heading even when moving straight up or down
   const k = min(1, dt * rate); let a = Hd[o] + (x - Hd[o]) * k, b = Hd[o + 1] + (y - Hd[o + 1]) * k, c = Hd[o + 2] + (z - Hd[o + 2]) * k;
   const l = sqrt(a * a + b * b + c * c) || 1; Hd[o] = a / l; Hd[o + 1] = b / l; Hd[o + 2] = c / l;
 }
@@ -181,20 +294,22 @@ function ecoFrame(dtIn) {
     const far = d2(i, cx, cy, cz) > 4900;
     if (far && (frameN + i) % 4) continue;
     const st = far ? dt * 4 : dt;
+    if (FROZ[i]) { BEAT[i] = 0.5; continue; } // (dev: held still for a portrait)
     switch (SP[i]) {
       case 0: clown(i, st); break; case 1: chromis(i, st); break; case 2: cleaner(i, st); break;
       case 3: case 4: case 6: grouper(i, st); break; case 5: trout(i, st); break; case 7: shark(i, st); break; case 8: moray(i, st); break; case 9: manta(i); break;
     }
     BEAT[i] = min(2, 0.35 + speedOf(i) / LEN[i] * 0.45);
   }
-  for (let k = 0; k < nAnem; k++) AN[k * 8 + 5] += ((night() ? 0.7 : 0) - AN[k * 8 + 5]) * min(1, dtIn * 0.3);
+  for (let k = 0; k < nAnem; k++) if (AN[k * 8 + 4] < 8) AN[k * 8 + 5] += ((night() ? 0.7 : 0) - AN[k * 8 + 5]) * min(1, dtIn * 0.3);
+  critStep(dtIn);
   // instances: fish, then sharks, then eels
   let n = 0;
   const put = (i) => {
     const o = n * 8, s = BEAT[i] * (ST[i] === S_SLEEP || ST[i] === S_HOLE ? 0.15 : 1);
     EB[o] = P[i * 3]; EB[o + 1] = P[i * 3 + 1]; EB[o + 2] = P[i * 3 + 2]; EB[o + 3] = LEN[i];
     EB[o + 4] = Hd[i * 3] * s; EB[o + 5] = Hd[i * 3 + 1] * s; EB[o + 6] = Hd[i * 3 + 2] * s;
-    EB[o + 7] = SP[i] + (ST[i] === S_SLEEP && SP[i] === 3 ? 16 : 0) + PH[i] * 0.99; n++;
+    EB[o + 7] = SP[i] + (ST[i] === S_SLEEP && SP[i] === 3 ? 16 : 0) + 32 * VR[i] + PH[i] * 0.99; n++;
   };
   for (let i = 0; i < nA; i++) if (SP[i] < 7 && ST[i] !== S_GONE) put(i);
   nEcoF = n;
@@ -203,24 +318,65 @@ function ecoFrame(dtIn) {
   for (let i = 0; i < nA; i++) if (SP[i] === 8) put(i);
   nEcoE = n - nEcoF - nEcoS;
   cardStep(dtIn);
-  mapStep(); tagStep(); zoneStep(dtIn); cvRender();
+  mapStep(); tagStep(); zoneStep(dtIn);
 }
 
+const CROWN = [0.55, 0.16, 0.2, 0.2, 0.45, 0.2, 0.12, 0.08]; // height of each anemone kind's tentacle crown above its base (x size)
+// clownfish and the dascyllus over their anemone. Each fish follows an intent for a while (hover, circle the crown, dip
+// into the tentacles, visit a neighbouring host and come back), with its own timing, so a group never moves in step.
+// The diver: far off, ignored; nearer, the curious ones (about a third) swim out to look, then go home; the big
+// clownfish (the females) defend; very close, clownfish dive into the tentacles and the dascyllus scatter.
+// Personality by PH: < .35 curious, < .7 indifferent, else shy (shy ones react from further away).
+const NBR = [];   // per anemone: hosts within 4 m that a fish may visit
+const nbrOf = (k) => NBR[k] || (NBR[k] = ANE.map((b, j) => j).filter((j) => j !== k && (ANE[j][4] | 0) <= 3 && hypot(ANE[j][0] - ANE[k][0], ANE[j][1] - ANE[k][1], ANE[j][2] - ANE[k][2]) < 4));
+const LOOKCD = new Float32Array(NA);
+function crownPt(i, a, r, o, t) {
+  const nx = a[5] || 0, nz = a[6] || 0, ny = sqrt(max(0, 1 - nx * nx - nz * nz)), ax = a[0] + nx * 0.1 * a[3], ay = a[1] + ny * 0.1 * a[3], az = a[2] + nz * 0.1 * a[3];
+  setT(i, ax + cos(t) * r * ny + nx * o, ay + o * ny + sin(t) * r * (1 - ny), az + sin(t) * r * ny + nz * o);
+}
 function clown(i, dt) {
-  const a = ANE[HM[i]], ax = a[0], ay = a[1] + 0.1 * a[3], az = a[2], camD = hypot(F[CX] - ax, F[CY] - ay, F[CZ] - az);
-  const big = LEN[i] > 0.25, thr = threat(i, 0);
+  const home = ANE[HM[i]], o3 = i * 3, dsc = VR[i] === 4, big = LEN[i] > 0.33 && !dsc, pers = PH[i] < 0.35 ? 0 : PH[i] < 0.7 ? 1 : 2;
+  const hx = home[0], hy = home[1] + 0.2 * home[3], hz = home[2], camD = hypot(F[CX] - hx, F[CY] - hy, F[CZ] - hz), meD = sqrt(d2(i, F[CX], F[CY], F[CZ]));
+  const thr = threat(i, 0);
+  LOOKCD[i] -= dt; T2[i] -= dt;
+  const st0 = ST[i];
   if (night()) ST[i] = S_SLEEP;
   else if (thr < 4) ST[i] = S_HIDE;
+  else if (meD < (pers === 2 ? 1.8 : 1.1) && ST[i] !== S_GUARD) { ST[i] = dsc ? S_SCAT : S_HIDE; T2[i] = rr(2.5, 5); }     // too close: hide or scatter
   else if (big && camD < 2.2 && camD > 0.9) ST[i] = S_GUARD;
-  else ST[i] = S_HOVER;
-  if ((TM[i] -= dt) < 0 || ST[i] === S_GUARD) {
-    TM[i] = rr(0.6, 2);
-    if (ST[i] === S_HOVER) { const r = rr(0, 0.45) * a[3], t = rnd() * TAU; setT(i, ax + cos(t) * r, ay + rr(0.15, 0.6) * a[3], az + sin(t) * r); }
-    else if (ST[i] === S_GUARD) { const k = 0.8 / camD; setT(i, ax + (F[CX] - ax) * k, ay + (F[CY] - ay) * k, az + (F[CZ] - az) * k); }
-    else { const r = rr(0, 0.2) * a[3], t = rnd() * TAU; setT(i, ax + cos(t) * r, ay + rr(0.02, 0.1), az + sin(t) * r); }
+  else if ((ST[i] === S_HIDE || ST[i] === S_SCAT) && T2[i] > 0) { /* stay put a little, then come out slowly */ }
+  else if (ST[i] === S_LOOK && (T2[i] < 0 || camD > 6)) { ST[i] = S_HOVER; T2[i] = rr(3, 8); LOOKCD[i] = rr(12, 25); }
+  else if (ST[i] !== S_LOOK && pers === 0 && camD > 1.8 && camD < 5 && LOOKCD[i] < 0 && rnd() < dt * 0.25) { ST[i] = S_LOOK; T2[i] = rr(2, 6); } // curious: out to have a look
+  else if (ST[i] === S_SLEEP || ST[i] === S_HIDE || ST[i] === S_SCAT || ST[i] === S_GUARD || T2[i] < 0) {
+    // a new intent, each fish on its own clock
+    const u = rnd(), nb = nbrOf(HM[i]);
+    if (ST[i] === S_VISIT) { ST[i] = S_HOVER; XI[i] = -1; T2[i] = rr(6, 14); }                            // back home after a visit
+    else if (u < 0.12 && nb.length && !big) { ST[i] = S_VISIT; XI[i] = nb[(rnd() * nb.length) | 0]; T2[i] = rr(4, 9); }
+    else if (u < 0.3) { ST[i] = S_CIRC; T2[i] = rr(4, 9); }
+    else if (u < 0.42 && !dsc) { ST[i] = S_DIP; T2[i] = rr(2, 4); }
+    else { ST[i] = S_HOVER; T2[i] = rr(4, 12); }
   }
-  steer(i, ST[i] === S_GUARD ? 1.2 : ST[i] === S_HIDE ? 0.8 : 0.35, dt, 3, 0, false);
-  face(i, dt, ST[i] === S_GUARD ? F[CX] - P[i * 3] : 0, ST[i] === S_GUARD ? F[CY] - P[i * 3 + 1] : 0, ST[i] === S_GUARD ? F[CZ] - P[i * 3 + 2] : 0);
+  const s = ST[i], A = s === S_VISIT && XI[i] >= 0 ? ANE[XI[i]] : home, K = A[4] | 0, crown = CROWN[K] * A[3];
+  if (s !== st0) TM[i] = 0;
+  if ((TM[i] -= dt) < 0 || s === S_GUARD || s === S_LOOK || s === S_CIRC) {
+    TM[i] = dsc ? rr(0.5, 1.8) : rr(0.8, 2.6) * (0.7 + 0.6 * PH[i]);
+    if (s === S_HOVER || s === S_VISIT) crownPt(i, A, (dsc ? rr(0.05, 0.45) : rr(0.05, 0.4)) * A[3], crown + (dsc ? rr(0.05, 0.35) : rr(0.04, 0.24)) * A[3], rnd() * TAU);
+    else if (s === S_CIRC) crownPt(i, A, (dsc ? 0.4 : 0.32) * A[3], crown + 0.1 * A[3], ecoT * (0.5 + 0.3 * PH[i]) * (PH[i] > 0.5 ? 1 : -1) + PH[i] * 20);
+    else if (s === S_GUARD) { const k = 0.8 / camD; setT(i, hx + (F[CX] - hx) * k, hy + (F[CY] - hy) * k, hz + (F[CZ] - hz) * k); }
+    else if (s === S_LOOK) { const k = min(dsc ? 2.2 : 1.4, max(0, camD - 1.2)) / camD; setT(i, hx + (F[CX] - hx) * k, hy + 0.2 + (F[CY] - hy) * k, hz + (F[CZ] - hz) * k); } // stop ~1.2 m from you, never far from home
+    else if (s === S_SCAT) { const ax = P[o3] - F[CX], ay = P[o3 + 1] - F[CY], az = P[o3 + 2] - F[CZ], l = hypot(ax, ay, az) || 1; setT(i, hx + ax / l * 1.6, hy + 0.4 + max(0, ay / l) * 0.6, hz + az / l * 1.6); }
+    else crownPt(i, A, rr(0, 0.2) * A[3], crown + rr(-0.08, 0.0) * A[3], rnd() * TAU);                   // hide / sleep / dip: nestled into the crown
+  }
+  const sp = s === S_GUARD ? 1.2 : s === S_SCAT ? 1.6 : s === S_HIDE ? (dsc ? 1.2 : 0.9) : s === S_LOOK ? 0.45 : s === S_VISIT ? 0.5 : s === S_CIRC ? 0.4 : dsc ? 0.5 : 0.35;
+  steer(i, sp * (0.85 + 0.3 * PH[i]), dt, 3, 0, false);
+  // keep a little apart from the others (a group never piles into one spot)
+  for (let j = 0; j < nA; j++) {
+    if (j === i || SP[j] !== 0 || FROZ[j]) continue;
+    const dx = P[o3] - P[j * 3], dy = P[o3 + 1] - P[j * 3 + 1], dz = P[o3 + 2] - P[j * 3 + 2], q = dx * dx + dy * dy + dz * dz, R = (LEN[i] + LEN[j]) * 0.45;
+    if (q < R * R && q > 1e-6) { const l = sqrt(q), f = (R - l) / l * min(1, dt * 4); P[o3] += dx * f; P[o3 + 1] += dy * f * 0.5; P[o3 + 2] += dz * f; }
+  }
+  const look = s === S_GUARD || (s === S_LOOK && d2(i, TG[o3], TG[o3 + 1], TG[o3 + 2]) < 0.04);
+  face(i, dt, look ? F[CX] - P[o3] : 0, look ? F[CY] - P[o3 + 1] : 0, look ? F[CZ] - P[o3 + 2] : 0);
 }
 function chromis(i, dt) {
   if (ST[i] === S_GONE) { if ((TM[i] -= dt) < 0 && d2(i, F[CX], F[CY], F[CZ]) > 100) { ST[i] = S_HIDE; TM[i] = 2; } return; }
@@ -356,7 +512,7 @@ function moray(i, dt) {
   else if (ST[i] === S_FORAGE) { ST[i] = 15; } // heading home
   if (ST[i] === S_HOLE) {
     // head out of the hole along its normal, body back in the rock; slowly in and out
-    const e = 0.3 + 0.12 * sin(ecoT * 0.25 + PH[i] * 9), hx = h[3], hz = h[4], hy = 0.28, hl = hypot(hx, hy, hz);
+    const e = 0.45 + 0.15 * sin(ecoT * 0.25 + PH[i] * 9), hx = h[3], hz = h[4], hy = 0.28, hl = hypot(hx, hy, hz);
     Hd[o] = hx / hl; Hd[o + 1] = hy / hl; Hd[o + 2] = hz / hl;
     P[o] = h[0] + hx * e - Hd[o] * L * 0.5; P[o + 1] = h[1] + 0.05 - Hd[o + 1] * L * 0.5 + hy * e * 0.3; P[o + 2] = h[2] + hz * e - Hd[o + 2] * L * 0.5;
     Vv[o] = Vv[o + 1] = Vv[o + 2] = 0; return;
@@ -380,7 +536,7 @@ function manta(i) {
 }
 
 // ---------------------------------------------------------------- the info card: what you are looking at
-const cPic = $('cpic'), card = $('cd'), cN = $('cn'), cL = $('cl'), cF = $('cf'), cD = $('cg'), clock = $('ck');
+const xh = $('xh'), cPic = $('cpic'), card = $('cd'), cN = $('cn'), cL = $('cl'), cF = $('cf'), cD = $('cg'), clock = $('ck');
 let cardI = -1, candI = -1, candT = 0, lostT = 0, fol = -1, tour = false, tourT = 0, pickX = 0, pickY = 0, pickOn = false;
 const ANEB = 1000; // card index for anemone k: ANEB + k
 let pkX = 0, pkY = 0, pkZ = 0, pkB = -1, pkS = 1e9;
@@ -388,8 +544,9 @@ function pkTest(id, x, y, z, rad) {
   const dx = x - F[CX], dy = y - F[CY], dz = z - F[CZ], al = dx * pkX + dy * pkY + dz * pkZ;
   if (al < 0.3 || al > 18) return;
   const px = dx - pkX * al, py = dy - pkY * al, pz = dz - pkZ * al, off = sqrt(px * px + py * py + pz * pz);
-  const tol = rad + al * 0.035; if (off > tol) return;
-  const s = off / tol + al * 0.02; if (s < pkS) { pkS = s; pkB = id; }
+  const tol = rad * 1.3 + al * 0.05; if (off > tol) return; // (generous: what wears the yellow ring should be easy to aim at)
+  const s = (off / tol + al * 0.02) * (id === cardI ? 0.7 : 1) + (id >= CORB ? 1.1 : id >= ANEB ? 0.8 : 0); // (a fish in front of an anemone wins, an anemone in front of a coral)
+  if (s < pkS) { pkS = s; pkB = id; } // the open card wins near-ties, so it does not flicker between neighbours
 }
 function lookPick() {
   // the ray: the screen centre, or where a finger tapped
@@ -403,17 +560,21 @@ function lookPick() {
   for (let i = 0; i < nA; i++) if (ST[i] !== S_GONE) {
     const L = LEN[i], o = i * 3;
     // morays: test the head, the part you see
-    if (SP[i] === 8) pkTest(i, P[o] + Hd[o] * L * 0.4, P[o + 1] + Hd[o + 1] * L * 0.4, P[o + 2] + Hd[o + 2] * L * 0.4, 0.15);
-    else pkTest(i, P[o], P[o + 1], P[o + 2], SP[i] === 9 ? L * 0.5 : L * 0.45);
+    if (SP[i] === 8) pkTest(i, P[o] + Hd[o] * L * 0.4, P[o + 1] + Hd[o + 1] * L * 0.4, P[o + 2] + Hd[o + 2] * L * 0.4, 0.25);
+    else pkTest(i, P[o], P[o + 1], P[o + 2], SP[i] === 9 ? L * 0.5 : max(L * 0.45, 0.14)); // (small fish: a floor, so they are not fiddly to aim at)
   }
   for (let k = 0; k < nAnem; k++) pkTest(ANEB + k, AN[k * 8], AN[k * 8 + 1] + 0.15, AN[k * 8 + 2], 0.35 * AN[k * 8 + 3]);
+  for (let k = 0; k < nCor; k++) {
+    const o = k * 5, x = CORL[o], z = CORL[o + 2]; if (abs(x - F[CX]) > 18 || abs(z - F[CZ]) > 18) continue;
+    const sc = CORL[o + 3], m = CORL[o + 4]; pkTest(CORB + k, x, CORL[o + 1] + sc * (m === 27 ? 0.35 : 0.4), z, sc * (m === 8 ? 0.45 : 0.4));
+  }
   return pkB;
 }
-const spOf = (id) => id >= ANEB ? 10 : SP[id];
+const spOf = (id) => id >= CORB ? 11 : id >= ANEB ? 10 : SP[id];
 const stOf = (id) => id >= ANEB ? S_HOVER : ST[id];
 function showCard(id) {
-  const sp = spOf(id), s = SPC[sp];
-  cN.textContent = s.zh; cL.textContent = s.la; cvShow(sp, id); cF.textContent = s.facts.join(' ');
+  const sp = spOf(id), s = id >= CORB ? CORSP[CORL[(id - CORB) * 5 + 4]] : id >= ANEB ? ANSP[AN[(id - ANEB) * 8 + 4] | 0] : sp === 0 ? CLOWNS[VR[id]] : SPC[sp];
+  cN.textContent = s.zh; cL.textContent = s.la; cvShow(sp, id); cF.textContent = (s.size ? s.size + '。' : '') + s.facts.join(' ');
   card.className = 'on'; cardI = id; lastDo = '';
 }
 let lastDo = '';
@@ -428,16 +589,20 @@ function cardStep(dt) {
   if (fol >= 0) { if (cardI !== fol) showCard(fol); }
   else if (frameN % 3 === 0) {
     const b = lookPick();
-    if (b >= 0 && b === candI) candT += dt * 3; else { candI = b; candT = 0; }
-    if (b >= 0 && candT > 0.35 && b !== cardI) showCard(b);
-    if (b === cardI && b >= 0) lostT = 0; else if (cardI >= 0 && (lostT += dt * 3) > 3) { card.className = ''; cardI = -1; }
+    // aiming time counts while the centre stays on any animal: in a dense anemone clump the pick hops between neighbours,
+    // and resetting the timer on every hop meant the card never opened although the ring was showing
+    if (b >= 0) candT += dt * 3; else candT = 0; candI = b;
+    if (b >= 0 && candT > 0.15 && b !== cardI) showCard(b);  // a new target switches the card at once
+    // aimed at nothing: the card stays ~3.5 s (a fish may swim off while you read), then fades out slowly
+    if (b >= 0) lostT = 0; else if (cardI >= 0 && (lostT += dt * 3) > 3.5) { card.className = ''; cardI = -1; }
+    xh.className = b >= 0 ? 'on' : '';
     pickOn = false;
   }
   if (cardI >= 0 && (frameN % 10 === 0 || lastDo === '')) {
     const sp = spOf(cardI), d = (DOING[sp] || {})[stOf(cardI)] || '';
     let txt = d;
     if (d.includes('{c}')) { const c = XI[cardI]; txt = d.replace('{c}', c >= 0 ? SPC[SP[c]].zh.replace(/（.*）/, '') : '鱼'); }
-    txt = '正在：' + txt + (fol >= 0 ? '' : '　·　G 跟随');
+    txt = cardI >= CORB ? '' : '正在：' + txt + (fol >= 0 ? '' : '　·　G 跟随');
     if (txt !== lastDo) { cD.textContent = txt; lastDo = txt; }
   }
 }
@@ -449,7 +614,7 @@ canvas.addEventListener('pointerup', (e) => {
   pickOn = true; const b = lookPick(); pickOn = false;
   if (b >= 0) { showCard(b); candI = b; lostT = 0; }
 });
-card.addEventListener('click', () => { if (cardI >= 0) follow(cardI); });
+card.addEventListener('click', () => { if (cardI >= 0 && cardI < CORB) follow(cardI); });
 
 // ---------------------------------------------------------------- following an animal, the guided tour
 function follow(id) { fol = id; tour = false; F[VX] = F[VY] = F[VZ] = 0; showCard(id); }
@@ -514,7 +679,7 @@ function camTo(id, dt, snap) {
 const TGc = new Float64Array(3);
 addEventListener('keydown', (e) => {
   if (menu || e.repeat) return;
-  if (e.code === 'KeyG') { if (fol >= 0) unfollow(); else if (cardI >= 0) follow(cardI); }
+  if (e.code === 'KeyG') { if (fol >= 0) unfollow(); else if (cardI >= 0 && cardI < CORB) follow(cardI); }
   else if (e.code === 'KeyT') { if (tour) unfollow(); else { tour = true; tourT = 0; } }
   else if (e.code === 'KeyN') ffwd = 1;
 });
@@ -573,6 +738,10 @@ function mapStep() {
   mx.fillStyle = '#03131ccc'; mx.fillRect(MS - 196, MS - 32, 190, 26);
   mx.fillStyle = '#fff'; mx.font = 'bold 15px system-ui,sans-serif'; mx.textAlign = 'center'; mx.textBaseline = 'middle';
   mx.fillText(`你在 ${gridOf(F[CX], F[CZ])} · 水深 ${(-F[CY]).toFixed(0)} 米`, MS - 101, MS - 19);
+  if (devOn) { // developer mode: the exact position and view, so a screenshot tells where it was taken
+    mx.fillStyle = '#03131ccc'; mx.fillRect(MS - 296, MS - 62, 290, 26); mx.fillStyle = '#ffe08a'; mx.font = 'bold 14px ui-monospace,monospace';
+    mx.fillText(`x ${F[CX].toFixed(1)}  y ${F[CY].toFixed(1)}  z ${F[CZ].toFixed(1)}  朝向 ${((F[YAW] * 180 / PI + 360) % 360).toFixed(0)}°`, MS - 151, MS - 49);
+  }
 }
 addEventListener('keydown', (e) => { if (!menu && !e.repeat && e.code === 'KeyM') mapToggle(); });
 
@@ -613,7 +782,7 @@ function tagStep() {
       const x = an ? AN[(id - ANEB) * 8] : P[o] + Hd[o] * h, y = an ? AN[(id - ANEB) * 8 + 1] + 0.2 : P[o + 1] + Hd[o + 1] * h, z = an ? AN[(id - ANEB) * 8 + 2] : P[o + 2] + Hd[o + 2] * h;
       if (!tagPos(x, y, z, TP)) continue;
       const t = tags[n++], r = max(14, L / (TP[2] * TANH) * canvas.clientHeight * 0.5) | 0, a = min(1, (TAGR - TP[3]) / 1.2);
-      if (t.txt !== TAGNAME[sp]) { t.txt = TAGNAME[sp]; t.name.textContent = t.txt; }
+      const nm = an ? ANSP[AN[(id - ANEB) * 8 + 4] | 0].short || '海葵' : sp === 0 ? CLOWNS[VR[id]].short : TAGNAME[sp]; if (t.txt !== nm) { t.txt = nm; t.name.textContent = nm; }
       if (t.rr !== r) { t.rr = r; t.ring.style.cssText = `width:${2 * r}px;height:${2 * r}px;transform:translate(${-r}px,${-r}px)`; t.name.style.top = `${r + 4}px`; }
       t.d.style.transform = `translate(${TP[0].toFixed(1)}px,${TP[1].toFixed(1)}px)`; t.d.style.opacity = a.toFixed(2);
       if (!t.on) { t.on = true; t.d.style.display = 'block'; }
@@ -632,62 +801,19 @@ function zoneStep(dt) {
   if (znT > 0 && (znT -= dt) <= 0) znEl.className = '';
 }
 
-// ---------------------------------------------------------------- the card's picture: the animal's own 3D model, side on, turning slowly
-// rendered with the scene's shaders into a small canvas, in clear shallow-water daylight, so it always matches the reef
-const cvEl = document.createElement('canvas'); cvEl.id = 'cpv'; cvEl.width = 320; cvEl.height = 192; cPic.appendChild(cvEl);
-const cvCtx = cvEl.getContext('webgpu'); cvCtx.configure({ device, format: FMT, alphaMode: 'opaque' });
-const uboC = device.createBuffer({ size: 272, usage: BU.UNIFORM | BU.COPY_DST }), UC = new Float32Array(68), bgC = mkBG0(uboC, tShadow);
-const cvMS = tex(AA > 1 ? 320 : 1, 192, HDR, TU.RENDER_ATTACHMENT, { samples: AA }), cvRes = tex(320, 192, HDR, TU.RENDER_ATTACHMENT | TU.TEXTURE_BINDING);
-const cvDp = tex(320, 192, DEPTH, TU.RENDER_ATTACHMENT, { samples: AA });
-const ibCard = device.createBuffer({ size: 32, usage: BU.VERTEX | BU.COPY_DST }), CVI = new Float32Array(8);
-const mCard = device.createShaderModule({ code: /*wgsl*/`
-@group(0) @binding(0) var t: texture_2d<f32>;
-@vertex fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4f { return vec4f(f32(i32(i & 1u) * 4 - 1), f32(i32(i >> 1u) * 4 - 1), 0., 1.); }
-@fragment fn fs(@builtin(position) fc: vec4f) -> @location(0) vec4f {
-  let q = fc.xy / vec2f(320., 192.) - .5;
-  var c = textureLoad(t, vec2i(fc.xy), 0).rgb * .85 * (1. - dot(q, q) * .8);
-  c = clamp((c * (2.51 * c + .03)) / (c * (2.43 * c + .59) + .14), vec3f(0.), vec3f(1.));
-  return vec4f(pow(c, vec3f(1. / 2.2)), 1.);
-}` });
-const pCard = device.createRenderPipeline({ layout: 'auto', vertex: { module: mCard, entryPoint: 'vs' }, fragment: { module: mCard, entryPoint: 'fs', targets: [{ format: FMT }] } });
-const bgCard = device.createBindGroup({ layout: pCard.getBindGroupLayout(0), entries: [{ binding: 0, resource: cvRes.createView() }] });
-let cvSp = -1, cvSeed = 0.75;
-// the picture is taken high above the anemone garden, in open water
-const cvPos = [ZON[0].x, floorAt(ZON[0].x, ZON[0].z) + 9, ZON[0].z];
-function cvShow(sp, id) { cvSp = sp === 9 ? -1 : sp; if (sp === 10) cvSeed = AN[(id - ANEB) * 8 + 4]; cvEl.style.display = cvSp < 0 ? 'none' : 'block'; }
-function cvRender() {
-  if (cvSp < 0 || card.className !== 'on') return;
-  const sp = cvSp, an = sp === 10, t = ecoT;
-  // the subject: unit length (a smaller anemone), heading +x with a slow swing so it reads as 3D
-  const [x, y, z] = cvPos, a = 0.45 * sin(t * 0.5);
-  if (an) CVI.set([x, y - 0.25, z, 0.7, cvSeed, 0, 0, 0]);
-  else CVI.set([x, y, z, sp === 8 ? 1.3 : 1, cos(a) * 0.5, 0, sin(a) * 0.5, sp + 0.25]);
-  Q.writeBuffer(ibCard, 0, CVI);
-  // camera: side on (slightly above for the anemone), narrow field of view
-  const th = 0.3, asp = 320 / 192, dist = an ? 1.9 : sp === 8 ? 2.4 : 1 / (2 * th * asp) * 1.35;
-  const pitch = an ? -0.45 : -0.08, cp = cos(pitch), fy = sin(pitch), fx = 0, fz = -cp, rx = 1, rz = 0;
-  const ux = 0, uy = rz * fx - rx * fz, uz = rx * fy;
-  const cx = x - fx * dist, cy = y - fy * dist + (an ? 0.1 : 0), cz = z - fz * dist;
-  const m = UC; m.set(UB);
-  const sx = 1 / (th * asp), sy = 1 / th;
-  m[0] = rx * sx; m[4] = 0; m[8] = rz * sx; m[12] = -(rx * cx + rz * cz) * sx;
-  m[1] = ux * sy; m[5] = uy * sy; m[9] = uz * sy; m[13] = -(ux * cx + uy * cy + uz * cz) * sy;
-  m[2] = 0; m[6] = 0; m[10] = 0; m[14] = 0.05;
-  m[3] = fx; m[7] = fy; m[11] = fz; m[15] = -(fx * cx + fy * cy + fz * cz);
-  m[32] = cx; m[33] = cy; m[34] = cz; m[35] = t;
-  m[36] = rx; m[37] = 0; m[38] = rz; m[39] = th * asp; m[40] = ux; m[41] = uy; m[42] = uz; m[43] = th; m[44] = fx; m[45] = fy; m[46] = fz; m[47] = 0.05;
-  m[51] = 0; m[56] = an ? 0.55 : 0.9; m[57] = 0; m[59] = 1; // daylight, no purple zone
-  m[60] = cx; m[61] = cy + 0.3; m[62] = cz; m[63] = an ? 0 : 1; m[64] = fx; m[65] = fy; m[66] = fz; // a soft lamp from the camera
-  Q.writeBuffer(uboC, 0, UC);
-  const e = device.createCommandEncoder();
-  let r = e.beginRenderPass({ colorAttachments: [{ view: (AA > 1 ? cvMS : cvRes).createView(), resolveTarget: AA > 1 ? cvRes.createView() : undefined, clearValue: [0.03, 0.16, 0.24, 1], loadOp: 'clear', storeOp: 'store' }],
-    depthStencilAttachment: { view: cvDp.createView(), depthClearValue: 0, depthLoadOp: 'clear', depthStoreOp: 'discard' } });
-  r.setBindGroup(0, bgC); r.setVertexBuffer(0, vbMesh); r.setIndexBuffer(ibMesh, 'uint32'); r.setVertexBuffer(1, ibCard);
-  const M = meshes[an ? 31 : sp === 7 ? 29 : sp === 8 ? 30 : 28];
-  r.setPipeline(an ? pAnem : pReef); r.drawIndexed(M.ib.length, 1, M.i0, M.v0, 0); r.end();
-  r = e.beginRenderPass({ colorAttachments: [{ view: cvCtx.getCurrentTexture().createView(), loadOp: 'clear', clearValue: [0, 0, 0, 1], storeOp: 'store' }] });
-  r.setPipeline(pCard); r.setBindGroup(0, bgCard); r.draw(3); r.end();
-  Q.submit([e.finish()]);
+// ---------------------------------------------------------------- the card's picture: a real photo of the species
+// The 3D models are coloured for looks; the card shows what the animal really looks like. Photos from Wikimedia Commons
+// (free licences), stored next to the page in photos/ and loaded only when a card opens; the author is credited under it.
+const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "clown1": "Diego Delso · CC BY-SA 4.0", "clown2": "Diego Delso · CC BY-SA 4.0", "dasc": "Diego Delso · CC BY-SA 4.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0", "an5": "Fabrizio P. · CC BY-SA 3.0", "an7": "Diego Delso · CC BY-SA 4.0", "an8": "Diego Delso · CC BY-SA 4.0", "an9": "Diego Delso · CC BY-SA 4.0"}; // photo credits (details and links: SPECIES.md)
+const PKEY = ['clown', 'chromis', 'cleaner', 'parrot', 'idol', 'grouper', 'tang', 'shark', 'moray', 'manta'];
+const cvImg = document.createElement('img'), cvCr = document.createElement('small');
+cvImg.alt = ''; cPic.appendChild(cvImg); cPic.appendChild(cvCr);
+let cvKey = '';
+function cvShow(sp, id) {
+  const k = sp === 10 ? 'an' + [0, 1, 2, 3, 4, 5, 5, 7, 8, 9][AN[(id - ANEB) * 8 + 4] | 0] : sp === 0 && VR[id] ? (VR[id] === 4 ? 'dasc' : 'clown' + min(VR[id], 2)) : PKEY[sp], c = PHOTOS[k];
+  cPic.style.display = c ? 'block' : 'none';
+  if (!c || k === cvKey) return;
+  cvKey = k; cvImg.src = 'photos/' + k + '.webp'; cvCr.textContent = '照片：' + c;
 }
 
 // ---------------------------------------------------------------- developer mode (hidden): the 0 key (or ` / ^ left of 1) turns it on and off

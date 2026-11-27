@@ -205,12 +205,18 @@ fn ign(p: vec2f) -> f32 { return fract(52.9829189 * fract(dot(p, vec2f(.06711056
 fn hs(x: f32) -> f32 { return fract(sin(x * 127.1) * 43758.5453); }
 // the diver's lamp (L key): a hand torch held low on the right (g.lmp: position, on/off; g.lmd: direction). A bright round spot
 // with a soft edge and a little spill; inside it things show their true colours, like the lights in underwater films
-fn spot(v: vec3f) -> f32 { let c = dot(v, g.lmd.xyz); return .03 + ss(.925, .935, c) * (.8 + .4 * ss(.94, .99, c)); }
-fn torch(p: vec3f, n: vec3f) -> vec3f {
+fn spot(v: vec3f) -> f32 { let c = dot(v, g.lmd.xyz); return mix(.03, .09, nite()) * ss(.5, .9, c) + ss(.9, .94, c) * (.8 + .4 * ss(.94, .99, c)); } // softer edge; at night a wider dim spill so things beside the spot still read
+// at night the torch is a blue fluorescence light (as divers use on fluorescence night dives): anemones and corals answer
+// with their own glowing colours (fluo), while rock and sand stay dark. g.mis.w: 1 day .. 0 night
+fn nite() -> f32 { return 1. - ss(.25, .6, g.mis.w); }
+fn torchI(p: vec3f, n: vec3f) -> f32 {
   let v = p - g.lmp.xyz; let d = length(v); let l = v / max(d, 1e-3);
   let dc = distance(p, g.cam.xyz);
-  return vec3f(1.6, 1.05, .6) * g.lmp.w * spot(l) * (.25 + .75 * sat(-dot(n, l))) * exp(-SIG * (d + dc)) / (1. + .05 * d * d);
+  return g.lmp.w * spot(l) * (.25 + .75 * sat(-dot(n, l))) * exp(-.06 * (d + dc)) / (1. + .05 * d * d);
 }
+fn torch(p: vec3f, n: vec3f) -> vec3f { return mix(vec3f(1.6, 1.05, .6), vec3f(.05, .12, .6), nite()) * torchI(p, n); }
+// the glow a fluorescent surface of colour a gives back under the blue light
+fn fluo(a: vec3f, p: vec3f, n: vec3f) -> vec3f { let m = max(max(a.r, a.g), a.b); return a / max(m, .05) * m * nite() * torchI(p, n); }
 // the light the beam scatters toward you on its way through the water (the visible cone)
 fn beam(rd: vec3f, tmax: f32) -> vec3f {
   if (g.lmp.w < .5) { return vec3f(0.); }
@@ -219,7 +225,7 @@ fn beam(rd: vec3f, tmax: f32) -> vec3f {
     let t = (f32(k) + .5) * dt; let q = g.cam.xyz + rd * t; let v = q - g.lmp.xyz; let d = max(length(v), .05);
     s += ss(.9, .94, dot(v / d, g.lmd.xyz)) * exp(-.06 * (d + t)) / (1. + .12 * d * d) * dt;
   }
-  return vec3f(.9, .85, .75) * s * .07;
+  return mix(vec3f(.9, .85, .75), vec3f(.2, .35, 1.), nite()) * s * mix(.07, .018, nite()); // (night: half the haze, it greyed the colours inside the spot)
 }
 fn kd(z: f32) -> vec3f { return mix(KD, KDZ, z); }
 fn sg(z: f32) -> vec3f { return mix(SIG, vec3f(.034, .026, .022), z); }
@@ -278,14 +284,16 @@ fn sunE(y: f32, z: f32) -> vec3f { return SUNC * dayL() * exp(kd(z) * (min(y, 0.
 fn vol(p: vec3f) -> vec4f { return textureSampleLevel(tV, sC, (p - vec3f(-192., -56., -192.)) / vec3f(384., 60., 384.), 0.); }
 fn amb(p: vec3f, n: vec3f, sky: f32, z: f32) -> vec3f {
   let up = n.y * .5 + .5;
-  return mix(vec3f(.22, .60, .80), vec3f(.34, .56, .82), z) * exp(kd(z) * min(p.y, 0.) * 1.2) * (.3 + .7 * sky) * (.24 + .76 * up * up) * 1.3 * (.55 + .45 * sat(-p.y / 30.)) * dayL() + vec3f(.003, .010, .016);
+  return mix(vec3f(.22, .60, .80), vec3f(.34, .56, .82), z) * exp(kd(z) * min(p.y, 0.) * 1.2) * (.3 + .7 * sky) * (.24 + .76 * up * up) * 1.3 * (.55 + .45 * sat(-p.y / 30.)) * dayL() * (1. - .4 * gard(p)) + vec3f(.003, .010, .016);
 }
 fn zone(p: vec3f) -> f32 { return mix(g.sun.w, textureSampleLevel(tM, sC, p.xz / 384. + .5, 0.).b, .2); }
 fn side(p: vec3f, n: vec3f, open: f32, z: f32) -> vec3f { return mix(WCOL, PCOL, z) * exp(kd(z) * min(p.y, 0.)) * open * (1. - abs(n.y)) * .7 * dayL(); }
 // skylight at most 150 m along the ray: past that, terrain and the background behind it (vsB) get the same haze
+// the anemone garden (start basin): clearer, darker water so the fluorescent anemones stand out
+fn gard(p: vec3f) -> f32 { return ss(20., 14., length(p.xz - vec2f(3., 18.))); } // only round the clownfish home (the reef pinnacle)
 fn fog(c: vec3f, wp: vec3f, z: f32) -> vec3f {
-  let v = wp - g.cam.xyz; let d = length(v); let rd = v / d;
-  return c * exp(-sg(z) * d) * ss(230., 185., d) + fogIn(g.cam.xyz, rd, d, z, g.sun.xyz) * (.58 + .42 * vol(g.cam.xyz + rd * min(d, 150.)).g);
+  let v = wp - g.cam.xyz; let d = length(v); let rd = v / d; let gf = gard(g.cam.xyz);
+  return c * exp(-sg(z) * d * (1. - .45 * gf)) * ss(230., 185., d) + fogIn(g.cam.xyz, rd, d, z, g.sun.xyz) * (.58 + .42 * vol(g.cam.xyz + rd * min(d, 150.)).g) * (1. - .75 * gf);
 }
 fn qrot(q: vec4f, v: vec3f) -> vec3f { return v + 2. * cross(q.xyz, cross(q.xyz, v) + q.w * v); }
 `;
@@ -299,9 +307,19 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
   var o: VO;
   var sc = i.a.w;
   if (i.c.x < 1.5 && i.c.z > 1.5 && g.res.x > 0.) { sc *= 1. - ss(i.c.z * .7, i.c.z, distance(i.a.xyz, g.cam.xyz) / g.mis.z); }
-  var w = i.a.xyz + qrot(i.b, i.p * sc);
+  // corals and sponges (mat 4-9): every instance its own build: taller or squatter, wider or slimmer, a lean, and for the
+  // barrel sponge a wider or narrower mouth (the texture coordinates op keep the unbent shape, so patterns don't stretch)
+  var p = i.p; var nn = i.n.xyz; let mt = i32(i.c.x + .5);
+  if (mt >= 4 && mt <= 9) {
+    let h1 = fract(i.c.y * 13.7); let h2 = fract(i.c.y * 29.3); let h3 = fract(i.c.y * 51.1);
+    let s3 = vec3f(mix(.82, 1.22, h2), mix(.72, 1.32, h1), mix(.82, 1.22, h2) * mix(.9, 1.1, h3));
+    p *= s3; nn = normalize(nn / s3);
+    if (mt == 4) { let t = sat(i.p.y / 1.3); let k = mix(1., mix(.78, 1.25, h3), t * t); p.x *= k; p.z *= k * mix(1., mix(.78, 1.05, h1), t); p.y += p.x * (h2 - .5) * .35 * t; }
+    p.x += p.y * (h2 - .5) * .22; p.z += p.y * (h3 - .5) * .18;
+  }
+  var w = i.a.xyz + qrot(i.b, p * sc);
   w.y += sin(g.cam.w * .3 + i.c.y * 40.) * i.c.w;
-  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = qrot(i.b, i.n.xyz); o.op = i.p * i.a.w + i.c.y * 37.; o.on = i.n.xyz;
+  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = qrot(i.b, nn); o.op = i.p * i.a.w + i.c.y * 37.; o.on = nn;
   o.m = i.c; o.q = i.b; o.ao = i.n.w;
   return o;
 }
@@ -354,6 +372,7 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
       alb = mix(alb, vec3f(.20, .02, .12) * (.4 + .9 * B.h), mg * .8);
       flu = mg * .35;
       alb = mix(alb, alb * vec3f(.85, .8, 1.4) + vec3f(.015, .0, .05), gm.b * .8);
+      alb *= 1. - .85 * gm.g * flt;
     }
   } else if (mat == 2) {
     // whale fluke: smooth pale stone with dark streaks running along its length
@@ -367,41 +386,102 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     alb = mix(alb, vec3f(.08, .22, .16), ss(.5, .7, A.c) * .6);
     gloss = .2; bump = .7;
   } else if (mat == 4) {
+    // barrel sponge (Xestospongia): brick-red to rose-brown, matte and rough; the lamella crests (aux high) a little
+    // paler, the grooves between them and the deep cavity (aux low) dark; a dusting of pale silt on up-facing parts
     let hue = fract(sd * 7.31);
-    alb = mix(vec3f(.60, .17, .08), vec3f(.64, .35, .10), fract(hue * 3.));
-    if (hue > .75) { alb = vec3f(.44, .18, .42); }
-    alb *= (.45 + .75 * B.h) * (.7 + .3 * C.h);
-    vao = i.ao * i.ao; gloss = .2; bump = 1.4; flu = .55;
+    var base = mix(vec3f(.78, .34, .22), vec3f(.66, .30, .20), hue);
+    if (hue > .55) { base = vec3f(.60, .30, .30); }                // rose-brown
+    if (hue > .75) { base = vec3f(.45, .42, .50); }                // mauve-grey
+    if (hue > .9) { base = vec3f(.50, .28, .20); }                 // dark chocolate-brown
+    let pv = fract(sd * 17.3);
+    let lam = sat((i.ao - .45) / .55) * mix(.45, 1., pv);          // some with sharp deep lamellae, some worn smoother
+    alb = base * (.55 + .6 * lam) * (.8 + .3 * C.h);
+    alb = mix(alb, base * 1.25 + .05, ss(.45, .5, i.ao) * ss(.55, .5, i.ao) * .6);   // the rim, paler
+    alb = mix(alb, vec3f(.24, .16, .14), ss(.4, .05, i.ao));      // the cavity
+    if (pv > .7) { alb = mix(alb, base * 1.35 + .06, ss(.62, .78, B.h) * ss(.4, .6, i.ao) * .7); }   // pale encrusting blotches on some
+    alb = mix(alb, vec3f(.62, .58, .5), ss(.55, .9, on.y) * ss(.45, .7, B.c) * .35);
+    sgro = (lam - .5) * 1.2; vao = .55 + .45 * lam; gloss = .05; bump = 1.6; flu = .2;
   } else if (mat == 6) {
     // brain coral: meandering ridges and valleys over a dome
     let hue = fract(sd * 3.91);
-    var base = mix(vec3f(.30, .26, .10), vec3f(.20, .26, .09), fract(hue * 3.));
-    if (hue > .65) { base = vec3f(.36, .28, .16); }
-    if (hue > .88) { base = vec3f(.14, .24, .18); }
-    let mq = sin((B.c * 2.5 + C.c * 1.1) * TAU * 3.);
-    let ridge = 1. - ss(.4, .0, abs(mq));                        // dark winding valleys between rounded ridges
-    alb = mix(base * .3, base * (.9 + .25 * F.h), ridge) * (.7 + .3 * B.h) * (.5 + .5 * i.ao);
-    sgro = (ridge - .5) * 1.6; vao = .55 + .45 * ridge; flu = .25; gloss = .3; bump = 1.1;
+    // two-tone, as in the refs: brown-grey walls over green valleys; some honey-yellow, some salmon, some cream over grey
+    var wall = vec3f(.52, .38, .20); var vall = vec3f(.30, .22, .12);                    // tan-brown
+    if (hue > .25) { wall = vec3f(.40, .48, .22); vall = vec3f(.30, .32, .30); }        // green over grey valleys
+    if (hue > .5) { wall = vec3f(.62, .48, .44); vall = vec3f(.42, .28, .26); }         // cream-pink
+    if (hue > .7) { wall = vec3f(.40, .44, .50); vall = vec3f(.22, .36, .18); }         // blue-grey over green
+    if (hue > .87) { wall = vec3f(.64, .50, .16); vall = vec3f(.40, .32, .10); }        // honey-yellow
+    let mq = sin((B.c * 4.5 + C.c * 1.8 + F.c * .3) * TAU * 3.);
+    let ridge = ss(-.35, .35, mq);                       // sinuous ridges (sharp crests) between winding valleys
+    let crest = ss(.75, 1., ridge);
+    alb = mix(vall * .7, wall * (.85 + .2 * F.h), ridge) * (.7 + .3 * B.h) * (.55 + .45 * i.ao);
+    alb *= .9 + .2 * crest;
+    alb *= 1. - .4 * ss(.3, .9, on.y);
+    sgro = (ridge - .5) * .35; vao = .7 + .3 * ridge; flu = .25; gloss = .3; bump = 1.1;
   } else if (mat == 7) {
     // table coral: pastel plate, a paler growing rim, fine corallite texture on top
     let hue = fract(sd * 4.37);
-    var base = mix(vec3f(.40, .44, .30), vec3f(.46, .38, .24), fract(hue * 2.));
-    if (hue > .7) { base = vec3f(.34, .44, .46); }
-    alb = base * (.7 + .5 * F.h) * (.8 + .3 * C.h);
-    alb = mix(alb, vec3f(.75, .72, .62), ss(.97, 1., i.ao) * .5);
-    alb *= mix(.45, 1., ss(-.2, .4, on.y));
-    flu = .6; gloss = .2; bump = 1.6;
-  } else {
-    // branching coral and sea fans
+    // table coral: brown, pastel green or blue-grey; the top a carpet of short upturned branchlets with pale cup tips
+    // (a dense dot field), a cream growing rim, the underside dark and shaded, the stalk grey-brown
+    var base = vec3f(.46, .38, .22);                               // brown-olive
+    if (hue > .25) { base = vec3f(.50, .36, .40); }                // lilac-brown
+    if (hue > .5) { base = vec3f(.36, .42, .50); }                 // blue-grey
+    if (hue > .72) { base = vec3f(.40, .46, .30); }                // green
+    if (hue > .88) { base = vec3f(.60, .50, .40); }                // cream
+    base *= .85 + .35 * ss(.2, .8, length(i.op.xz - vec2f(sd * 37.)));   // paler toward the growing rim
+    let top = ss(.8, .95, i.ao);
+    // the branchlet tips: a fine irregular speckle (any regular pattern reads as fabric)
+    // radial rows of branchlets growing out from the stalk, broken up by noise so they never read as a regular weave
+    let pr = i.op.xz - vec2f(sd * 37.); let an = atan2(pr.y, pr.x);
+    let streak = ss(.35, .8, sin(an * 70. + F.h * 7. + C.h * 4.) * .5 + .5);
+    let tip = (ss(.62, .8, F.h * .6 + C.h * .4) * .5 + streak * .35) * top;
+    alb = base * (.55 + .35 * F.h) * (1. - .35 * top * (1. - tip));
+    alb = mix(alb, vec3f(.80, .70, .48), tip * .45);
+    alb = mix(alb, vec3f(.31, .29, .24), ss(.55, .35, i.ao) * ss(.3, .45, i.ao));   // underside
+    alb = mix(alb, vec3f(.42, .39, .31), ss(.3, .2, i.ao));                       // stalk
+    alb *= 1. - .6 * ss(.3, .9, on.y);
+    sgro = tip * .6; vao = mix(.55, 1., top); flu = .5; gloss = .15; bump = 1.4;
+  } else if (mat == 8) {
+    // giant sea fan: mostly tan-beige, some rust-red; main branches darker; light passes through the fine net
     let hue = fract(sd * 5.73);
-    alb = mix(vec3f(.52, .34, .16), vec3f(.36, .40, .16), fract(hue * 3.));
-    if (hue > .5) { alb = vec3f(.78, .30, .46); }
-    if (hue > .66) { alb = vec3f(.80, .62, .26); }
-    if (hue > .8) { alb = vec3f(.62, .14, .10); }
-    if (hue > .92) { alb = vec3f(.40, .32, .78); }
-    alb *= (.45 + .75 * B.h) * (.5 + .9 * i.ao * i.ao);
-    alb = mix(alb, mix(vec3f(.9, .85, .7), vec3f(.5, .7, 1.), step(.5, fract(hue * 7.))), ss(.9, 1., i.ao) * .3);
-    emi = alb * .01; flu = .75; gloss = .25; bump = 1.5;
+    var base = mix(vec3f(.50, .20, .09), vec3f(.56, .28, .12), fract(hue * 3.));
+    if (hue > .75) { base = vec3f(.70, .56, .36); }
+    if (i.ao > .93) {
+      // the membrane: keep only a fine irregular net (cell edges of a jittered grid, ~3 cm cells)
+      let g = i.op.xy * 30.; let ip = floor(g); var d1 = 9.; var d2 = 9.;
+      for (var a = -1; a <= 1; a++) { for (var b = -1; b <= 1; b++) {
+        let c = ip + vec2f(f32(a), f32(b)); let pn = c + vec2f(hs(c.x * 7.1 + c.y * 3.3), hs(c.x * 1.7 + c.y * 9.2));
+        let dd = length(g - pn); if (dd < d1) { d2 = d1; d1 = dd; } else if (dd < d2) { d2 = dd; } } }
+      if (d2 - d1 > .16) { discard; }
+    }
+    alb = mix(base * .62, base, ss(.5, .75, i.ao)) * (.8 + .3 * C.h);
+    flu = .1; gloss = .1; bump = .6; vao = 1.;
+  } else if (mat == 9) {
+    // leather coral: a velvety cap (tan, olive, yellow-brown, or blue-lavender grey with a paler rim) over a cream stalk
+    let hue = fract(sd * 6.11);
+    // (saturated: pale low-chroma colours turn milky white under the cyan ambient)
+    var cap = vec3f(.56, .42, .22);                                  // tan-ochre
+    if (hue > .3) { cap = vec3f(.40, .40, .18); }                    // olive
+    if (hue > .55) { cap = vec3f(.56, .40, .36); }                   // pinkish beige
+    if (hue > .75) { cap = vec3f(.62, .54, .34); }                   // cream-yellow
+    if (hue > .9) { cap = vec3f(.38, .32, .46); }                    // lilac
+    let fuzz = .82 + .3 * F.h + .12 * C.h;                             // the extended polyps: a fine soft fuzz
+    alb = cap * fuzz;
+    alb = mix(alb, vec3f(.55, .48, .32), ss(.3, .12, i.ao));            // the stalk
+    alb = mix(alb, cap * .55, ss(.4, .55, i.ao) * ss(.7, .55, i.ao));   // the cap's underside, shaded
+    alb *= 1. - .62 * ss(.3, .9, on.y);   // (sun + caustics wash out faces turned up: keep the cap's colour)
+    flu = .15; gloss = .05; bump = .5; vao = 1.;
+  } else {
+    // staghorn Acropora: tan to straw-brown branches, pale (cream, or blue-lilac on some) swollen tips, the dead base
+    // grey-green with turf algae
+    let hue = fract(sd * 5.73);
+    var body = mix(vec3f(.46, .30, .11), vec3f(.40, .30, .10), fract(hue * 3.));
+    if (hue > .7) { body = vec3f(.50, .36, .14); }
+    if (hue > .85) { body = vec3f(.42, .28, .30); }                // a purple-brown colony
+    var tipc = vec3f(.86, .84, .76); let th = fract(hue * 7.);
+    if (th > .3) { tipc = vec3f(.56, .66, .86); } if (th > .55) { tipc = vec3f(.66, .50, .82); } if (th > .8) { tipc = vec3f(.86, .80, .44); }
+    alb = mix(vec3f(.43, .48, .36), body, ss(.3, .55, i.ao)) * (.6 + .5 * B.h) * (.75 + .35 * C.h);
+    alb = mix(alb, tipc, ss(.95, 1.05, i.ao));
+    flu = .5; gloss = .15; bump = .35; vao = 1.5;
   }
   let rip = select(0., flt * gm.a * cos((i.wp.x * .8 + i.wp.z * .35) * 5. + A.c * 9.) * .65, mat == 0);
   let N = normalize(qrot(i.q, normalize(on + (A.n * .85 + B.n * .65 + C.n * .45 * ss(60., 12., dist) + F.n * .5 * fk) * bump + vec3f(.8, sgro, .35) * vec3f(rip, 1., rip))));
@@ -414,7 +494,7 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
   let am = (amb(i.wp, N, v1.g, z) + side(i.wp, N, sat((v2.r - .5) * 2.7), z)) * ao;
   let dl = E * ndl * (.10 + mix(vec3f(.33), ca, ss(.1, .45, dot(n0, L))) * 2.5);
   var c = alb * (dl + am) + emi + alb * flu * dot(dl + am, vec3f(.1, .5, .5));
-  c += alb * torch(i.wp, N);
+  c += alb * torch(i.wp, N) + fluo(alb, i.wp, N) * flu * 2.;
   let H = normalize(V + L);
   c += E * (.25 + ca) * pow(sat(dot(N, H)), mix(10., 70., gloss)) * gloss * ndl * 1.8;
   c += (amb(i.wp, reflect(-V, N), v1.g, z) + side(i.wp, reflect(-V, N), sat((v2.r - .5) * 2.7), z)) * ao * (.08 + gloss) * .6 * pow(1. - sat(dot(N, V)), 2.5);
@@ -636,14 +716,14 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
 @vertex fn vsReef(i: VI) -> VO {
   var o: VO;
   let t = g.cam.w; let sz = i.a.w; let bw = floor(i.b.w); let ph = fract(i.b.w) * TAU;
-  let k = i32(bw) % 16; let asleep = bw >= 16.;
+  let kv = i32(bw); let k = kv % 16; let asleep = (kv / 16) % 2 == 1; let vr = kv / 32; // vr: clownfish species (0 ocellaris, 1 pink, 2/3 Clark's), 4 three-spot dascyllus
   let bl = length(i.b.xyz); let T = i.b.xyz / max(bl, 1e-4);
   let c = cross(vec3f(0., 1., 0.), T); let S = select(vec3f(0., 0., 1.), normalize(c), length(c) > 1e-3); let Up = cross(T, S);
   var l = i.p; let aux = i.n.w;
   // body shape per species: height, width, extra fin height
   var hs = 1.; var ws = 1.; var fs = 1.; var fq = 9.; var amp = .1;
   switch k {
-    case 0 { hs = 1.05; ws = 1.15; fs = .85; fq = 11.; }
+    case 0 { hs = select(select(1.05, select(.97, 1.1, vr >= 2), vr >= 1), 1.42, vr == 4); ws = select(1.15, .95, vr == 4); fs = select(.85, 1.55, vr == 4); fq = select(11., 14., vr == 4); } // vr 4: three-spot dascyllus, a deep round disc
     case 1 { hs = 1.2; ws = .9; fs = 1.1; fq = 12.; }
     case 2 { hs = .62; ws = .95; fs = .7; fq = 10.; }
     case 3 { hs = 1.; ws = 1.2; fs = .55; fq = 6.; }
@@ -657,17 +737,22 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
     let isF = aux > .5 && aux < .7;
     l.y *= hs; l.z *= ws;
     if (isF) { let e = sat((abs(i.p.y) - .14) / .08); l.y *= 1. + (fs - 1.) * e; }
+    // dascyllus: a rounder disc (shorter body), a bigger tail
+    if (k == 0 && vr == 4) { if (aux > .25 && aux < .35) { l.x = -.33 + (l.x + .33) * 1.25; l.y *= 1.2; l.x += .05; } else { l.x = (l.x - .05) * .88 + .05; } }
+    // clownfish: a rounded tail, not a forked one (the notch filled out, the lobe tips pulled in)
+    if (k == 0 && vr != 4 && aux > .25 && aux < .35 && i.p.x < -.4) { if (abs(i.p.y) < .01) { l.x = -.57; } else { l.x += .03; l.y *= .85; } }
     // moorish idol: the dorsal fin's front edge streams back into a long white filament
     if (k == 4 && aux > .58 && aux < .62 && i.p.y > .2 && i.p.x > -.05) { l.y += .28; l.x -= .2; }
   }
   // swimming: a wave down the body, stronger toward the tail (eels: the whole body)
   let ex = select(.25 - l.x, .55 - l.x, k == 8);
   let wv = sin(t * fq * (.5 + .5 * min(bl, 2.)) + ph - l.x * select(4., 13., k == 8)) * amp * ex * ex * select(1., 1.6, k == 8) * min(bl, 2.);
+  if (k == 8) { l.z += sin(l.x * 8.5 + ph * 6. + t * .4) * .035 * sat(.55 - l.x); } // a moray is never ruler-straight: a slow lazy S-bend, even at rest
   l.z += select(wv, wv * .1, asleep);
   // pectoral fins flutter
   if (aux > .75 && aux < .85) { l.y += sin(t * 7. + ph) * .02 * abs(l.z) * 10.; }
   let w = i.a.xyz + (T * l.x + Up * l.y + S * l.z) * sz;
-  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = T * i.n.x + Up * i.n.y + S * i.n.z; o.op = l; o.sp = vec2f(f32(k), select(0., 1., asleep)); o.aux = aux;
+  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = T * i.n.x + Up * i.n.y + S * i.n.z; o.op = l; o.sp = vec2f(f32(k), select(0., 1., asleep) + 2. * f32(vr)); o.aux = aux;
   o.lt = shadow1(w);
   return o;
 }
@@ -680,15 +765,41 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let hb = .19 * sat(1. - pow((x - .02) / .52, 2.));            // body half-height along the fish
   let edge = sat((ay - hb) / .08);                               // 0 at the body, 1 at a fin's outer edge
   let tail = i.aux > .25 && i.aux < .35;
-  var alb = vec3f(.5); var spec = .5; var iri = 0.;
+  var alb = vec3f(.5); var spec = .5; var iri = 0.; var dsc = false;
   switch k {
-    case 0 { // clownfish: orange, three white bands edged in black, black-rimmed fins
-      alb = vec3f(1., .30, .02);
-      let b1 = abs(x - .29 + y * .15); let b2 = abs(x - .02 - y * .25); let b3 = abs(x + .3);
-      let bd = min(min(b1 - .035, b2 - .045), b3 - .025);
-      alb = mix(alb, vec3f(.02), ss(.018, .008, bd) * f32(!isF));
-      alb = mix(alb, vec3f(.95, .95, .9), ss(.004, -.004, bd) * f32(!isF));
-      if (isF) { alb = mix(alb, vec3f(.02), ss(.55, .85, edge) + select(0., ss(-.44, -.48, x), tail)); }
+    case 0 { // clownfish (refs: clownfish/LOOKS.md)
+      let vr = i32(floor(i.sp.y * .5 + .01));
+      if (vr == 0) { // ocellaris: orange, three white bands edged in black (the middle one bulging toward the head), black-rimmed fins
+        alb = vec3f(1., .25, .0);
+        let b1 = abs(x - .29 + .04 * (1. - pow(y / .19, 2.))); let b2 = abs(x - .03 - .06 * (1. - ss(0., .17, abs(y)))); let b3 = abs(x + .3); // head bar bowed back behind the eye; one middle bar with a smooth point toward the head
+        let bd = min(min(b1 - .035, b2 - .045), b3 - .025);
+        alb = mix(alb, vec3f(.01), ss(.016, .008, bd) * f32(!isF));
+        alb = mix(alb, vec3f(.95, .95, .9), ss(.004, -.004, bd) * f32(!isF));
+        if (isF) { alb = mix(alb, vec3f(.02), sat(ss(.35, .6, edge) + select(0., ss(-.42, -.46, x), tail))); } // bold black fin margins
+      } else if (vr == 1) { // pink skunk: peach-pink, a white stripe along the whole back, a thin white bar behind the eye, pale fins
+        alb = mix(vec3f(.92, .4, .38), vec3f(.88, .5, .56), ss(.1, -.15, y));
+        let bk = ss(hb * .7, hb * .8, y) * f32(!isF); // a thin white line on the dorsal ridge, snout to tail base                       // the dorsal stripe, snout to tail
+        let hbar = ss(.016, .01, abs(x - .3 + y * .12)) * f32(!isF);
+        alb = mix(alb, vec3f(.97, .95, .92), max(bk, hbar));
+        if (isF) { alb = mix(vec3f(.95, .55, .55), vec3f(.97, .85, .82), select(.4 * edge, .7, tail)); spec = .25; } // fins pink, paler to the edge; the tail whitish
+      } else if (vr == 4) { // three-spot dascyllus juvenile (refs: garden-mood/da*.jpg): sooty black all over, one white spot high on each flank under the dorsal fin, one on the forehead
+        let yy = y / 1.42; // the body is drawn 1.42x deeper (vsReef), hb is for the plain shape
+        dsc = true; alb = vec3f(.1, .11, .14);                                       // sooty blue-black, so it still reads against a dark reef
+        let fl = length(vec2f((x + .03) * 1.05, yy - hb * .5)); let fh = length(vec3f(x - .3, (yy - hb) * 1.6, i.op.z * 1.2));
+        let spt = max(ss(.068, .056, fl), ss(.055, .044, fh)) * f32(!isF); alb = mix(alb, vec3f(.9, .9, .88), spt); spec = .5;
+        if (isF) { alb = mix(vec3f(.05, .055, .07), vec3f(.09, .1, .13), edge * f32(i.aux < .75)); spec = .2; if (i.aux > .75) { alb = vec3f(.1, .11, .14); spec = .5; } } // fins black (the clear pectorals show the black body through)
+      } else { // Clark's: black back, yellow-orange face, chest and belly, two broad white bands, white tail stalk; male tail yellow, female white
+        let face = max(ss(.26, .36, x), ss(-.01, -.1, y) * ss(-.3, .1, x));
+        alb = mix(vec3f(.025, .018, .012), vec3f(1., .42, .02), face);
+        let b1 = abs(x - .27 + y * .15) - .045; let b2 = abs(x + .02 - y * .1) - .045;
+        let wb = max(ss(.004, -.004, min(b1, b2)), ss(.004, -.004, abs(x + .37) - .045)) * f32(!isF); // and a crisp white ring round the tail stalk
+        alb = mix(alb, vec3f(.95, .95, .92), wb);
+        if (isF) {
+          alb = vec3f(1., .45, .02);                                              // pectoral, pelvic and anal fins: yellow-orange
+          if (y > hb * .6) { alb = vec3f(.03, .02, .015); } // the dorsal fin: black like the back
+          if (tail) { alb = select(vec3f(1., .72, .1), vec3f(.95, .93, .85), vr == 3); }
+        }
+      }
     }
     case 1 { // blue-green chromis
       alb = mix(vec3f(.25, .95, .55), vec3f(.45, .85, 1.), ss(-.1, .1, -y));
@@ -721,8 +832,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
       if (isF && !tail && i.op.y > .3) { alb = vec3f(.95, .95, .9); }
     }
     case 5 { // coral trout: red-orange with small bright blue spots
-      alb = vec3f(.78, .16, .06) * (.8 + .3 * ss(.1, -.1, y));
-      alb = mix(alb, vec3f(.25, .55, 1.), spots(vec2f(x, y), 38., .28));
+      alb = vec3f(.95, .14, .05) * (.8 + .3 * ss(.1, -.1, y));
+      alb = mix(alb, vec3f(.3, .7, 1.), spots(vec2f(x, y), 38., .28));
       spec = .6;
     }
     case 6 { // blue tang: royal blue, a black "palette" mark, yellow tail
@@ -745,9 +856,9 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
       spec = .35;
     }
     default { // giant moray: brown with dense dark leopard spots, a black gill patch
-      alb = vec3f(.42, .34, .16) * (.8 + .4 * ss(-.02, .03, y));
-      alb = mix(alb, vec3f(.05, .04, .02), spots(vec2f(x * 2., y + i.op.z), 55., .38) * .85);
-      alb = mix(alb, vec3f(.02), ss(.02, .01, length(vec2f(x - .4, y + .005)) - .012));
+      alb = vec3f(.37, .31, .17) * (.72 + .5 * ss(-.03, .04, -y));   // olive-brown, the back darker, the belly lighter
+      alb = mix(alb, vec3f(.05, .04, .02), spots(vec2f(x, y * 1.1 + i.op.z * .6), mix(42., 85., ss(.25, .45, x)), .4) * .85); // fine dense spots on the head, larger leopard spots behind   // round leopard spots, about 3-4 rows down each flank
+      alb = mix(alb, vec3f(.02), ss(.006, .0, length(vec2f((x - .385) * .8, y + .008)) - .012));    // the black gill patch
       let mouth = ss(.004, .0, abs(y + .004 + .0 * x)) * ss(.43, .46, x);
       alb = mix(alb, vec3f(.01), mouth);
       spec = .4;
@@ -755,8 +866,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   }
   // eyes: a dark pupil in a lighter ring
   if (!isF && k < 9) {
-    let ex = select(select(.39, .41, k == 7), .45, k == 8); let ey = select(select(.055, .025, k == 7), .012, k == 8);
-    let er = select(select(.032, .016, k == 7), .009, k == 8) * select(1., 1.25, k == 4 || k == 6 || k == 1);
+    let ex = select(select(.39, .41, k == 7), .45, k == 8); let ey = select(select(.055, .025, k == 7), .019, k == 8);
+    let er = select(select(.032, .016, k == 7), .009, k == 8) * select(1., 1.25, k == 4 || k == 6 || k == 1) * select(1., .7, k == 0);
     let de = length(vec2f(x - ex, y - ey));
     alb = mix(alb, select(vec3f(.9, .75, .3), vec3f(.75), k > 6), ss(er * 1.45, er * 1.25, de) * f32(k != 7));
     alb = mix(alb, vec3f(.01), ss(er, er * .8, de));
@@ -764,53 +875,288 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let E = sunE(i.wp.y, z) * i.lt;
   let ndv = sat(dot(n, V));
   let ndl = dot(n, L);
-  var c = alb * (E * (.22 + .78 * sat(ndl)) + amb(i.wp, n, vv.g, z) * 1.25);
-  c += alb * torch(i.wp, n) * 1.3;
+  alb = pow(alb, vec3f(1.2)); // a touch more contrast: blacks stay black, colours stay rich in the blue light
+  var c = alb * (E * (.22 + .78 * sat(ndl)) + amb(i.wp, n, vv.g, z) * .95);
+  c += alb * torch(i.wp, n) * 1.3 + alb * torchI(i.wp, n) * nite() * vec3f(5.5, 2.2, .6);
+  { let dc = distance(i.wp, g.cam.xyz); c += alb * nite() * vec3f(1., .85, .7) * .5 * (.4 + .6 * sat(dot(n, V))) / (1. + .2 * dc * dc); } // a soft fill light from the camera (like a photographer's strobe), so the fish read at night // seen through a yellow filter, like fluorescence photos
   if (isF) { c += alb * E * sat(-ndl) * .5; }                                   // light through the fins
   c += E * pow(sat(dot(n, normalize(V + L))), 30.) * spec * .9;
   c += (.5 + .5 * cos(TAU * (vec3f(0., .33, .67) + ndv * 1.3 + .45))) * iri * .25 * E * pow(1. - ndv, 2.);
-  if (k == 0) { c += alb * (.06 + .5 * g.mis.w); }                                  // clownfish: keep their orange at depth (the showpiece)
+  if (k == 0) { // clownfish: keep their colour at depth, but shaded (lit from above, belly in shadow) and wet: a sharp glint and a blue rim
+    c += alb * (.015 + .12 * g.mis.w) * (.3 + .7 * sat(n.y * .5 + .5));
+    c *= mix(.5, 1., sat(n.y * .5 + .5));
+    let sc = spots(vec2f(x * 1.6, y), 70., .45); if (!isF) { c *= .92 + .08 * sc; }
+    c += nite() * select(.9, .25, isF) * (.6 + .4 * sc) * .35 * pow(ndv, 48.) * vec3f(1., .95, .9);
+    c += amb(i.wp, n, vv.g, z) * pow(1. - ndv, 3.) * .8;
+    if (dsc) { c += amb(i.wp, n, vv.g, z) * pow(1. - ndv, 2.5) * .6 + nite() * pow(ndv, 6.) * .05 * vec3f(.6, .75, 1.); } // dascyllus: a blue-grey sheen and a stronger rim, so the black fish stands off the dark reef
+    if (isF) { c += alb * E * sat(-ndl) * .6 * mix(1., .5, edge); }
+    { let lm = dot(c, vec3f(.3, .59, .11)); let cc = max((c - lm) * 1.15 + lm, vec3f(0.)); c = mix(c, max(cc - .02, vec3f(0.)) * 1.12, nite()); } // night: more saturation and contrast (owner: livelier, not a new colour)
+  }                                  // clownfish: keep their orange at depth (the showpiece)
   // asleep in a mucus cocoon (parrotfish): a milky film over the body
-  if (i.sp.y > .5) { c = mix(c, amb(i.wp, n, vv.g, z) * vec3f(1.6, 1.8, 1.9) + E * .1, .25 + .45 * pow(1. - ndv, 2.)); }
+  if (i.sp.y - 2. * floor(i.sp.y * .5) > .5) { c = mix(c, amb(i.wp, n, vv.g, z) * vec3f(1.6, 1.8, 1.9) + E * .1, .25 + .45 * pow(1. - ndv, 2.)); }
   return fin(fog(c, i.wp, z));
 }
 // sea anemone: a = base position + size, b.x colour seed, b.y how far the tentacles are drawn in (night)
 @vertex fn vsAnem(i: VI) -> VO {
   var o: VO;
-  let t = g.cam.w; let sz = i.a.w; var l = i.p; var a = -.5;
+  let t = g.cam.w; let sz = i.a.w; var l = i.p; var a = min(i.n.w, -.11); // non-tentacle parts keep their tag (-.5 column, -.4 disc)
+  // b.y: how far it is closed (0..1) + 2 * a fade code while it crosses between its near and far mesh (main.js anemSort)
+  let fcode = floor(i.b.y * .5); let cl = i.b.y - 2. * fcode;
+  // b.x: kind (integer part, see meshAnem) + colour; each one also gets its own turn and stretch from where it sits
+  let kind = floor(i.b.x); let crit = kind > 7.5;
+  // a lodger moves about (its position changes), so its look can't hang on where it stands: heading from b.x, no stretch
+  let hsh = select(fract(sin(dot(i.a.xz, vec2f(12.9898, 78.233))) * 43758.55), fract(i.b.x * 7.31 + .17), crit);
+  var yaw = select(hsh * 6.2832, -fract(i.b.x) * 6.2832, crit);
+  if (crit && kind < 8.5) { yaw += .42 * sin(t * 7. + hsh * 20.) * (1. - ss(.0, .2, cl)); } // the shrimp's side-to-side "dance" (stops while it walks)
+  let cs = cos(yaw); let sn = sin(yaw);
+  if (crit) { // poses: legs step while walking, the crab's claws thrust when shoving, the shrimp's claw-legs peck at the tentacles
+    let tg = i.n.w; let walk = select(cl * 2., 0., cl >= .5); let shv = select(0., (cl - .5) * 2., cl >= .5);
+    let side = sign(l.z + 1e-4); let lp = l.x * 160. + select(0., 3.1416, side < 0.);
+    if (abs(tg + .55) < .03 || (abs(tg + .3) < .03 && l.x < .033)) { l.y += walk * .012 * max(0., sin(t * 16. + lp)) * ss(.0, .025, abs(l.z)); l.x += walk * .006 * cos(t * 16. + lp) * ss(.0, .025, abs(l.z)); }
+    if (abs(tg + .5) < .03) { let f = ss(.02, .06, l.x); let th = sin(3.1416 * min(1., shv * 2.2)) * select(0., 1., shv > 0.);
+      l.x += f * (.03 * th + .006 * sin(t * .9 + hsh * 9.) * (1. - th)); l.y += f * (.02 * th + .004 * max(0., sin(t * .9 + hsh * 9.))); l.z -= side * f * .012 * th; }
+    if (abs(tg + .3) < .03 && l.x >= .033) { let pk = max(0., sin(t * 3.3 + side * 1.6 + hsh * 7.)); l.x += .012 * pk * ss(.04, .07, l.x); l.y -= .014 * pk * ss(.04, .07, l.x); }
+  }
+  l = vec3f(l.x * cs - l.z * sn, l.y, l.x * sn + l.z * cs) * select(vec3f(.88 + .24 * fract(hsh * 7.), .8 + .4 * fract(hsh * 13.), .88 + .24 * fract(hsh * 7.)), vec3f(1.), crit);
+  // the violet-and-coral magnificent anemone: taller, more upright tentacles (reference: purple-column Heteractis magnifica)
+
   if (i.n.w > -.1) {
     // a tentacle: each sways on its own (own phase and pace), the base stays put, plus a gentle shared push of the current
-    let v = round(i.n.w * 127.); let ring = v - 5. * floor(v / 5.); let sd = floor(v / 5.) + i.b.x * 7.;
-    a = select(select(select(select(1., .9, ring < 3.5), .7, ring < 2.5), .35, ring < 1.5), 0., ring < .5);
-    let sw = a * a; let ph = sd * 2.39996;
-    let shrink = 1. - i.b.y * .4 * a;
-    l = vec3f(l.x * mix(1., .9, i.b.y * a), (l.y - .06) * shrink + .06, l.z * mix(1., .9, i.b.y * a));
-    let cur = .03 * sin(t * .55 + l.x * 1.5) + .02;
-    l.x += sw * (.045 * sin(t * (1.1 + fract(sd * .37) * .9) + ph) + cur);
-    l.z += sw * (.045 * cos(t * (1. + fract(sd * .61) * .8) + ph * 1.3) + .4 * cur);
+    let v = round(i.n.w * 127.); let q = v - 16. * floor(v / 16.); let sd = floor(v / 16.) + i.b.x * 7. + hsh * 31.;
+    a = q / 15.;   // position along the tentacle, 0 root .. 1 tip
+    // sway and pivot by kind: carpet barely moves, long thin tentacles swing more; a tube anemone closes toward its tube top
+    let amp = array<f32, 8>(1., .35, .5, 1.1, 1.8, .9, 0., .5)[u32(kind)]; let py = select(select(select(.06, .5, kind > 3.5), .13, kind > 4.5), .12, kind == 4.);
+    let sw = a * a * amp; let ph = sd * 2.39996;
+    let shrink = 1. - cl * .4 * a;
+    l = vec3f(l.x * mix(1., .9, cl * a), (l.y - py) * shrink + py, l.z * mix(1., .9, cl * a));
+    // the garden's current: all tentacles lean downstream together (more toward the tips) and breathe with slow surges,
+    // like anemones in a reef current or an aquarium's pump flow; each tentacle then adds only a small sway of its own
+    let lean = array<f32, 8>(.14, .07, .05, .1, .14, .1, 0., .06)[u32(kind)] * a * a * (.75 + .25 * sin(t * .45 + i.a.x * .15 + i.a.z * .1) + .08 * sin(t * 1.3 + sd));
+    var ln = lean;
+    l.x += ln * .86; l.z += ln * .51; l.y -= ln * .35;
+    let cv = a * a * .035 * sin(sd * 1.7 + a * 3.); l.x += cv * -.51; l.z += cv * .86;   // each tentacle curls a little its own way
+    let cur = .02 * sin(t * .55 + l.x * 1.5);
+    l.x += sw * (.028 * sin(t * (1.1 + fract(sd * .37) * .9) + ph) + cur);
+    l.z += sw * (.028 * cos(t * (1. + fract(sd * .61) * .8) + ph * 1.3) + .4 * cur);
   }
-  let w = i.a.xyz + l * sz;
-  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = i.n.xyz; o.op = i.p; o.sp = vec2f(i.b.x, 0.); o.aux = a; o.lt = shadow1(w);
+  if (kind > 7.5) { // the lodgers: the shrimp sways a little on its legs and feels about with its antennae; the crab combs the water with its fans
+    let tg = i.n.w;
+    l.y += .0015 * sin(t * 1.1 + hsh * 20.) * ss(.0, .02, l.y);
+    if (abs(tg + .35) < .03) { let s = ss(.05, .09, l.x); l.z += s * .006 * sin(t * 1.7 + hsh * 9. + l.x * 30.); l.y += s * .004 * sin(t * 1.3 + l.z * 40.); }
+    if (abs(tg + .6) < .03) { let f = sat((l.x - .036) / .02); let ph = fract(t * .45 + hsh); l.x -= f * f * .012 * ss(.0, .15, ph) * ss(.5, .25, ph); l.y -= f * .008 * ss(.0, .15, ph) * ss(.5, .25, ph); }
+  }
+  // tilt onto the rock it grows on (b.zw: the normal's x and z; upright when 0)
+  let N = vec3f(i.b.z, sqrt(max(0., 1. - i.b.z * i.b.z - i.b.w * i.b.w)), i.b.w);
+  let Tx = normalize(select(vec3f(1., 0., 0.), cross(vec3f(0., 0., 1.), N), length(i.b.zw) > .05) * select(1., -1., length(i.b.zw) > .05));
+  let Tz = cross(Tx, N);
+  let w = i.a.xyz + (Tx * l.x + N * l.y + Tz * l.z) * sz;
+  let nr = vec3f(i.n.x * cs - i.n.z * sn, i.n.y, i.n.x * sn + i.n.z * cs);
+  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = Tx * nr.x + N * nr.y + Tz * nr.z; o.op = i.p; o.sp = vec2f(i.b.x, hsh + 2. * fcode); o.aux = a; o.lt = shadow1(w);
   return o;
 }
 @fragment fn fsAnem(i: VO, @builtin(front_facing) ff: bool) -> @location(0) vec4f {
   var n = normalize(i.n); if (!ff) { n = -n; }
   let L = g.sun.xyz; let V = normalize(g.cam.xyz - i.wp);
   let z = zone(i.wp); let vv = vol(i.wp);
-  // magnificent sea anemone: sandy-green tentacles with paler tips over a coloured column
-  // six colour forms (real ones vary): pale tentacles with brighter, slightly fluorescent tips, a coloured column/disc
-  let k = u32(i.sp.x * 6.) % 6u;
-  var PD = array<vec3f, 6>(vec3f(.85, .2, .5), vec3f(.9, .25, .2), vec3f(.55, .3, .9), vec3f(.95, .55, .2), vec3f(.3, .45, .95), vec3f(.9, .3, .7));
-  var PT = array<vec3f, 6>(vec3f(.95, .68, .5), vec3f(.95, .55, .6), vec3f(.7, .6, .9), vec3f(.95, .75, .4), vec3f(.55, .85, .7), vec3f(.9, .6, .75));
-  var PX = array<vec3f, 6>(vec3f(.55, .6, 1.), vec3f(.7, 1., .35), vec3f(1., .5, .85), vec3f(.45, 1., .5), vec3f(.4, .95, 1.), vec3f(1., .95, .4));
-  let tip = ss(.7, .95, i.aux);
-  var alb = mix(mix(PD[k] * .7, PT[k], ss(0., .6, i.aux)) * (.7 + .3 * i.aux), PX[k], tip * .8);
-  if (i.aux < 0.) { alb = PD[k]; }
+  // a frame along each tentacle (from screen derivatives of the position and of aux, which runs root->tip), so the surface
+  // can carry stripes along the tube and a long thin highlight streak like wet tissue (computed before any branch)
+  let p1 = dpdx(i.wp); let p2 = dpdy(i.wp); let f1 = dpdx(i.aux); let f2 = dpdy(i.aux);
+  let r1 = cross(p2, n); let r2 = cross(n, p1); let dt = dot(p1, r1);
+  var Tg = (f1 * r1 + f2 * r2) * sign(dt); Tg -= n * dot(Tg, n);
+  let okT = length(Tg) > 1e-7 && i.aux >= 0.; Tg = select(vec3f(0., 1., 0.), normalize(Tg), okT);
+  let Rf = normalize(cross(Tg, vec3f(.001, 1., .002)));
+  let phi = atan2(dot(n, cross(Tg, Rf)), dot(n, Rf));          // angle around the tube
+  let sdv = normalize(cross(Tg, n) + vec3f(1e-5));
+  // colour like the reference photos (anemones under blue reef light): each tentacle runs from a deep base through a
+  // strongly saturated middle to a pale, glowing tip; the tips carry a little light of their own (fluorescence), so the
+  // anemone stays vivid and high-contrast in the blue water. Six colour forms per kind; colours are for looks, the card
+  // shows the real animal.
+  let k = u32(fract(i.sp.x) * 6.) % 6u; let kind = floor(i.sp.x);
+  //                              blue                  peach-orange           violet-pink           golden                green                 rose-red
+  var CB = array<vec3f, 6>(vec3f(.06, .07, .5), vec3f(.40, .12, .08), vec3f(.40, .15, .55), vec3f(.25, .12, .01), vec3f(.01, .14, .07), vec3f(.30, .02, .07));
+  var CM = array<vec3f, 6>(vec3f(.03, .22, 1.), vec3f(1., .5, .25), vec3f(1., .33, .33), vec3f(1., .48, .05), vec3f(.12, .85, .35), vec3f(1., .15, .3));
+  var CT = array<vec3f, 6>(vec3f(.43, .62, 1.), vec3f(1., .72, .55), vec3f(.7, .55, 1.), vec3f(1., .97, .55), vec3f(.75, 1., .65), vec3f(1., .7, .9));
+  var B = CB[k]; var M = CM[k]; var T = CT[k];
+    if (kind == 2.) { B = vec3f(.42, .1, .04); M = vec3f(1., .46, .2); T = vec3f(1., .76, .52); }  // bubble-tip: one colour, peach
+    if (kind == 3.) { B = vec3f(.18, .2, .06); M = vec3f(.66, .9, .14); T = vec3f(.92, 1., .6); }  // long-tentacle: olive root, yellow-green, pale lime tips
+  let act = kind > 4.5 && kind < 6.5; let aur = kind > 6.5; // beadlet anemone (5 open, 6 shut): coral-red roots, pink shafts, pale pink-white tips
+  if (act) { B = vec3f(.75, .1, .16); M = vec3f(1., .38, .55); T = vec3f(1., .82, .88); }
+  var tip = ss(.72, .98, i.aux);
+  if (kind == 1.) { tip = ss(.9, 1., i.aux) * .7; }
+  if (kind == 2.) { tip = ss(.65, .95, i.aux) * .8; } // the bulb is paler
+  if (kind == 0.) { tip = ss(.45, 1., i.aux); }
+  if (act) { tip = ss(.55, 1., i.aux); }
+  if (aur) { B = vec3f(.3, .08, .22); M = vec3f(.42, .18, .22); T = vec3f(.8, .72, .42); tip = 0.; } // magnificent: salmon-pink shafts fade slowly into lavender tips // bubble-tip: only the bulb end is pale // carpet: only the very tip is a pale dot // the violet form fades into coral over half its length
+  var alb = mix(B, M, ss(0., .55, i.aux));
+  if (kind == 4.) { B = vec3f(.005, .08, .09); M = vec3f(.02, .82, .62); T = vec3f(.4, 1., .85); alb = mix(B, M, ss(.04, .45, i.aux)); tip = ss(.6, 1., i.aux) * .55; } // tube: deep teal root, cyan-green body, pale tip
+  if (kind == 1.) { alb = mix(B, M, .25 + .75 * ss(0., .6, i.aux)); // carpet: violet roots, blue body; patches drift from cyan to violet
+    let pj = sin(i.op.x * 9. + 1.3) * sin(i.op.z * 7. + .4) + .5 * sin(i.op.x * 23. - i.op.z * 17.);
+    alb = mix(alb, select(vec3f(.25, .12, 1.), vec3f(.02, .55, 1.), pj > 0.), min(abs(pj), 1.) * .45); }
+  if (kind == 1.) { // the folds: troughs between them darker and redder-violet, crests brighter; the centre a pale mouth
+    let ang = atan2(i.op.z, i.op.x); let rf = length(i.op.xz) / .62;
+    let vf = (1. - pow(abs(cos((ang * 9. + .7 + .35 * sin(ang * 3.)) * .5)), .5)) * ss(.35, .9, rf);
+    alb = mix(alb * (1. - .5 * vf), vec3f(.28, .08, .45) * .6, .35 * vf);
+    if (i.aux < 0. && rf < .12) { alb = vec3f(.55, .6, .35) * .5; } }              // carpet: one strong colour all over
+  alb = mix(alb, T, tip * .7);
+  if (i.aux < 0.) { alb = select(select(B * 1.2, B * .6 + M * .3, kind == 1.), vec3f(.12, .09, .07), kind == 4.); } // disc / column
+  if (kind == 4. && i.aux < 0.) { let rd = length(i.op.xz); alb = select(vec3f(.16, .13, .1) * (.8 + .2 * sin(i.op.y * 140.)), mix(vec3f(.02, .03, .03), vec3f(.05, .3, .25), ss(.02, .06, rd)), i.aux > -.45); } // felt tube; the disc dark at the mouth
+  let col0 = (kind == 0. || act) && i.aux < -.45; // the magnificent's satiny column: a deep, saturated red-violet of its own
+  if (col0 && kind == 0.) { alb = vec3f(.5, .015, .05) * mix(.55, 1., ss(-.04, .3, i.op.y)); } // deep wine red, darker toward the rock
+  if (kind == 0. && i.aux < 0. && !col0) { alb = vec3f(.9, .55, .2) * .6; } // its oral disc and mouth: orange-yellow
+  if (aur) { // beaded anemone: grey-brown stalks ringed by white beads; a purple disc with pale radial lines between them
+    if (i.aux >= 0.) { let bp = fract(i.aux * 16.); let bd = max(ss(.5, .36, abs(bp - .5)), ss(.92, .97, i.aux)); // (the tip itself: no dark groove dot) // ~22 beads, each a bulge with a thin dark groove between
+      alb = mix(vec3f(.16, .05, .12), mix(mix(B, M, ss(0., .6, i.aux)), T, .35 + .65 * ss(.1, .9, i.aux)) * (.75 + .25 * sin(bp * 3.1416)), bd); tip = 0.;
+      if (okT) { n = normalize(n + Tg * cos(bp * 3.1416) * .18); } } // 9 beads per tentacle, soft-edged
+    else { let an = atan2(i.op.z, i.op.x); alb = mix(vec3f(.3, .12, .38), vec3f(.55, .42, .62), ss(.6, .95, sin(an * 40.)) * .4); }
+  }
+  if (act && i.aux < 0.) { // beadlet: glossy wine-red column, a thin blue line round the foot, a ring of cobalt beads (acrorhagi) at the top edge
+    let ar = length(i.op.xz); let an = atan2(i.op.z, i.op.x);
+    alb = vec3f(.5, .02, .06) * mix(.6, 1., ss(-.02, .08, i.op.y));
+    if (i.aux > -.45) { alb = vec3f(.62, .08, .14) * (.8 + .2 * sin(an * 24.)); } // oral disc: lighter red, fine radial lines
+    alb = mix(alb, vec3f(.1, .22, .75), ss(.012, .004, abs(i.op.y + .012)) * ss(.1, .13, ar));
+    let by = select(.118, .08, kind > 5.5); let bc = fract(an / 6.2832 * select(30., 36., kind > 5.5)) - .5;
+    let bd = length(vec2f(bc * select(.024, .022, kind > 5.5), (i.op.y - by)));
+    alb = mix(alb, vec3f(.12, .35, .95), ss(.006, .004, bd) * step(i.aux, -.45));
+  }
+  let fq = length(fwidth(i.op)) * 90.; // how big one pile cell is on screen (computed outside any branch)
+  if (kind == 1. && i.aux < 0. && length(i.op.xz) > .08) { // carpet: the disc under the tentacles is painted as a dense pile of short tentacle ends (no bare surface)
+    let ny = abs(n.y); let q = select(vec2f(atan2(i.op.z, i.op.x) * 9., i.op.y * 90.), i.op.xz * 90., ny > .5);
+    let cl = floor(q); let h = fract(sin(dot(cl, vec2f(12.9898, 78.233))) * 43758.5); let d = length(fract(q) - .5 - (h - .5) * .3);
+    let dt0 = ss(.36, .12, d) * step(.3, h) * (.5 + .5 * h) * ss(.04, .25, fq); // irregular; fades out up close, where the real tentacles take over
+    alb = mix(vec3f(.04, .2, .9) * .45 * (.7 + .6 * h), vec3f(.43, .62, 1.) * .8, dt0 * .6) * (1. - .35 * ss(.4, .5, d) * ss(.04, .25, fq));
+    tip = dt0 * .6; }
+  // tissue pattern: darker stripes along the bubble-tip's tentacles, soft mottling on the magnificent's
+  let stp = .5 + .5 * sin(phi * select(6., 8., kind == 2.));
+  if (kind == 2. && okT) { alb *= 1. - .35 * ss(.35, .9, stp) * (1. - tip); }
+  let hs = fract(i.sp.y);
+  if (kind == 0. && i.aux >= 0.) { alb *= .88 + .24 * fract(sin(floor(i.aux * 14.) * 91.7 + hs * 13.) * 4375.); }
+  alb *= 1. + .25 * (vec3f(fract(hs * 3.1), fract(hs * 5.3), fract(hs * 7.7)) - .5); // each one a little different
   let E = sunE(i.wp.y, z) * i.lt;
-  var c = alb * (E * (.4 + .6 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * 1.15) + alb * E * .15;
-  c += alb * torch(i.wp, n) * .6;
-  c += E * pow(sat(dot(n, normalize(V + L))), 20.) * .3;
-  c += (PX[k] * tip * .35 + alb * E * .2) * (.4 + .6 * g.mis.w) * select(1., 0., i.aux < 0.) + PX[k] * tip * .15 * (1. - g.mis.w); // a soft glow at the tips, stronger at night
+  var c = alb * (E * (.35 + .65 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * .8);
+  c += alb * torch(i.wp, n) * .6 * (1. - nite()); // at night the blue light itself mostly turns into the glow below
+  // night (blue reef light, like the reference photos): each tentacle shows its own colour where the light hits it, turns
+  // blue-violet on its shadow side and rim, and the roots and gaps between tentacles fall dark. High contrast, real volume.
+  {
+    let a0 = max(i.aux, 0.);
+    let ld = normalize(i.wp - g.lmp.xyz); let tI = torchI(i.wp, n);
+    // a real surface, not a glow stick: fine ridges along the tube (and faint rings on the magnificent) bend the light
+    let NS = select(select(6., 8., kind == 2.), 0., kind == 1.); let aS = select(select(.3, .1, kind == 2.), 0., kind == 1.);
+    let NR = select(0., 9., kind == 0.);
+    let nb = normalize(n + (sdv * cos(phi * NS) * aS + Tg * cos(i.aux * NR * 6.2832) * .08) * f32(okT));
+    let Ld = normalize(vec3f(.25, 1., .15) + V * .35 - ld * .2);   // reef lights shine from above (a little toward us): tops lit, undersides in shadow
+    let ndl = dot(nb, Ld); let key = sat(ndl); let wrap = sat((ndl + .6) / 1.6);
+    let nv = sat(dot(nb, V));
+    var occ = mix(select(.22, .08, kind == 1.), 1., ss(0., .6, a0));
+    if (col0) { occ = .9; }                           // deep inside the crown it is darker
+    if (kind == 3. && i.aux >= 0.) { occ *= mix(.7, 1., ss(.04, .09, length(i.op.xz))); } // long-tentacle: inner rows a little darker
+    if (kind == 4. && i.aux >= 0.) { occ *= mix(.15, 1., ss(.05, .28, length(i.op.xz))); } // tube: the crown's heart in its own shade
+    if (kind != 1. && !col0) { occ *= mix(.35, 1., ss(0., .8, i.op.y / select(select(select(select(.45, .38, kind == 3.), .5, kind == 2.), .3, act), .07, aur))); } // lower tentacles sit in the shade of the upper ones
+    let VI = vec3f(.20, .26, 1.);                                       // the blue of the reef light
+    let vk = array<f32, 6>(1., .25, 1.4, 1., 1., 1.)[k];
+    let kb = select(array<f32, 6>(1., .5, .6, 1., 1., 1.)[k], .42, kind == 2.);             // warm colours sit much closer to white on screen: less light
+    let body = alb * kb * (.03 + 1.5 * key * key) * (.55 + .45 * nv);   // own colour where the light hits; edges turn away and darken
+    let term = alb * vec3f(1., .55, .65) * pow(1. - abs(ndl), 3.) * .08; // a little light through the tissue at the terminator
+    // wet sheen: a long thin highlight streak along each tube (hair-style), not a plastic dot
+    let H = normalize(Ld + V); let th = dot(Tg, H);
+    let ks = select(pow(sat(dot(nb, H)), 40.), pow(sqrt(max(0., 1. - th * th)), 90.), okT);
+    let sp = ks * sat(ndl * 2.) * select(select(select(.55, .15, kind == 3.), .25, kind == 1.), 1.2, col0) * vec3f(.85, .9, 1.) * (.5 + .5 * a0);
+    // light through the thin edges and tips, on the side away from the key light
+    let TR = select(select(vec3f(.25, .30, 1.), vec3f(1., .55, .25), kind == 2.), vec3f(.15, .55, 1.), kind == 1.);
+    let thin = (1. - nv) * (.4 + .6 * a0);
+    let trans = TR * thin * thin * (1. - key) * (.25 + .75 * sat(dot(-V, Ld) * .5 + .5)) * .35 * step(0., i.aux);
+    let blue = VI * select(vk, .6, kind == 2.) * wrap * (1. - key) * select(select(select(.45, .2, k == 1u), .06, col0), .15, aur); // blue only where the key light is absent
+    // sheen (like a stocking or velvet): the edges of each tentacle, seen at a grazing angle, turn pale; the middle keeps its colour
+    let shK = array<f32, 8>(.0, 0., .06, .4, .35, .3, 0., 0.)[u32(kind)] * step(0., i.aux);
+    let sheen = mix(alb, vec3f(1., .95, .9), .6) * kb * pow(1. - nv, 1.6) * (.25 + .75 * wrap) * shK * 2.2;
+    // the carpet's beads catch the reef light: a bright little highlight on each one makes them read as vivid, not grey
+    let bead = select(0., 1., kind == 1.) * tip * pow(sat(dot(nb, normalize(Ld + V))), 12.) * .9 * vec3f(.45, .85, 1.) * (1. - ss(.2, .7, fq)); // fades with distance: no sparkle
+    var lit = (body * mix(1., 1. / (.55 + .45 * nv), shK * 1.6) + term * kb + blue + sp + sheen) * occ + trans + T * tip * kb * .6 * key * key + bead;
+    if (kind == 2.) { let lm = dot(lit, vec3f(.3, .59, .11)); lit = max((lit - lm) * 1.35 + lm, vec3f(0.)); } // bubble-tip: livelier peach (contrast, not a new hue)
+    if (kind == 3.) { lit += mix(M, T, tip) * .24 * (.08 + .92 * key) * step(0., i.aux) * occ; } // its green fluorescence under the blue light
+    if (kind == 4.) { lit += mix(M, T, tip) * .35 * (.08 + .92 * key) * step(0., i.aux) * occ; } // fluorescence: the blue light comes back cyan-green (lit, not self-lit)
+    if (kind == 0. && i.aux >= 0.) { // magnificent: salmon where the light lands, clean blue-violet on the shadow side, side by side (never mixed)
+      let PK = alb; let PS = vec3f(.40, .31, .85);   // the lavender-blue of the photo's shadow side
+      lit = mix(PS * (.06 + .3 * wrap), PK * kb * (.08 + 1.4 * key), ss(-.45, .15, ndl) * (1. - .5 * pow(1. - nv, 2.))) * occ + sp * occ + trans + T * tip * kb * .6 * key * key;
+    }
+    c += lit * (.35 + tI) * nite();
+  }
+  c += E * pow(sat(dot(n, normalize(V + L))), 24.) * .25 * (1. - nite());
+  // their own light: a little in the saturated body, much more at the tips; stronger at night
+  let gl = (.5 + .5 * g.mis.w) * (1. - .85 * nite());
+  if (i.aux >= 0.) { c += M * ss(.2, .7, i.aux) * .14 * gl + T * tip * (.55 + .35 * (1. - g.mis.w)) * gl; }
+  // (carpet beads: no glow of their own; the bead highlight does the work) // carpet beads: a faint fluorescence
+  { c = max(c, vec3f(0.)); let m0 = max(max(c.r, max(c.g, c.b)), 1e-4); c = mix(c, m0 * pow(c / m0, vec3f(1.5)), nite()); }
+  if (aur) { c = mix(c, max(c - .01, vec3f(0.)) * 1.12, nite()); } // beaded anemone: crisper contrast between dark stalks and pale beads // night: richer colour (the screen's gamma washes thin colours to pastel)
+  { let mx = max(c.r, max(c.g, c.b)); c *= mix(1. / (1. + 2. * max(mx - .3, 0.)), 1. / (1. + .8 * max(mx - .5, 0.)), nite()); } // a soft roll-off that keeps light and dark apart // never burn out to white (night exposure is ~2.6x)
+  { // crossing between the near and far mesh: both are drawn for a metre or two, each keeping a share of the pixels
+    // (a fine screen dither), so the detail fades in instead of popping. code 1..101: near mesh, 129..229: far mesh
+    let fc = floor(i.sp.y * .5);
+    if (fc > .5) {
+      let far = fc > 127.5; let f = (fc - select(1., 129., far)) * .01; // the near mesh's share
+      let dh = fract(52.9829189 * fract(dot(floor(i.cp.xy), vec2f(.06711056, .00583715))));
+      if (select(dh > f, dh <= f, far)) { discard; }
+    }
+  }
+  return fin(fog(c, i.wp, z));
+}
+
+// the anemones' lodgers (kinds 8 shrimp, 9 porcelain crab): animals, not anemones, so their own colours and a plain lit
+// surface. aux tags the parts: -.2 shrimp body, -.22 tail fan, -.3 legs, -.35 antennae, -.4 eyes, -.45 crab shell,
+// -.5 claws, -.55 crab legs, -.6 fans
+fn critHash(c: vec2f) -> f32 { return fract(sin(dot(c, vec2f(127.1, 311.7))) * 43758.55); }
+@fragment fn fsCrit(i: VO, @builtin(front_facing) ff: bool) -> @location(0) vec4f {
+  var n = normalize(i.n); if (!ff) { n = -n; }
+  let L = g.sun.xyz; let V = normalize(g.cam.xyz - i.wp);
+  let z = zone(i.wp); let vv = vol(i.wp);
+  let kind = floor(i.sp.x); let p = i.op; let tg = i.aux;
+  var alb = vec3f(.85); var glass = 0.;
+  if (kind < 8.5) {
+    // shrimp (refs sh02/sh04/sh05): a clear glassy body, opaque white saddles with a thin orange rim, white tail spots ringed orange
+    alb = vec3f(.035, .05, .09); glass = 1.;   // glass: the dark blue of what lies behind shows through
+    var w = 0.; var o = 0.;
+    let PC = array<vec4f, 11>(vec4f(.022, .041, 0., .011), vec4f(.024, .03, .008, .008), vec4f(.024, .03, -.008, .008), vec4f(-.005, .047, 0., .0075),
+      vec4f(-.02, .048, 0., .0065), vec4f(-.035, .04, 0., .0055), vec4f(-.012, .034, .007, .0065), vec4f(-.012, .034, -.007, .0065),
+      vec4f(-.03, .032, .006, .0055), vec4f(-.03, .032, -.006, .0055), vec4f(-.072, .017, 0., .006));
+    for (var k = 0; k < 11; k++) { let d = length(p - PC[k].xyz) / PC[k].w; w = max(w, ss(1., .85, d)); o = max(o, ss(1.1, 1.02, d) * ss(.85, .98, d)); }
+    var tov = 0.;
+    if (abs(tg + .22) < .015) { let d = length(vec2f((p.x + .07) * .8, abs(p.z) - .006)) / .0034; tov = ss(1., .75, d); w = max(w, ss(1.35, 1.15, d) * ss(.85, 1., d) + ss(.074, .078, -p.x)); } // tail fan: orange-brown ovals edged white, white tips
+    alb = mix(alb, vec3f(1., .98, .95), w); alb = mix(alb, vec3f(.95, .55, .25), o * (1. - w)); alb = mix(alb, vec3f(.75, .3, .08), tov); glass *= 1. - max(max(w, o), tov);
+    if (abs(tg + .3) < .03) { let b = fract(length(p.xz) * 75. + p.y * 45.); alb = mix(vec3f(.28, .3, .38), vec3f(.42, .12, .85), ss(.75, .83, b) * ss(.99, .9, b)); glass = .45; } // (darker clear legs so the white saddles carry the read; saturated violet joints) // clear legs, small violet bands at the joints
+    if (abs(tg + .35) < .02) { alb = vec3f(.5, .5, .58); glass = .4; }
+    if (abs(tg + .4) < .02) { alb = vec3f(.07, .045, .02); }
+  } else {
+    // porcelain crab (refs cr01/cr02): porcelain white, densely freckled with small red-brown dots; legs and fans paler
+    alb = vec3f(.78, .68, .52); glass = .2;                      // (glass here: a little porcelain gloss) cream, kept below white so the torch can't burn it out
+    var dt = 0.;
+    for (var g2 = 0; g2 < 2; g2++) { // dense fine pepper dots: two offset jittered grids, so no rows show
+      let q = p * (480. + 170. * f32(g2)) + f32(g2) * .37; let cl = floor(q.xz + q.y * .7); let f = fract(q.xz + q.y * .7) - .5; let h1 = critHash(cl + f32(g2) * 31.); let h2 = critHash(cl + 17.);
+      dt = max(dt, ss(.16 + .12 * h2, .08 + .12 * h2, length(f - (vec2f(h1, h2) - .5) * .6)) * step(.25, h1)); }
+    let nb = sin(p.x * 160. + sin(p.z * 210.) * 1.7) * sin(p.z * 150. + sin(p.x * 190.) * 1.5); let big = ss(.55, .75, nb) * ss(.012, .028, length(p.xz)); // a few irregular ochre blotches toward the rim
+    let red = vec3f(.4, .09, .03);   // dark red-brown: under the blue light a lighter red turns grey
+    if (tg > -.53) { alb = mix(alb, vec3f(.78, .55, .18), big * step(abs(tg + .45), .02)); alb = mix(alb, red, dt); }
+    if (abs(tg + .5) < .02) { glass = .45; }
+    if (abs(tg + .55) < .02) { alb = mix(vec3f(.72, .66, .63), red, dt * .8); glass = .1; }
+    if (abs(tg + .6) < .02) { alb = vec3f(.82, .76, .7); glass = .5; }
+    if (abs(tg + .4) < .02) { alb = vec3f(.1, .05, .03); }
+  }
+  let E = sunE(i.wp.y, z) * i.lt; let nv = sat(dot(n, V)); let fr = pow(1. - nv, 3.);
+  var c = alb * (E * (.35 + .65 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * .8);
+  c += (E * .3 + amb(i.wp, n, vv.g, z) * .6) * fr * glass * vec3f(.8, .9, 1.);         // a glass body shows mostly its edges
+  c += E * pow(sat(dot(n, normalize(V + L))), 50.) * (.25 + .6 * glass) * (1. - nite());
+  c += alb * torch(i.wp, n) * .6 * (1. - nite());
+  { // night: lit like the anemones around it (blue reef light from above, the torch), so it belongs to the same scene
+    let ld = normalize(i.wp - g.lmp.xyz); let tI = torchI(i.wp, n);
+    let Ld = normalize(vec3f(.25, 1., .15) + V * .35 - ld * .2); let ndl = dot(n, Ld); let key = sat(ndl);
+    let body = alb * .7 * (.04 + 1.5 * key * key) * (.55 + .45 * nv);
+    let sp = min((pow(sat(dot(n, normalize(Ld + V))), 90.) * 1. + pow(sat(dot(n, normalize(Ld + V))), 12.) * .08) * (.3 + .9 * glass), .5) * vec3f(.9, .95, 1.); // a tight wet highlight and a soft sheen
+    let rim = fr * vec3f(.7, .8, 1.) * (glass * .5 + .12);  // glass edges (and a faint cool edge on the crab's shell)
+    let blue = vec3f(.2, .26, 1.) * sat((ndl + .6) / 1.6) * (1. - key) * .12 * (1. - .7 * glass);
+    let warm = select(vec3f(1.), vec3f(1.25, 1., .78), kind > 8.5);   // the crab keeps its warm cream and red dots under the blue light
+    c += (body * warm + sp + rim + blue) * (.35 + tI) * nite();
+  }
+  { c = max(c, vec3f(0.)); let mx = max(c.r, max(c.g, c.b)); c *= mix(1. / (1. + 2. * max(mx - .3, 0.)), 1. / (1. + .8 * max(mx - .5, 0.)), nite()); }
+  { let fc = floor(i.sp.y * .5); // the near/far cross-fade (as in fsAnem)
+    if (fc > .5) { let far = fc > 127.5; let f = (fc - select(1., 129., far)) * .01; let dh = fract(52.9829189 * fract(dot(floor(i.cp.xy), vec2f(.06711056, .00583715)))); if (select(dh > f, dh <= f, far)) { discard; } } }
   return fin(fog(c, i.wp, z));
 }
 `;
@@ -1007,16 +1353,19 @@ fn sat3(x: vec3f) -> vec3f { return clamp(x, vec3f(0.), vec3f(1.)); }
     c += beam(rv / rl, zf * rl);
   }
   let bl = textureSampleLevel(tB, sC, uv, 0.).rgb;
-  c = mix(c, bl, .06) + bl * .03;
+  c = mix(c, bl, .06 * (1. - .6 * nite())) + bl * .03 * (1. - .6 * nite()); // less bloom at night: anemones are lit, they don't glow
   c *= g.mis.x;
   let q = uv - .5;
-  c *= 1. - dot(q, q) * .55;
-  c = tmap(c);
+  let nt = nite();
+  c *= 1. - dot(q, q) * mix(.55, .3, nt);
+  { let mc = max(c.r, max(c.g, c.b)); let hp = c * (tmap(vec3f(mc)).x / max(mc, 1e-4)); c = mix(tmap(c), hp, .7 * nt); } // night: keep each colour's hue (peach must not drift to yellow)
   let l0 = dot(c, vec3f(.2126, .7152, .0722));
-  let l = mix(l0, l0 * l0 * (3. - 2. * l0), .55);
+  let l = mix(l0, l0 * l0 * (3. - 2. * l0), .55 * (1. - .6 * nt));
   c *= l / max(l0, 1e-4);
-  c = mix(c, vec3f(l), ss(.55, 1., l) * .1);
-  c = mix(vec3f(l), c, .93) + vec3f(.008, .002, 0.);
+  // the original's film look (soft highlights, a touch less colour, a lifted black) suits the day; the night garden's
+  // reef-light look needs the opposite: true blacks and full colour, like the aquarium photos it copies
+  c = mix(c, vec3f(l), ss(.55, 1., l) * .1 * (1. - nt));
+  c = max(mix(vec3f(l), c, mix(.93, 1.12, nt)) + vec3f(.008, .002, 0.) * (1. - nt) - .012 * nt, vec3f(0.));
   c = pow(max(c, vec3f(0.)), vec3f(1. / 2.2));
   let n = ign(fc.xy) + ign(fc.xy + 37.) - 1.;
   return vec4f(c + n / 255., 1.);

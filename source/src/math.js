@@ -169,7 +169,15 @@ class Mesh {
     for (let k = 0; k < rings.length - 1; k++) for (let s = 0; s < sides; s++) {
       const s2 = (s + 1) % sides; this.quad(rings[k][s], rings[k][s2], rings[k + 1][s2], rings[k + 1][s]);
     }
-    if (capEnd) { const e = pts[pts.length - 1], c = this.v(e[0], e[1], e[2], auxFn ? auxFn(pts.length - 1) : 1); const r = rings[rings.length - 1]; for (let s = 0; s < sides; s++) this.tri(r[s], r[(s + 1) % sides], c); }
+    if (capEnd === 'round') { // a rounded end: two shrinking rings and an apex (a half-dome), not a flat cone
+      const e0 = pts[pts.length - 1], q = pts[pts.length - 2] || e0, d = [e0[0] - q[0], e0[1] - q[1], e0[2] - q[2]], dl = hypot(d[0], d[1], d[2]) || 1, r0 = typeof rad === 'function' ? rad(pts.length - 1) : rad, ax = auxFn ? auxFn(pts.length - 1) : 1, P = this.p;
+      const last = rings[rings.length - 1]; let prev = last;
+      for (const [u, sc] of [[0.55, 0.83], [0.87, 0.48]]) { const o = [d[0] / dl * r0 * u, d[1] / dl * r0 * u, d[2] / dl * r0 * u], rg = [];
+        for (let s = 0; s < sides; s++) { const v = last[s] * 3; rg.push(this.v(e0[0] + (P[v] - e0[0]) * sc + o[0], e0[1] + (P[v + 1] - e0[1]) * sc + o[1], e0[2] + (P[v + 2] - e0[2]) * sc + o[2], ax)); }
+        for (let s = 0; s < sides; s++) { const s2 = (s + 1) % sides; this.quad(prev[s], prev[s2], rg[s2], rg[s]); } prev = rg; }
+      const c = this.v(e0[0] + d[0] / dl * r0, e0[1] + d[1] / dl * r0, e0[2] + d[2] / dl * r0, ax); for (let s = 0; s < sides; s++) this.tri(prev[s], prev[(s + 1) % sides], c);
+    } else if (capEnd) { const e0 = pts[pts.length - 1], q = pts[pts.length - 2] || e0, el = hypot(e0[0] - q[0], e0[1] - q[1], e0[2] - q[2]) || 1, er = (typeof rad === 'function' ? rad(pts.length - 1) : rad) * 0.9 / el;
+      const e = [e0[0] + (e0[0] - q[0]) * er, e0[1] + (e0[1] - q[1]) * er, e0[2] + (e0[2] - q[2]) * er], c = this.v(e[0], e[1], e[2], auxFn ? auxFn(pts.length - 1) : 1); const r = rings[rings.length - 1]; for (let s = 0; s < sides; s++) this.tri(r[s], r[(s + 1) % sides], c); }
   }
   // returns {vb: ArrayBuffer, ib: Uint32Array}; normals area-weighted; aux -> normal.w
   build(nrmFn) {

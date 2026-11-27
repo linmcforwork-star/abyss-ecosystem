@@ -21,3 +21,34 @@ FishBase is useful for cross-checking but is CC BY-NC (no commercial use), so no
 | 华丽海葵 | [*Heteractis magnifica*](https://www.marinespecies.org/aphia.php?p=taxlist&tName=Heteractis%20magnifica) | 小丑鱼的宿主；有刺细胞和共生藻 | Fautin & Allen 1997（同上） |
 
 如果以后要把"科普准确"当作卖点，建议请懂海洋生物的人再核对一遍，并把"通用图鉴"换成具体页码。
+
+
+## 卡片照片 / Card photos
+
+卡片里的真实照片来自 Wikimedia Commons，按各自的许可使用，已裁剪并缩小（存放在 `photos/`）。
+Real photos on the cards are from Wikimedia Commons, used under their licences, cropped and resized (in `photos/`).
+
+| 文件 | 原图 | 作者 | 许可 |
+|---|---|---|---|
+| clown | [Amphiprion ocellaris (Clown anemonefish) by Nick Hobgood.jpg](https://commons.wikimedia.org/wiki/File:Amphiprion_ocellaris_(Clown_anemonefish)_by_Nick_Hobgood.jpg) | Nick Hobgood | CC BY-SA 3.0 |
+| clown1 | [Pez payaso rosado (Amphiprion perideraion), Anilao, Filipinas, 2023-08-25, DD 98.jpg](https://commons.wikimedia.org/wiki/File:Pez_payaso_rosado_(Amphiprion_perideraion),_Anilao,_Filipinas,_2023-08-25,_DD_98.jpg) | Diego Delso | CC BY-SA 4.0 |
+| clown2 | [Pez payaso de cola amarilla (Amphiprion clarkii), Anilao, Filipinas, 2023-08-22, DD 85.jpg](https://commons.wikimedia.org/wiki/File:Pez_payaso_de_cola_amarilla_(Amphiprion_clarkii),_Anilao,_Filipinas,_2023-08-22,_DD_85.jpg) | Diego Delso | CC BY-SA 4.0 |
+| dasc | [Damisela dominó (Dascyllus trimaculatus) en una anémona magnífica (Heteractis magnifica), mar Rojo, Egipto, 2023-04-18, DD 113.jpg](https://commons.wikimedia.org/wiki/File:Damisela_domin%C3%B3_(Dascyllus_trimaculatus)_en_una_an%C3%A9mona_magn%C3%ADfica_(Heteractis_magnifica),_mar_Rojo,_Egipto,_2023-04-18,_DD_113.jpg) | Diego Delso | CC BY-SA 4.0 |
+| chromis | [Chromis viridis mâle nuptial.JPG](https://commons.wikimedia.org/wiki/File:Chromis_viridis_m%C3%A2le_nuptial.JPG) | Philippe Bourjon | CC BY-SA 4.0 |
+| cleaner | [Lábrido limpiador común (Labroides dimidiatus), islas Ad Dimaniyat, Omán, 2024-08-15, DD 54.jpg](https://commons.wikimedia.org/wiki/File:L%C3%A1brido_limpiador_com%C3%BAn_(Labroides_dimidiatus),_islas_Ad_Dimaniyat,_Om%C3%A1n,_2024-08-15,_DD_54.jpg) | Diego Delso | CC BY-SA 4.0 |
+| parrot | [Bullethead parrotfish (Chlorurus spilurus) (37479197131).jpg](https://commons.wikimedia.org/wiki/File:Bullethead_parrotfish_(Chlorurus_spilurus)_(37479197131).jpg) | Rickard Zerpe | CC BY 2.0 |
+| idol | [Ídolo moro (Zanclus cornutus), Anilao, Filipinas, 2023-08-22, DD 188.jpg](https://commons.wikimedia.org/wiki/File:%C3%8Ddolo_moro_(Zanclus_cornutus),_Anilao,_Filipinas,_2023-08-22,_DD_188.jpg) | Diego Delso | CC BY-SA 4.0 |
+| grouper | [Plectropomus leopardus 326868772.jpg](https://commons.wikimedia.org/wiki/File:Plectropomus_leopardus_326868772.jpg) | portioid | CC BY-SA 4.0 |
+| tang | [Paracanthurus-hepatus-paletten-doktorfisch.jpg](https://commons.wikimedia.org/wiki/File:Paracanthurus-hepatus-paletten-doktorfisch.jpg) | Holger Krisp | CC BY 3.0 |
+| shark | [Blacktip reef shark (Carcharhinus melanopterus) Moorea.jpg](https://commons.wikimedia.org/wiki/File:Blacktip_reef_shark_(Carcharhinus_melanopterus)_Moorea.jpg) | Charles J. Sharp | CC BY-SA 4.0 |
+| moray | [Morena gigante (Gymnothorax javanicus), Nosy Sakatia, Madagascar, 2025-09-18, DD 19.jpg](https://commons.wikimedia.org/wiki/File:Morena_gigante_(Gymnothorax_javanicus),_Nosy_Sakatia,_Madagascar,_2025-09-18,_DD_19.jpg) | Diego Delso | CC BY-SA 4.0 |
+| manta | [Manta alfredi cruising - journal.pone.0046170.g002A.png](https://commons.wikimedia.org/wiki/File:Manta_alfredi_cruising_-_journal.pone.0046170.g002A.png) | Jaine et al. | CC BY 2.5 |
+| an0 | [Anémona magnífica (Radianthus magnifica), Zanzíbar, Tanzania, 2024-05-29, DD 51.jpg](https://commons.wikimedia.org/wiki/File:An%C3%A9mona_magn%C3%ADfica_(Radianthus_magnifica),_Zanz%C3%ADbar,_Tanzania,_2024-05-29,_DD_51.jpg) | Diego Delso | CC BY-SA 4.0 |
+| an1 | [Stichodactyla gigantea, A. percula.jpeg](https://commons.wikimedia.org/wiki/File:Stichodactyla_gigantea,_A._percula.jpeg) | Anne Hoggett | CC BY 3.0 |
+| an2 | [Entacmaea quadricolor (Bubble tip anemone).jpg](https://commons.wikimedia.org/wiki/File:Entacmaea_quadricolor_(Bubble_tip_anemone).jpg) | Nick Hobgood | CC BY-SA 3.0 |
+| an3 | [Anémona (Radianthus doreensis), Anilao, Filipinas, 2023-08-24, DD 178.jpg](https://commons.wikimedia.org/wiki/File:An%C3%A9mona_(Radianthus_doreensis),_Anilao,_Filipinas,_2023-08-24,_DD_178.jpg) | Diego Delso | CC BY-SA 4.0 |
+| an4 | [Ceriantharia by Luc Viatour.jpg](https://commons.wikimedia.org/wiki/File:Ceriantharia_by_Luc_Viatour.jpg) | Luc Viatour | CC BY-SA 3.0 |
+| an5 | [Actinia equina2.JPG](https://commons.wikimedia.org/wiki/File:Actinia_equina2.JPG) (Actinia mediterranea) | Fabrizio P. | CC BY-SA 3.0 |
+| an7 | [Anémona perla de cristal (Heteractis aurora), islas Ad Dimaniyat, Omán, 2024-08-16, DD 19.jpg](https://commons.wikimedia.org/wiki/File:An%C3%A9mona_perla_de_cristal_(Heteractis_aurora),_islas_Ad_Dimaniyat,_Om%C3%A1n,_2024-08-16,_DD_19.jpg) | Diego Delso | CC BY-SA 4.0 |
+| an8 | [Camarón de anémona de vidrio (Periclimenes brevicarpalis) en una anémona alfombra de Mertens (Stichodactyla mertensii), Anilao, Filipinas, 2023-08-22, DD 228.jpg](https://commons.wikimedia.org/wiki/File:Camar%C3%B3n_de_an%C3%A9mona_de_vidrio_(Periclimenes_brevicarpalis)_en_una_an%C3%A9mona_alfombra_de_Mertens_(Stichodactyla_mertensii),_Anilao,_Filipinas,_2023-08-22,_DD_228.jpg) | Diego Delso | CC BY-SA 4.0 |
+| an9 | [Cangrejo porcelana (Neopetrolisthes maculatus), Anilao, Filipinas, 2023-08-22, DD 217-218 FS.jpg](https://commons.wikimedia.org/wiki/File:Cangrejo_porcelana_(Neopetrolisthes_maculatus),_Anilao,_Filipinas,_2023-08-22,_DD_217-218_FS.jpg) | Diego Delso | CC BY-SA 4.0 |

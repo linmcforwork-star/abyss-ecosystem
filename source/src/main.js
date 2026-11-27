@@ -104,7 +104,7 @@ const pLeafS = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, constants: 
 const pLeafF = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, constants: { ROWS: 3 } });
 const pFish = scenePipe(mAnim, 'vsFish', 'fsFish', [vbSolid, ibAnim]);
 const pManta = scenePipe(mAnim, 'vsManta', 'fsManta', [vbSolid, ibAnim]);
-const mReef = mod(W_REEF), pReef = scenePipe(mReef, 'vsReef', 'fsReef', [vbSolid, ibAnim]), pAnem = scenePipe(mReef, 'vsAnem', 'fsAnem', [vbSolid, ibAnim]);
+const mReef = mod(W_REEF), pReef = scenePipe(mReef, 'vsReef', 'fsReef', [vbSolid, ibAnim]), pAnem = scenePipe(mReef, 'vsAnem', 'fsAnem', [vbSolid, ibAnim]), pCrit = scenePipe(mReef, 'vsAnem', 'fsCrit', [vbSolid, ibAnim]);
 const pSurf = scenePipe(mSurf, 'vs', 'fs', [], { strip: true }), pBack = scenePipe(mSurf, 'vsB', 'fsB', [], { strip: true });
 const pBub = scenePipe(mSpr, 'vsBub', 'fsBub', [ibBub], { strip: true, blend: { color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' }, alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' } } });
 const ADD = { color: { srcFactor: 'one', dstFactor: 'one' }, alpha: { srcFactor: 'one', dstFactor: 'one' } };
@@ -196,7 +196,7 @@ const T = buildTerrain(D);
 
 // preset viewpoints (position, look-at), keys 1-6; the world generator dresses the scene around them
 const POSES = [
-  [7.4, 1.9, 4.9, 4, 0, 2], // looking at the anemone garden (look-at height set from the floor below)
+  [-19, 8, 46, -40, 0, 44], // the start view: from the spawn side, looking west through the stone arch at the clownfish home (look-at height set below)
   [50, 1.3, 34, 58, -23, 8],
   [-26, 2.2, -100, 0, -9, -108],
   [-55, 1.5, -18, -60, -30, 8],
@@ -270,22 +270,26 @@ for (const p of POSES) flyPts.push([p[0], -40, p[2]]);
 await say('正在种珊瑚…', 0.73, 2500);
 const Wd = makeWorld(D, T, flyPts, POSES);
 for (const p of POSES) p[1] += Wd.gy(p[0], p[2]);
-POSES[0][4] = Wd.gy(POSES[0][3], POSES[0][5]) + 0.5;
+POSES[0][4] = Wd.gy(POSES[0][3], POSES[0][5]) + 5;
 D = Wd.gy = T.smp = null; // with gy goes the generator's working memory (about 200 MB)
 
 await say('正在放鱼…', 0.94, 1200);
 // mesh ids: 0-3 boulders, 4-6 sponges, 7-8 coral, 9 tube sponge, 10 whale fluke, 11 ship, 12 manta, 13 fish,
 // 14-20 rock chunks + pebbles, 21-22 coral LOD, 23-25 far LOD of the large rock chunks, 26 brain coral, 27 table coral,
 // 28 reef fish, 29 reef shark, 30 moray eel, 31 sea anemone
-const PM = [4, 5, 6, 7, 8, 9, 26, 27]; // mesh of each prop group
+const PM = [4, 5, 6, 7, 8, 9, 26, 27]; // mesh of each prop group (+ the growth-form variants, appended below)
+const PLOD = { 3: 21, 4: 22 }; // far mesh of a prop group (drawn beyond 6 m)
 const meshes = [meshChunk(1, 3), meshChunk(7, 3), meshChunk(13, 3), meshChunk(22, 3),
-  meshLathe([[0, 0, 0.5], [0.34, 0, 0.6], [0.5, 0.2, 0.85], [0.6, 0.6, 1], [0.55, 0.95, 1], [0.47, 1.08, 1], [0.38, 1.1, 0.9], [0.3, 1.0, 0.45], [0.26, 0.6, 0.15], [0, 0.35, 0.05]], 18, 0.3, 9),
-  meshLathe([[0, 0, 0.5], [0.2, 0, 0.6], [0.26, 0.5, 0.85], [0.4, 1.25, 1], [0.4, 1.42, 1], [0.33, 1.48, 0.9], [0.26, 1.38, 0.4], [0.18, 0.8, 0.12], [0, 0.5, 0.05]], 16, 0.35, 8),
-  meshLathe([[0, 0, 0.5], [0.5, 0, 0.7], [0.72, 0.18, 1], [0.74, 0.38, 1], [0.62, 0.5, 0.9], [0.48, 0.42, 0.45], [0.4, 0.2, 0.15], [0, 0.14, 0.06]], 18, 0.25, 10),
+  meshBarrel(0.85, 0.55, 212), meshLeather(0), meshLeather(1),
   meshCoral(0), meshCoral(1), meshTubes()].map((m) => m.build());
 meshes.push(meshFluke(), meshShip().build(), meshManta().build(), meshFish().build(),
   meshChunk(3).build(), meshChunk(11).build(), meshChunk(29).build(), meshChunk(5, 3).build(), meshChunk(17, 3).build(), meshChunk(41, 3).build(), meshChunk(9, 1).build(), meshCoral(0, 1).build(), meshCoral(1, 1).build(), meshChunk(5, 2, 1).build(), meshChunk(17, 2, 1).build(), meshChunk(41, 2, 1).build(),
-  meshBrain().build(), meshTable().build(), meshReefFish().build(), meshShark().build(), meshEel().build(), meshAnemone().build());
+  meshBrain().build(), meshTable().build(), meshReefFish().build(), meshShark().build(), meshEel().build(), meshAnem(0, 0).build());
+for (let j = 1; j < 20; j++) meshes.push(meshAnem(j >> 1, j & 1).build()); // anemone kind k, far f: mesh 31 + k * 2 + f (kinds 8, 9: the anemone shrimp and the porcelain crab)
+// coral growth forms (world.js propGroup): groups 8, 9 staghorn open / compact (with far versions), 10-14 meshVariant
+{ const b = meshes.length;
+  meshes.push(meshCoral(0, LV > 1, 1).build(), meshCoral(0, LV > 1, 2).build(), ...[0, 1, 2, 3, 4].map((k) => meshVariant(k).build()), meshCoral(0, 1, 1).build(), meshCoral(0, 1, 2).build());
+  PM.push(b, b + 1, b + 2, b + 3, b + 4, b + 5, b + 6); PLOD[8] = b + 7; PLOD[9] = b + 8; }
 let nV = 0, nI = 0;
 for (const m of meshes) { m.v0 = nV; m.i0 = nI; nV += m.nv; nI += m.ib.length; }
 const allV = new Uint8Array(nV * 16), allI = new Uint32Array(nI);
@@ -302,9 +306,29 @@ const ibGl = buf(Wd.glints, BU.VERTEX), nGl = Wd.glints.length / 8;
 const nFish = Wd.fish.length / 8, nManta = Wd.mantas.length / 8, nBub = Wd.bubbles.length / 8, nSnow = Wd.snow.length / 4;
 const MANTA = meshes[12], FISH = meshes[13];
 // the reef animals (eco.js) write their instances here every frame: fish, then sharks, then eels; 8 floats each
-const NA = 420, EB = new Float32Array(8 * NA), ibEco = device.createBuffer({ size: EB.byteLength, usage: BU.VERTEX | BU.COPY_DST });
-const AN = new Float32Array(8 * 32), ibAnem = device.createBuffer({ size: AN.byteLength, usage: BU.VERTEX | BU.COPY_DST });
-let nEcoF = 0, nEcoS = 0, nEcoE = 0, nAnem = 0, DAY = 1;
+const NA = 470, EB = new Float32Array(8 * NA), ibEco = device.createBuffer({ size: EB.byteLength, usage: BU.VERTEX | BU.COPY_DST });
+const AN = new Float32Array(8 * 400), ANd = new Float32Array(8 * 640), ANC = new Int32Array(21), ibAnem = device.createBuffer({ size: ANd.byteLength, usage: BU.VERTEX | BU.COPY_DST });
+// anemones sorted for drawing: by kind, the near ones (full tentacles) then the far ones (a quarter, fatter); none past the fog
+function anemSort() {
+  let o = 0;
+  for (let j = 0; j < 20; j++) {
+    ANC[j] = o;
+    for (let k = 0; k < nAnem; k++) {
+      const b = k * 8, kind = AN[b + 4] | 0, d = hypot(AN[b] - F[CX], AN[b + 1] - F[CY], AN[b + 2] - F[CZ]);
+      // near mesh inside D - X, far mesh beyond D + X, and both in between, cross-fading (see fsAnem)
+      const D = (5 + 2 * AN[b + 3]) * NEARK, X = 1 + 0.15 * D, far = j & 1;
+      if ((j >> 1) !== kind || (far ? d < D - X : d > D + X) || d > min(75, CLIPD) || k < TANK || o >= 640) continue;
+      for (let q = 0; q < 8; q++) ANd[o * 8 + q] = AN[b + q];
+      if (d > D - X && d < D + X) ANd[o * 8 + 5] += 2 * ((far ? 129 : 1) + Math.round(100 * sstep(D + X, D - X, d)));
+      o++;
+    }
+  }
+  ANC[20] = o;
+}
+let NEARK = [1, 0.6, 0.35][LV] ?? 1; // how far out anemones get their detailed mesh: shrinks with the quality setting
+let CLIPD = 1e9; // dev (dev.js clip): nothing farther than this from the camera is drawn
+let TANK = 0; // dev test tank: > 0 draws only the anemones from this index on and a bare floor (dev.js tank())
+let nEcoF = 0, nEcoS = 0, nEcoE = 0, nAnem = 0, DAY = 1, GNITE = 1; // GNITE: how far the garden's night has faded in
 Q.writeTexture({ texture: tVol }, Wd.volD, { bytesPerRow: NX, rowsPerImage: NY / 2 }, [NX / 2, NY / 2, NZ / 2]);
 Q.writeTexture({ texture: tMap }, Wd.gm, { bytesPerRow: 2048 }, [512, 512]);
 
@@ -327,14 +351,14 @@ Q.writeTexture({ texture: tMap }, Wd.gm, { bytesPerRow: 2048 }, [512, 512]);
   for (let i = 0; i < 12; i++) { const g = Wd.solids.ranges[i]; if (g[1]) r.drawIndexed(meshes[i].ib.length, g[1], meshes[i].i0, meshes[i].v0, g[0]); }
   // small rocks, sponges and corals (~35M triangles) only on High: too much for a phone's driver
   if (!LV) for (let i = 0; i < NCHUNK; i++) { r.setVertexBuffer(1, ibChunk[i]); r.drawIndexed(meshes[14 + i].ib.length, Wd.chunks[i].n, meshes[14 + i].i0, meshes[14 + i].v0, 0); }
-  if (!LV) for (let i = 0; i < 8; i++) if (Wd.props[i].n) { r.setVertexBuffer(1, ibProp[i]); r.drawIndexed(meshes[PM[i]].ib.length, Wd.props[i].n, meshes[PM[i]].i0, meshes[PM[i]].v0, 0); }
+  if (!LV) for (let i = 0; i < PM.length; i++) if (Wd.props[i].n) { r.setVertexBuffer(1, ibProp[i]); r.drawIndexed(meshes[PM[i]].ib.length, Wd.props[i].n, meshes[PM[i]].i0, meshes[PM[i]].v0, 0); }
   r.setPipeline(pLeafSh); r.setVertexBuffer(0, ibBig); r.draw(6, Wd.big.n);
   r.end();
   Q.submit([e.finish()]);
 }
 // the GPU has its own copies now: let go of the generator's (about 300 MB)
 for (const o of [Wd.big, Wd.bigF, Wd.small, ...Wd.chunks, ...Wd.props]) o.buf = o.data = 0;
-Wd.glints = Wd.volD = Wd.gm = T.vb = T.ib = T.wp = T.wn = 0;
+Wd.glints = Wd.volD = Wd.gm = T.vb = T.ib = 0; if (!/keepT/.test(location.search)) T.wp = T.wn = 0; // (dev: ?keepT keeps the terrain points for probing)
 
 // ---------------------------------------------------------------- render targets (rebuilt on resize)
 // The scene is drawn at `pix` pixels and scaled up to the window. frame() tunes it and the draw distance scale `det`
@@ -406,6 +430,7 @@ const rowOrd = new Uint8Array(CELLS);
 // Draws the cells of a cell-sorted buffer that are in view and within [minD, maxD) (scaled by `det`, but not for the
 // terrain) as merged runs, nearest rows first.
 function drawCells(r, start, lo, hi, mar, indexed, verts, minD, maxD) {
+  maxD = min(maxD, CLIPD); // dev: draw only what is near the camera (fast review renders of one zone)
   const cx = F[CX], cy = F[CY], cz = F[CZ], fx = F[FX], fy = F[FY], fz = F[FZ], rx = F[RX], rz = F[RZ], ux = F[UX], uy = F[UY], uz = F[UZ];
   const ds = indexed === 1 ? 1 : det * det;
   const tx = TANH * W / H, hw = CELLW * 0.5, ex = hw + mar, min2 = minD * minD * ds, max2 = maxD * maxD * ds;
@@ -450,7 +475,13 @@ function render() {
   const zx = cx - PURPLE[0], zz = cz - PURPLE[1]; let zt = (44 - sqrt(zx * zx + zz * zz)) / 18; zt = zt < 0 ? 0 : zt > 1 ? 1 : zt;
   m[51] = zt * zt * (3 - 2 * zt);
   let ek = (-cy - 8) / 26; ek = ek < 0 ? 0 : ek > 1 ? 1 : ek;
-  m[56] = EXPO * (0.6 + 0.4 * ek) * (2.6 - 1.6 * DAY); m[57] = RAYS * DAY; m[58] = det; m[59] = DAY;
+  { // the anemone garden (start basin) is shown as a night dive under blue light: swimming in, the light fades to night;
+    // leaving, day comes back. Only the look changes; the animals keep the real time of day.
+    const b = (a, c, x) => { const t = clamp((x - a) / (c - a), 0, 1); return t * t * (3 - 2 * t); };
+    GNITE += (b(21, 15, Math.hypot(cx - HOMEP[0], cz - HOMEP[1])) - GNITE) * 0.03; // night only near the clownfish home (the stone arch)
+  }
+  const DV = DAY * (1 - GNITE);
+  m[56] = EXPO * (0.6 + 0.4 * ek) * (2.6 - 1.6 * DV); m[57] = RAYS * DV; m[58] = det; m[59] = DV;
   { // the diver's lamp: held low on the right, aimed at what is 6 m ahead in the middle of the screen
     const lx = cx + rx * 0.35 - ux * 0.3 + fx * 0.1, ly = cy - uy * 0.3 + fy * 0.1, lz = cz + rz * 0.35 - uz * 0.3 + fz * 0.1;
     let dx = cx + fx * 6 - lx, dy = cy + fy * 6 - ly, dz = cz + fz * 6 - lz; const dl = Math.hypot(dx, dy, dz); dx /= dl; dy /= dl; dz /= dl;
@@ -472,34 +503,42 @@ function render() {
   r = e.beginRenderPass(passScene);
   r.setBindGroup(0, bg0);
   r.setPipeline(pTerrain); r.setVertexBuffer(0, vbTerrain); r.setVertexBuffer(1, ibSolids); r.setIndexBuffer(ibTerrain, 'uint32');
-  drawCells(r, T.start, T.lo, T.hi, 1.5, 1, 0, 0, 240);
-  r.setPipeline(pSolid); r.setVertexBuffer(0, vbMesh); r.setIndexBuffer(ibMesh, 'uint32');
+  drawCells(r, T.start, T.lo, T.hi, 1.5, 1, 0, 0, TANK ? 160 : 240);
+  r.setVertexBuffer(0, vbMesh); r.setIndexBuffer(ibMesh, 'uint32');
+  if (!TANK) {
+  r.setPipeline(pSolid);
   for (let i = 0; i < 12; i++) { const g = Wd.solids.ranges[i]; if (g[1]) r.drawIndexed(meshes[i].ib.length, g[1], meshes[i].i0, meshes[i].v0, g[0]); }
   for (let i = 0; i < NCHUNK; i++) {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
     drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, 0, i > 5 ? 30 : big ? 40 : 96);
     if (big) drawCells(r, c.start, c.lo, c.hi, 3, meshes[20 + i], 0, 40, 150);
   }
-  for (let i = 0; i < 8; i++) {
-    const lod = i === 3 || i === 4; r.setVertexBuffer(1, ibProp[i]);
+  for (let i = 0; i < PM.length; i++) {
+    const lod = PLOD[i]; r.setVertexBuffer(1, ibProp[i]);
     drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PM[i]], 0, 0, lod ? 6 : 110);
-    if (lod) drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[18 + i], 0, 6, 110);
+    if (lod) drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[lod], 0, 6, 110);
   }
   r.setPipeline(pManta); r.setVertexBuffer(1, ibManta); r.drawIndexed(MANTA.ib.length, nManta, MANTA.i0, MANTA.v0, 0);
   r.setPipeline(pFish); r.setVertexBuffer(1, ibFish); r.drawIndexed(FISH.ib.length, nFish, FISH.i0, FISH.v0, 0);
+  }
   if (nEcoF + nEcoS + nEcoE) {
     Q.writeBuffer(ibEco, 0, EB, 0, (nEcoF + nEcoS + nEcoE) * 8);
     r.setPipeline(pReef); r.setVertexBuffer(1, ibEco);
     if (nEcoF) r.drawIndexed(meshes[28].ib.length, nEcoF, meshes[28].i0, meshes[28].v0, 0);
-    if (nEcoS) r.drawIndexed(meshes[29].ib.length, nEcoS, meshes[29].i0, meshes[29].v0, nEcoF);
+    if (nEcoS && !TANK) r.drawIndexed(meshes[29].ib.length, nEcoS, meshes[29].i0, meshes[29].v0, nEcoF);
     if (nEcoE) r.drawIndexed(meshes[30].ib.length, nEcoE, meshes[30].i0, meshes[30].v0, nEcoF + nEcoS);
   }
-  if (nAnem) { Q.writeBuffer(ibAnem, 0, AN, 0, nAnem * 8); r.setPipeline(pAnem); r.setVertexBuffer(1, ibAnem); r.drawIndexed(meshes[31].ib.length, nAnem, meshes[31].i0, meshes[31].v0, 0); }
+  if (nAnem) {
+    anemSort(); Q.writeBuffer(ibAnem, 0, ANd, 0, ANC[20] * 8); r.setPipeline(pAnem); r.setVertexBuffer(1, ibAnem);
+    for (let j = 0; j < 20; j++) { if (j === 16) r.setPipeline(pCrit); const n = ANC[j + 1] - ANC[j], M = meshes[31 + j]; if (n) r.drawIndexed(M.ib.length, n, M.i0, M.v0, ANC[j]); }
+  }
   // kelp and plants: 9-row blades up close, 5 rows mid-range, a decimated set far away
+  if (!TANK) {
   r.setPipeline(pLeaf); r.setVertexBuffer(0, ibBig); drawCells(r, Wd.big.start, Wd.big.lo, Wd.big.hi, 5, false, 18, 0, 24);
   r.setPipeline(pLeaf5); drawCells(r, Wd.big.start, Wd.big.lo, Wd.big.hi, 5, false, 10, 24, 58);
   r.setPipeline(pLeafF); r.setVertexBuffer(0, ibBigF); drawCells(r, Wd.bigF.start, Wd.bigF.lo, Wd.bigF.hi, 5, false, 6, 58, 150);
   r.setPipeline(pLeafS); r.setVertexBuffer(0, ibSmall); drawCells(r, Wd.small.start, Wd.small.lo, Wd.small.hi, 1.5, false, 6, 0, 70);
+  }
   r.setPipeline(pSurf); r.draw(4);
   r.setPipeline(pBack); r.draw(4);
   r.setPipeline(pBub); r.setVertexBuffer(0, ibBubbles); r.draw(4, nBub);
