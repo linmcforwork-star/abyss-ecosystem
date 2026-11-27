@@ -149,6 +149,50 @@ function meshAnem(kind, lo) {
     const R = 0.13;
     m.tube([[0, -0.03, 0], [0, 0.003, 0], [0, 0.03, 0], [0, 0.06, 0], [0, 0.085, 0], [0, 0.1, 0], [0, 0.108, 0]], (k) => R * [1.2, 1.16, 1.06, 0.98, 0.8, 0.45, 0.12][k], lo ? 12 : 28, false, () => -0.5);
     disc(R * 0.12, 0.108, -0.01, 0, 1, lo ? 12 : 28);
+  } else if (kind === 8 || kind === 9) {
+    // the anemones' lodgers, ~4.5x life size so they can be seen (scale 1: shrimp 12 cm long, crab 9 cm across); front = +x.
+    // Every part is tagged (aux < 0) so fsCrit can paint it; nothing here sways like a tentacle
+    const sd = lo ? 0.6 : 1, S = (n) => max(3, Math.round(n * sd));
+    const squash = (i0, sy, cy, sz = 1) => { for (let k = i0; k < m.p.length / 3; k++) { m.p[k * 3 + 1] = cy + (m.p[k * 3 + 1] - cy) * sy; m.p[k * 3 + 2] *= sz; } };
+    const bulb = (c, r, aux) => m.tube([[c[0] - r, c[1], c[2]], [c[0] - r * 0.5, c[1], c[2]], [c[0], c[1], c[2]], [c[0] + r * 0.5, c[1], c[2]], [c[0] + r, c[1], c[2]]], (k) => r * [0.05, 0.85, 1, 0.85, 0.05][k], S(6), false, () => aux);
+    const leg = (pts, r0, r1, aux, sides = 4) => m.tube(pts, (k) => r0 + (r1 - r0) * k / (pts.length - 1), S(sides), false, () => aux);
+    if (kind === 8) {
+      // anemone shrimp (Ancylocaris brevicarpalis; refs: scratchpad shrimp/sh02,sh04,sh05,sh08): a glassy, humped body
+      // (tall and narrow), white saddle patches rimmed orange (painted), purple-banded legs, long fine antennae, a fanned tail
+      let i0 = m.p.length / 3;
+      const sp = [[-0.063, 0.018], [-0.05, 0.022], [-0.036, 0.034], [-0.022, 0.046], [-0.008, 0.043], [0.008, 0.035], [0.028, 0.032], [0.045, 0.029], [0.056, 0.031], [0.068, 0.034]]; // the hump at the third abdominal segment
+      const rr0 = [0.003, 0.0055, 0.0075, 0.009, 0.0102, 0.0105, 0.0098, 0.0072, 0.0018, 0.0006]; // tapering to a slim rostrum
+      m.tube(sp.map(([x, y]) => [x, y, 0]), (k) => rr0[k], S(12), false, () => -0.2);
+      squash(i0, 1, 0, 0.72);                                                   // narrow from side to side
+      i0 = m.p.length / 3; bulb([0.024, 0.04, 0], 0.012, -0.2); squash(i0, 0.55, 0.04, 0.85); // the raised white saddle on the carapace
+      for (const [dz, a] of [[0, 0], [0.006, 0.5], [-0.006, -0.5]]) { i0 = m.p.length / 3; // the tail fan: three flat blades
+        m.tube([[-0.06, 0.02, 0], [-0.068, 0.018, dz + a * 0.004], [-0.076, 0.017, dz + a * 0.01]], (k) => [0.0035, 0.005, 0.004][k], S(6), false, () => -0.22); squash(i0, 0.3, 0.018); }
+      for (const s2 of [-1, 1]) {
+        bulb([0.05, 0.037, 0.007 * s2], 0.0028, -0.4);                          // eyes
+        leg([[0.05, 0.033, 0.003 * s2], [0.07, 0.043, 0.012 * s2], [0.085, 0.047, 0.03 * s2], [0.09, 0.044, 0.05 * s2], [0.088, 0.04, 0.07 * s2]], 0.0009, 0.0005, -0.35, 3); // antennae
+        leg([[0.036, 0.024, 0.006 * s2], [0.05, 0.022, 0.016 * s2], [0.068, 0.012, 0.022 * s2], [0.08, 0.006, 0.02 * s2]], 0.0016, 0.0024, -0.3); // the long claw-legs
+        for (const x of [0.028, 0.019, 0.01, 0.001]) leg([[x, 0.024, 0.006 * s2], [x + 0.004, 0.026, 0.022 * s2], [x - 0.003, 0.012, 0.032 * s2], [x - 0.006, 0.0, 0.036 * s2]], 0.0013, 0.0009, -0.3); // walking legs
+      }
+    } else {
+      // porcelain crab (Neopetrolisthes maculatus; refs: scratchpad crab/cr01, cr02): a flat round shell, two big flat claws
+      // held forward, three pairs of walking legs, two feathery fans under the eyes for filter feeding; cream with red dots
+      const C = 0.035; let i0 = m.p.length / 3;
+      m.tube(Array.from({ length: 9 }, (_, k) => [-C + 2 * C * k / 8, 0.022, 0]), (k) => C * Math.sqrt(max(0, 1 - ((k - 4) / 4) ** 2)) * (k === 0 || k === 8 ? 0.15 : 1), S(18), false, () => -0.45);
+      squash(i0, 0.42, 0.024, 0.95);
+      for (const s2 of [-1, 1]) {
+        bulb([0.034, 0.029, 0.011 * s2], 0.0035, -0.4);
+        i0 = m.p.length / 3; // merus and carpus: broad and flat, held low and forward
+        m.tube([[0.018, 0.017, 0.022 * s2], [0.038, 0.014, 0.036 * s2], [0.058, 0.012, 0.038 * s2]], (k) => [0.007, 0.009, 0.01][k], S(8), false, () => -0.5);
+        squash(i0, 0.45, 0.014);
+        i0 = m.p.length / 3; // the palm and fingers: a wide flat paddle
+        m.tube([[0.056, 0.012, 0.038 * s2], [0.068, 0.011, 0.036 * s2], [0.082, 0.01, 0.031 * s2]], (k) => [0.009, 0.014, 0.013][k], S(10), false, () => -0.5); // the palm
+        squash(i0, 0.32, 0.01);
+        for (const [dz, r0] of [[0.006, 0.0055], [-0.005, 0.0045]]) { i0 = m.p.length / 3; // two fingers: the fixed one and the movable one
+          m.tube([[0.08, 0.01, (0.031 + dz) * s2], [0.09, 0.0095, (0.028 + dz * 0.7) * s2], [0.099, 0.009, (0.024 + dz * 0.2) * s2]], (k) => r0 * [1, 0.75, 0.25][k], S(7), false, () => -0.5); squash(i0, 0.5, 0.0095); }
+        for (const x of [0.006, -0.009, -0.023]) leg([[x, 0.018, 0.028 * s2], [x - 0.003, 0.027, 0.04 * s2], [x - 0.006, 0.031, 0.047 * s2], [x - 0.01, 0.016, 0.055 * s2], [x - 0.012, 0.0, 0.058 * s2]], 0.0048, 0.0026, -0.55, 5); // short, stout, bent at the knee
+        for (let f = 0; f < 7; f++) { const a = -0.9 + f * 0.3; leg([[0.033, 0.017, 0.004 * s2], [0.042, 0.02, 0.005 * s2], [0.05 + 0.006 * Math.cos(a), 0.025 + 0.016 * Math.cos(a), (0.006 + 0.01 * Math.sin(a + 0.9)) * s2]], 0.0014, 0.0007, -0.6, 3); } // the fans, combing up from under the mouth
+      }
+    }
   } else if (kind === 7) {
     // beaded sea anemone (Heteractis aurora; refs: beaded-anemone/LOOKS.md, au03/au06 side by side with renders): the column
     // buried in sand, only a flat purple disc shows, packed with tentacles that rise, taper to a fine tip and curl over into

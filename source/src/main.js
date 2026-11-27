@@ -104,7 +104,7 @@ const pLeafS = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, constants: 
 const pLeafF = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, constants: { ROWS: 3 } });
 const pFish = scenePipe(mAnim, 'vsFish', 'fsFish', [vbSolid, ibAnim]);
 const pManta = scenePipe(mAnim, 'vsManta', 'fsManta', [vbSolid, ibAnim]);
-const mReef = mod(W_REEF), pReef = scenePipe(mReef, 'vsReef', 'fsReef', [vbSolid, ibAnim]), pAnem = scenePipe(mReef, 'vsAnem', 'fsAnem', [vbSolid, ibAnim]);
+const mReef = mod(W_REEF), pReef = scenePipe(mReef, 'vsReef', 'fsReef', [vbSolid, ibAnim]), pAnem = scenePipe(mReef, 'vsAnem', 'fsAnem', [vbSolid, ibAnim]), pCrit = scenePipe(mReef, 'vsAnem', 'fsCrit', [vbSolid, ibAnim]);
 const pSurf = scenePipe(mSurf, 'vs', 'fs', [], { strip: true }), pBack = scenePipe(mSurf, 'vsB', 'fsB', [], { strip: true });
 const pBub = scenePipe(mSpr, 'vsBub', 'fsBub', [ibBub], { strip: true, blend: { color: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' }, alpha: { srcFactor: 'one', dstFactor: 'one-minus-src-alpha' } } });
 const ADD = { color: { srcFactor: 'one', dstFactor: 'one' }, alpha: { srcFactor: 'one', dstFactor: 'one' } };
@@ -286,7 +286,7 @@ const meshes = [meshChunk(1, 3), meshChunk(7, 3), meshChunk(13, 3), meshChunk(22
 meshes.push(meshFluke(), meshShip().build(), meshManta().build(), meshFish().build(),
   meshChunk(3).build(), meshChunk(11).build(), meshChunk(29).build(), meshChunk(5, 3).build(), meshChunk(17, 3).build(), meshChunk(41, 3).build(), meshChunk(9, 1).build(), meshCoral(0, 1).build(), meshCoral(1, 1).build(), meshChunk(5, 2, 1).build(), meshChunk(17, 2, 1).build(), meshChunk(41, 2, 1).build(),
   meshBrain().build(), meshTable().build(), meshReefFish().build(), meshShark().build(), meshEel().build(), meshAnem(0, 0).build());
-for (let j = 1; j < 16; j++) meshes.push(meshAnem(j >> 1, j & 1).build()); // anemone kind k, far f: mesh 31 + k * 2 + f
+for (let j = 1; j < 20; j++) meshes.push(meshAnem(j >> 1, j & 1).build()); // anemone kind k, far f: mesh 31 + k * 2 + f (kinds 8, 9: the anemone shrimp and the porcelain crab)
 let nV = 0, nI = 0;
 for (const m of meshes) { m.v0 = nV; m.i0 = nI; nV += m.nv; nI += m.ib.length; }
 const allV = new Uint8Array(nV * 16), allI = new Uint32Array(nI);
@@ -304,23 +304,23 @@ const nFish = Wd.fish.length / 8, nManta = Wd.mantas.length / 8, nBub = Wd.bubbl
 const MANTA = meshes[12], FISH = meshes[13];
 // the reef animals (eco.js) write their instances here every frame: fish, then sharks, then eels; 8 floats each
 const NA = 470, EB = new Float32Array(8 * NA), ibEco = device.createBuffer({ size: EB.byteLength, usage: BU.VERTEX | BU.COPY_DST });
-const AN = new Float32Array(8 * 256), ANd = new Float32Array(8 * 256), ANC = new Int32Array(17), ibAnem = device.createBuffer({ size: AN.byteLength, usage: BU.VERTEX | BU.COPY_DST });
+const AN = new Float32Array(8 * 400), ANd = new Float32Array(8 * 640), ANC = new Int32Array(21), ibAnem = device.createBuffer({ size: ANd.byteLength, usage: BU.VERTEX | BU.COPY_DST });
 // anemones sorted for drawing: by kind, the near ones (full tentacles) then the far ones (a quarter, fatter); none past the fog
 function anemSort() {
   let o = 0;
-  for (let j = 0; j < 16; j++) {
+  for (let j = 0; j < 20; j++) {
     ANC[j] = o;
     for (let k = 0; k < nAnem; k++) {
       const b = k * 8, kind = AN[b + 4] | 0, d = hypot(AN[b] - F[CX], AN[b + 1] - F[CY], AN[b + 2] - F[CZ]);
       // near mesh inside D - X, far mesh beyond D + X, and both in between, cross-fading (see fsAnem)
       const D = (5 + 2 * AN[b + 3]) * NEARK, X = 1 + 0.15 * D, far = j & 1;
-      if ((j >> 1) !== kind || (far ? d < D - X : d > D + X) || d > min(75, CLIPD) || k < TANK) continue;
+      if ((j >> 1) !== kind || (far ? d < D - X : d > D + X) || d > min(75, CLIPD) || k < TANK || o >= 640) continue;
       for (let q = 0; q < 8; q++) ANd[o * 8 + q] = AN[b + q];
       if (d > D - X && d < D + X) ANd[o * 8 + 5] += 2 * ((far ? 129 : 1) + Math.round(100 * sstep(D + X, D - X, d)));
       o++;
     }
   }
-  ANC[16] = o;
+  ANC[20] = o;
 }
 let NEARK = [1, 0.6, 0.35][LV] ?? 1; // how far out anemones get their detailed mesh: shrinks with the quality setting
 let CLIPD = 1e9; // dev (dev.js clip): nothing farther than this from the camera is drawn
@@ -526,8 +526,8 @@ function render() {
     if (nEcoE && !TANK) r.drawIndexed(meshes[30].ib.length, nEcoE, meshes[30].i0, meshes[30].v0, nEcoF + nEcoS);
   }
   if (nAnem) {
-    anemSort(); Q.writeBuffer(ibAnem, 0, ANd, 0, ANC[16] * 8); r.setPipeline(pAnem); r.setVertexBuffer(1, ibAnem);
-    for (let j = 0; j < 16; j++) { const n = ANC[j + 1] - ANC[j], M = meshes[31 + j]; if (n) r.drawIndexed(M.ib.length, n, M.i0, M.v0, ANC[j]); }
+    anemSort(); Q.writeBuffer(ibAnem, 0, ANd, 0, ANC[20] * 8); r.setPipeline(pAnem); r.setVertexBuffer(1, ibAnem);
+    for (let j = 0; j < 20; j++) { if (j === 16) r.setPipeline(pCrit); const n = ANC[j + 1] - ANC[j], M = meshes[31 + j]; if (n) r.drawIndexed(M.ib.length, n, M.i0, M.v0, ANC[j]); }
   }
   // kelp and plants: 9-row blades up close, 5 rows mid-range, a decimated set far away
   if (!TANK) {

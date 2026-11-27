@@ -459,8 +459,8 @@ function makeWorld(D, T, flyPts, POSES) {
     // beside it and on the sand beneath, never hanging upside down. Placed on the real terrain surface (its points and
     // normals), so nothing ends up inside the rock. By habit: magnificent in clumps on the steep, exposed rock;
     // bubble-tips crowded in a clonal patch at the foot of the wall; carpet, long-tentacle and tube anemones on the sand.
-    if (ARCH) {
-      const [hx, hz] = HOMEP, R = 16, V = [];
+    // an anemone site: clumps seeded on the real rock and sand round (hx, hz), each by its habit (see the calls below)
+    const aSite = (hx, hz, R, fn) => { const V = [];
       for (let k = 0; k < T.nv * 3; k += 3) if (abs(T.wp[k] - hx) < R && abs(T.wp[k + 2] - hz) < R) V.push(k);
       let fl = 1e9; for (const k of V) if (T.wn[k + 1] > 0.85 && abs(T.wp[k] - hx) < 12 && abs(T.wp[k + 2] - hz) < 12) fl = min(fl, T.wp[k + 1]);
       const used = [], free3 = (k, r) => !used.some((p) => hypot(p[0] - T.wp[k], p[1] - T.wp[k + 1], p[2] - T.wp[k + 2]) < p[3] + r);
@@ -478,6 +478,9 @@ function makeWorld(D, T, flyPts, POSES) {
         let m = 0; for (let i = 0; i < 4000 && m < n && near.length; i++) { const k = near[(rnd() * near.length) | 0], sc = rr(lo, hi); if (!free3(k, sc * 0.34)) continue; put(k, sc, kind, col); m++; }
         return m;
       };
+      fn(cluster, wall, foot, sand, fl);
+    };
+    if (ARCH) aSite(HOMEP[0], HOMEP[1], 16, (cluster, wall, foot, sand, fl) => { const [hx, hz] = HOMEP;
       // arch: ring in the y-z plane at x=hx, legs near z=hz-10 and z=hz+10, opening faces east (+x, toward spawn) and west
       const seen = (test) => (k) => test(k) && T.wn[k] * (-27 - T.wp[k]) + T.wn[k + 2] * (46 - T.wp[k + 2]) > 0; // faces the visitor coming from spawn
       cluster(14, 0, 2, 1.0, 1.4, seen(wall), 2.8, [hx + 2.6, fl + 3, hz + 9]);  // magnificent clump on the south leg's east face
@@ -494,12 +497,32 @@ function makeWorld(D, T, flyPts, POSES) {
       cluster(8, 0, 1, 1.0, 1.3, wall, 2, [hx - 2.6, fl + 3, hz + 9]);
       cluster(8, 0, 5, 1.0, 1.3, wall, 2, [hx - 2.6, fl + 3, hz - 9]);
       // carpets: big and solitary, so a "carpet beach" on the sand in front of the arch, each with room around it
-      for (const [dx, dz] of [[1, 2], [4, -1.5], [7, -3], [6.5, 3.5], [9.5, 0.5], [3, 5], [10, -4], [-5, 4]]) cluster(1, 1, 0, 2.0, 2.5, sand, 0.6, [hx + dx, fl, hz + dz]);
+      for (const [dx, dz] of [[1, 2], [4, -1.5], [7, -3], [6.5, 3.5], [9.5, 0.5], [3, 5], [10, -4], [-5, 4]]) cluster(1, 1, 0, 1.3, 1.6, sand, 0.6, [hx + dx, fl, hz + dz]);
       // long-tentacle: solitary in nature but often several in one sandy patch; three loose groups
       for (const [dx, dz] of [[5, 6], [12, 1], [2, -5]]) cluster(7, 3, 1, 1.5, 2.0, sand, 2.2, [hx + dx, fl, hz + dz]);
       // tube anemones: "tube anemone fields" on soft bottom; three patches
       for (const [dx, dz] of [[8, -1], [11, 5], [-4, -2]]) cluster(8, 4, 1, 0.8, 1.05, sand, 2, [hx + dx, fl, hz + dz]);
-    }
+      // lodgers: porcelain crabs in pairs on the carpets, anemone shrimps on carpets and bubble-tips (sitting on the tentacles,
+      // along the host's own up direction)
+      const onTop = (a, r, h, kind, n) => { const nx = a[5] || 0, nz = a[6] || 0, ny = Math.sqrt(max(0, 1 - nx * nx - nz * nz)); for (let j = 0; j < n; j++) {
+        const an = (j === 0 ? (onTop.a0 = rnd() * TAU) : onTop.a0 + PI * j / n * 2 + rr(-0.4, 0.4)), ox = cos(an) * r * a[3], oz = sin(an) * r * a[3]; ane(a[0] + ox + nx * h * a[3], a[1] + ny * h * a[3] - (nx * ox + nz * oz), a[2] + oz + nz * h * a[3], 1.4 * rr(0.9, 1.1), kind, 0, nx, nz); } };
+      const near = (kd) => anemones.filter((a) => (a[4] | 0) === kd && hypot(a[0] - hx, a[2] - hz) < 16);
+      near(1).slice(0, 5).forEach((a) => onTop(a, 0.14, 0.15, 9, 2));
+      near(1).slice(0, 6).forEach((a, j) => onTop(a, 0.34, 0.13, 8, 1 + (j % 2))); // (further out than the crabs, so they never overlap)
+      near(2).filter((a, j) => j % 4 === 0).forEach((a) => onTop(a, 0.05, 0.26, 8, 1));
+    });
+    // two more anemone spots the owner picked (daylight, no clearing): the big ring arch between 4 and D/E on the map, and
+    // the small tunnel near 7E; magnificent clumps on the rock, bubble-tips at the feet and in the tunnel mouths
+    if (ARCH) aSite(ARCHES[1][0], ARCHES[1][2], 18, (cluster, wall, foot, sand, fl) => { const hx = ARCHES[1][0], hz = ARCHES[1][2];
+      cluster(10, 0, 2, 1.0, 1.4, wall, 2.4, [hx + 3, fl + 3, hz + 13]); cluster(9, 0, 5, 1.0, 1.4, wall, 2.4, [hx - 3, fl + 3, hz - 13]);
+      cluster(8, 0, 1, 1.0, 1.3, wall, 2.2, [hx + 3, fl + 3.5, hz - 13]); cluster(6, 0, 2, 1.0, 1.3, wall, 2, [hx - 3, fl + 2.5, hz + 13]);
+      cluster(9, 2, 1, 0.8, 1.1, foot, 1.4, [hx + 4, fl + 1, hz + 10]); cluster(8, 2, 1, 0.8, 1.1, foot, 1.4, [hx - 4, fl + 1, hz - 10]);
+      cluster(6, 3, 1, 1.5, 2.0, sand, 2.2, [hx + 6, fl, hz]); for (const dz of [-4, 3]) cluster(1, 1, 0, 1.3, 1.6, sand, 0.6, [hx - 5, fl, hz + dz]);
+    });
+    for (const [ex, ey, ez] of [[HOLES[1][0], HOLES[1][1], HOLES[1][2]], [HOLES[1][4], HOLES[1][5], HOLES[1][6]]]) if (ARCH) aSite(ex, ez, 10, (cluster, wall, foot) => {
+      cluster(10, 2, 1, 0.8, 1.1, wall, 1.8, [ex + 3, ey - 1, ez]); cluster(8, 2, 1, 0.8, 1.1, wall, 1.6, [ex - 3, ey - 1, ez]); // bubble-tips in the tunnel's mouth
+      cluster(7, 0, 2, 1.0, 1.3, wall, 2, [ex + 4, ey + 2, ez + (ez < 120 ? -2 : 2)]); cluster(5, 2, 1, 0.8, 1.1, foot, 1.3, [ex, ey - 3, ez + (ez < 120 ? -3 : 3)]);
+    });
     const walls = [];
     for (let i = 0; i < 600000 && walls.length < (ARCH ? 0 : 1); i++) {
       const k = pickV(), x = T.wp[k], y = T.wp[k + 1], z = T.wp[k + 2], ny = T.wn[k + 1];

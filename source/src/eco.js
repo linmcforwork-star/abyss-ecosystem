@@ -44,6 +44,11 @@ const ANSP = [SPC[10],
 ANSP[6] = ANSP[5]; // shut into a red dome: the same animal
 ANSP[7] = { zh: '珠光海葵', la: 'Heteractis aurora', short: '珠光海葵',
   facts: ['每根触手上都有一圈圈白色的"珠子"，像一串串珍珠，所以叫珠光海葵。', '身子埋在沙里，只露出铺满触手的口盘；受惊时整个缩进沙里。', '克氏小丑最爱住它，三点白小鱼也常躲在里面。'] };
+// the anemones' little lodgers (kinds 8, 9: drawn with the anemones, but shaded as animals, see fsCrit)
+ANSP[8] = { zh: '短腕岩虾（海葵虾）', la: 'Ancylocaris brevicarpalis', short: '海葵虾',
+  facts: ['身体几乎透明，背上和尾扇上有镶橙边的白斑，腿上是一圈圈紫蓝色的环纹。', '住在地毯海葵、奶嘴海葵这些大海葵的触手之间，不会被蜇。', '真身只有 2–3 厘米，这里放大了几倍，好让你看得见。'] };
+ANSP[9] = { zh: '斑点瓷蟹', la: 'Neopetrolisthes maculatus', short: '瓷蟹',
+  facts: ['白色扁平的身子和一对大螯上，布满红褐色的小斑点，像一只瓷器。', '它不用螯捉吃的，而是挥动嘴边两把羽毛似的小扇子，从水里滤食浮游生物。', '常常一对住在一只地毯海葵上，靠海葵的刺保护自己。甲壳只有 2 厘米左右，这里放大了。'] };
 // states
 const S_HOVER = 0, S_HIDE = 1, S_TRAVEL = 2, S_GRAZE = 3, S_POSE = 4, S_CLEAN = 5, S_STALK = 6, S_BURST = 7, S_SLEEP = 8, S_PATROL = 9,
   S_GUARD = 10, S_FORAGE = 11, S_HOLE = 12, S_GONE = 13, S_ATE = 14;
@@ -138,7 +143,7 @@ let nG = 0;
   if (!HEADS.length) HEADS.push([0, floorAt(0, 0) + 1, 0, 1]);
   // clownfish: a big female, a smaller male, sometimes a juvenile, in every anemone
   let fams = 0; // at most 22 clownfish families: a dense clump has many anemones but only some hold fish, and the fish budget (NA) must leave room for sharks and eels
-  ANE.map((a, k) => k).sort((p, q) => hypot(ANE[p][0] - HOMEP[0], ANE[p][2] - HOMEP[1]) - hypot(ANE[q][0] - HOMEP[0], ANE[q][2] - HOMEP[1])).forEach((k, r) => { const a = ANE[k]; if ((a[4] | 0) > 3 || (r > 3 && rnd() > 0.35) || fams >= 22) return; fams++; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) { LEN[i] = [0.3, 0.27, 0.24][j]; setClown(i, a, j); } } }); // ~3.5x life size (the hosts are big too), so you can see them
+  ANE.map((a, k) => k).sort((p, q) => hypot(ANE[p][0] - HOMEP[0], ANE[p][2] - HOMEP[1]) - hypot(ANE[q][0] - HOMEP[0], ANE[q][2] - HOMEP[1])).forEach((k, r) => { const a = ANE[k]; if ((a[4] | 0) > 3 || (r > 3 && rnd() > 0.35) || fams >= 28) return; fams++; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) { LEN[i] = [0.3, 0.27, 0.24][j]; setClown(i, a, j); } } }); // ~3.5x life size (the hosts are big too), so you can see them
   // three-spot dascyllus: 4-6 juveniles over the bigger magnificent anemones (at most 7 anemones)
   { let m = 0; ANE.forEach((a, k) => { if ((a[4] | 0) !== 0 || a[3] < 1.3 || m >= 7) return; m++; const n = 4 + (rnd() * 3 | 0); for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.4, 0.4), a[1] + 0.6, a[2] + rr(-0.4, 0.4), k); if (i >= 0) setDasc(i); } }); }
   // chromis: a cloud over each coral head
@@ -165,8 +170,8 @@ let nG = 0;
 }
 // anemone instances (static apart from closing at night)
 // (instance: position, size, colour seed, night closing, and the tilt for the ones on rock walls: normal x, z)
-for (let k = 0; k < ANE.length && k < 256; k++) { const a = ANE[k]; AN.set([a[0], a[1], a[2], a[3], a[4], 0, a[5] || 0, a[6] || 0], k * 8); }
-nAnem = min(ANE.length, 256);
+for (let k = 0; k < ANE.length && k < 400; k++) { const a = ANE[k]; AN.set([a[0], a[1], a[2], a[3], a[4], 0, a[5] || 0, a[6] || 0], k * 8); }
+nAnem = min(ANE.length, 400);
 
 // ---------------------------------------------------------------- movement helpers
 const PRED = [];                // indices of the predators (trout, sharks) for the prey's threat checks
@@ -678,13 +683,13 @@ function zoneStep(dt) {
 // ---------------------------------------------------------------- the card's picture: a real photo of the species
 // The 3D models are coloured for looks; the card shows what the animal really looks like. Photos from Wikimedia Commons
 // (free licences), stored next to the page in photos/ and loaded only when a card opens; the author is credited under it.
-const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "clown1": "Diego Delso · CC BY-SA 4.0", "clown2": "Diego Delso · CC BY-SA 4.0", "dasc": "Diego Delso · CC BY-SA 4.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0", "an5": "Fabrizio P. · CC BY-SA 3.0", "an7": "Diego Delso · CC BY-SA 4.0"}; // photo credits (details and links: SPECIES.md)
+const PHOTOS = {"clown": "Nick Hobgood · CC BY-SA 3.0", "clown1": "Diego Delso · CC BY-SA 4.0", "clown2": "Diego Delso · CC BY-SA 4.0", "dasc": "Diego Delso · CC BY-SA 4.0", "chromis": "Philippe Bourjon · CC BY-SA 4.0", "cleaner": "Diego Delso · CC BY-SA 4.0", "parrot": "Rickard Zerpe · CC BY 2.0", "idol": "Diego Delso · CC BY-SA 4.0", "grouper": "portioid · CC BY-SA 4.0", "tang": "Holger Krisp · CC BY 3.0", "shark": "Charles J. Sharp · CC BY-SA 4.0", "moray": "Diego Delso · CC BY-SA 4.0", "manta": "Jaine et al. · CC BY 2.5", "an0": "Diego Delso · CC BY-SA 4.0", "an1": "Anne Hoggett · CC BY 3.0", "an2": "Nick Hobgood · CC BY-SA 3.0", "an3": "Diego Delso · CC BY-SA 4.0", "an4": "Luc Viatour · CC BY-SA 3.0", "an5": "Fabrizio P. · CC BY-SA 3.0", "an7": "Diego Delso · CC BY-SA 4.0", "an8": "Diego Delso · CC BY-SA 4.0", "an9": "Diego Delso · CC BY-SA 4.0"}; // photo credits (details and links: SPECIES.md)
 const PKEY = ['clown', 'chromis', 'cleaner', 'parrot', 'idol', 'grouper', 'tang', 'shark', 'moray', 'manta'];
 const cvImg = document.createElement('img'), cvCr = document.createElement('small');
 cvImg.alt = ''; cPic.appendChild(cvImg); cPic.appendChild(cvCr);
 let cvKey = '';
 function cvShow(sp, id) {
-  const k = sp === 10 ? 'an' + [0, 1, 2, 3, 4, 5, 5, 7][AN[(id - ANEB) * 8 + 4] | 0] : sp === 0 && VR[id] ? (VR[id] === 4 ? 'dasc' : 'clown' + min(VR[id], 2)) : PKEY[sp], c = PHOTOS[k];
+  const k = sp === 10 ? 'an' + [0, 1, 2, 3, 4, 5, 5, 7, 8, 9][AN[(id - ANEB) * 8 + 4] | 0] : sp === 0 && VR[id] ? (VR[id] === 4 ? 'dasc' : 'clown' + min(VR[id], 2)) : PKEY[sp], c = PHOTOS[k];
   cPic.style.display = c ? 'block' : 'none';
   if (!c || k === cvKey) return;
   cvKey = k; cvImg.src = 'photos/' + k + '.webp'; cvCr.textContent = '照片：' + c;
