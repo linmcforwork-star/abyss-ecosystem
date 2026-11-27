@@ -488,10 +488,17 @@ function makeWorld(D, T, flyPts, POSES) {
       cluster(8, 2, 1, 0.7, 1.0, seen(wall), 1.3, [hx + 8, fl + 2, hz - 12]);    // bubble-tips tucked into the same wall
       cluster(12, 2, 1, 0.8, 1.1, seen(foot), 1.5, [hx + 3.5, fl + 1, hz + 6.5]);     // bubble-tip patch at the south leg's foot
       cluster(10, 2, 1, 0.8, 1.1, seen(foot), 1.4, [hx + 3.5, fl + 1, hz - 6.5]);     // and the north leg's foot
-      for (const [dx, dz] of [[1, 2], [7, -3], [-5, 4], [10, 2]]) cluster(1, 1, 0, 2.1, 2.5, sand, 0.5, [hx + dx, fl, hz + dz]); // carpets, alone on the sand
-      for (const [dx, dz] of [[6, 3], [4.5, -2], [9, 6], [-2, -3], [12, -4], [3, 0]]) cluster(1, 3, 1, 1.8, 2.2, sand, 0.5, [hx + dx, fl, hz + dz]); // long-tentacle, alone in the sand
-      cluster(5, 4, 1, 0.8, 1.0, sand, 2.2, [hx + 8, fl, hz - 1]);              // two loose groups of tube anemones on the open sand
-      cluster(4, 4, 1, 0.8, 1.0, sand, 2, [hx + 11, fl, hz + 5]);
+      // the wall to the left (south) of the arch and the legs' far faces
+      cluster(10, 0, 2, 1.0, 1.4, seen(wall), 2.4, [hx + 5, fl + 3, hz + 13]);
+      cluster(8, 2, 1, 0.8, 1.1, seen(wall), 1.3, [hx + 3, fl + 2, hz + 12]);
+      cluster(8, 0, 1, 1.0, 1.3, wall, 2, [hx - 2.6, fl + 3, hz + 9]);
+      cluster(8, 0, 5, 1.0, 1.3, wall, 2, [hx - 2.6, fl + 3, hz - 9]);
+      // carpets: big and solitary, so a "carpet beach" on the sand in front of the arch, each with room around it
+      for (const [dx, dz] of [[1, 2], [4, -1.5], [7, -3], [6.5, 3.5], [9.5, 0.5], [3, 5], [10, -4], [-5, 4]]) cluster(1, 1, 0, 2.0, 2.5, sand, 0.6, [hx + dx, fl, hz + dz]);
+      // long-tentacle: solitary in nature but often several in one sandy patch; three loose groups
+      for (const [dx, dz] of [[5, 6], [12, 1], [2, -5]]) cluster(7, 3, 1, 1.5, 2.0, sand, 2.2, [hx + dx, fl, hz + dz]);
+      // tube anemones: "tube anemone fields" on soft bottom; three patches
+      for (const [dx, dz] of [[8, -1], [11, 5], [-4, -2]]) cluster(8, 4, 1, 0.8, 1.05, sand, 2, [hx + dx, fl, hz + dz]);
     }
     const walls = [];
     for (let i = 0; i < 600000 && walls.length < (ARCH ? 0 : 1); i++) {

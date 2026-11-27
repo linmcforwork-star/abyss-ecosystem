@@ -828,6 +828,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
 @vertex fn vsAnem(i: VI) -> VO {
   var o: VO;
   let t = g.cam.w; let sz = i.a.w; var l = i.p; var a = min(i.n.w, -.11); // non-tentacle parts keep their tag (-.5 column, -.4 disc)
+  // b.y: how far it is closed (0..1) + 2 * a fade code while it crosses between its near and far mesh (main.js anemSort)
+  let fcode = floor(i.b.y * .5); let cl = i.b.y - 2. * fcode;
   // b.x: kind (integer part, see meshAnem) + colour; each one also gets its own turn and stretch from where it sits
   let kind = floor(i.b.x); let hsh = fract(sin(dot(i.a.xz, vec2f(12.9898, 78.233))) * 43758.55);
   let yaw = hsh * 6.2832; let cs = cos(yaw); let sn = sin(yaw);
@@ -841,8 +843,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
     // sway and pivot by kind: carpet barely moves, long thin tentacles swing more; a tube anemone closes toward its tube top
     let amp = array<f32, 8>(1., .35, .5, 1.1, 1.8, .9, 0., .5)[u32(kind)]; let py = select(select(select(.06, .5, kind > 3.5), .13, kind > 4.5), .12, kind == 4.);
     let sw = a * a * amp; let ph = sd * 2.39996;
-    let shrink = 1. - i.b.y * .4 * a;
-    l = vec3f(l.x * mix(1., .9, i.b.y * a), (l.y - py) * shrink + py, l.z * mix(1., .9, i.b.y * a));
+    let shrink = 1. - cl * .4 * a;
+    l = vec3f(l.x * mix(1., .9, cl * a), (l.y - py) * shrink + py, l.z * mix(1., .9, cl * a));
     // the garden's current: all tentacles lean downstream together (more toward the tips) and breathe with slow surges,
     // like anemones in a reef current or an aquarium's pump flow; each tentacle then adds only a small sway of its own
     let lean = array<f32, 8>(.14, .07, .05, .1, .14, .1, 0., .06)[u32(kind)] * a * a * (.75 + .25 * sin(t * .45 + i.a.x * .15 + i.a.z * .1) + .08 * sin(t * 1.3 + sd));
@@ -859,7 +861,7 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   let Tz = cross(Tx, N);
   let w = i.a.xyz + (Tx * l.x + N * l.y + Tz * l.z) * sz;
   let nr = vec3f(i.n.x * cs - i.n.z * sn, i.n.y, i.n.x * sn + i.n.z * cs);
-  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = Tx * nr.x + N * nr.y + Tz * nr.z; o.op = i.p; o.sp = vec2f(i.b.x, hsh); o.aux = a; o.lt = shadow1(w);
+  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = Tx * nr.x + N * nr.y + Tz * nr.z; o.op = i.p; o.sp = vec2f(i.b.x, hsh + 2. * fcode); o.aux = a; o.lt = shadow1(w);
   return o;
 }
 @fragment fn fsAnem(i: VO, @builtin(front_facing) ff: bool) -> @location(0) vec4f {
@@ -936,8 +938,9 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   // tissue pattern: darker stripes along the bubble-tip's tentacles, soft mottling on the magnificent's
   let stp = .5 + .5 * sin(phi * select(6., 8., kind == 2.));
   if (kind == 2. && okT) { alb *= 1. - .35 * ss(.35, .9, stp) * (1. - tip); }
-  if (kind == 0. && i.aux >= 0.) { alb *= .88 + .24 * fract(sin(floor(i.aux * 14.) * 91.7 + i.sp.y * 13.) * 4375.); }
-  alb *= 1. + .25 * (vec3f(fract(i.sp.y * 3.1), fract(i.sp.y * 5.3), fract(i.sp.y * 7.7)) - .5); // each one a little different
+  let hs = fract(i.sp.y);
+  if (kind == 0. && i.aux >= 0.) { alb *= .88 + .24 * fract(sin(floor(i.aux * 14.) * 91.7 + hs * 13.) * 4375.); }
+  alb *= 1. + .25 * (vec3f(fract(hs * 3.1), fract(hs * 5.3), fract(hs * 7.7)) - .5); // each one a little different
   let E = sunE(i.wp.y, z) * i.lt;
   var c = alb * (E * (.35 + .65 * sat(dot(n, L))) + amb(i.wp, n, vv.g, z) * .8);
   c += alb * torch(i.wp, n) * .6 * (1. - nite()); // at night the blue light itself mostly turns into the glow below
@@ -995,6 +998,15 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
   { c = max(c, vec3f(0.)); let m0 = max(max(c.r, max(c.g, c.b)), 1e-4); c = mix(c, m0 * pow(c / m0, vec3f(1.5)), nite()); }
   if (aur) { c = mix(c, max(c - .01, vec3f(0.)) * 1.12, nite()); } // beaded anemone: crisper contrast between dark stalks and pale beads // night: richer colour (the screen's gamma washes thin colours to pastel)
   { let mx = max(c.r, max(c.g, c.b)); c *= mix(1. / (1. + 2. * max(mx - .3, 0.)), 1. / (1. + .8 * max(mx - .5, 0.)), nite()); } // a soft roll-off that keeps light and dark apart // never burn out to white (night exposure is ~2.6x)
+  { // crossing between the near and far mesh: both are drawn for a metre or two, each keeping a share of the pixels
+    // (a fine screen dither), so the detail fades in instead of popping. code 1..101: near mesh, 129..229: far mesh
+    let fc = floor(i.sp.y * .5);
+    if (fc > .5) {
+      let far = fc > 127.5; let f = (fc - select(1., 129., far)) * .01; // the near mesh's share
+      let dh = fract(52.9829189 * fract(dot(floor(i.cp.xy), vec2f(.06711056, .00583715))));
+      if (select(dh > f, dh <= f, far)) { discard; }
+    }
+  }
   return fin(fog(c, i.wp, z));
 }
 `;

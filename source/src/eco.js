@@ -137,7 +137,8 @@ let nG = 0;
   for (const h of all) if (HEADS.length < 16 && !HEADS.some((q) => hypot(q[0] - h[0], q[2] - h[2]) < 9)) HEADS.push(h);
   if (!HEADS.length) HEADS.push([0, floorAt(0, 0) + 1, 0, 1]);
   // clownfish: a big female, a smaller male, sometimes a juvenile, in every anemone
-  ANE.forEach((a, k) => { if ((a[4] | 0) > 3 || (k > 3 && rnd() > 0.45)) return; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) { LEN[i] = [0.3, 0.27, 0.24][j]; setClown(i, a, j); } } }); // ~3.5x life size (the hosts are big too), so you can see them
+  let fams = 0; // at most 22 clownfish families: a dense clump has many anemones but only some hold fish, and the fish budget (NA) must leave room for sharks and eels
+  ANE.map((a, k) => k).sort((p, q) => hypot(ANE[p][0] - HOMEP[0], ANE[p][2] - HOMEP[1]) - hypot(ANE[q][0] - HOMEP[0], ANE[q][2] - HOMEP[1])).forEach((k, r) => { const a = ANE[k]; if ((a[4] | 0) > 3 || (r > 3 && rnd() > 0.35) || fams >= 22) return; fams++; const n = 2 + (rnd() < 0.5); /* clownfish in about half the anemones */ for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.3, 0.3), a[1] + 0.35, a[2] + rr(-0.3, 0.3), k); if (i >= 0) { LEN[i] = [0.3, 0.27, 0.24][j]; setClown(i, a, j); } } }); // ~3.5x life size (the hosts are big too), so you can see them
   // three-spot dascyllus: 4-6 juveniles over the bigger magnificent anemones (at most 7 anemones)
   { let m = 0; ANE.forEach((a, k) => { if ((a[4] | 0) !== 0 || a[3] < 1.3 || m >= 7) return; m++; const n = 4 + (rnd() * 3 | 0); for (let j = 0; j < n; j++) { const i = add(0, a[0] + rr(-0.4, 0.4), a[1] + 0.6, a[2] + rr(-0.4, 0.4), k); if (i >= 0) setDasc(i); } }); }
   // chromis: a cloud over each coral head

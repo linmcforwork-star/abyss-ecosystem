@@ -196,7 +196,7 @@ const T = buildTerrain(D);
 
 // preset viewpoints (position, look-at), keys 1-6; the world generator dresses the scene around them
 const POSES = [
-  [4, 17, 44, 4, 0, 18], // high on the south side of the start basin, looking over the anemone garden (look-at height set below)
+  [-19, 8, 46, -40, 0, 44], // the start view: from the spawn side, looking west through the stone arch at the clownfish home (look-at height set below)
   [50, 1.3, 34, 58, -23, 8],
   [-26, 2.2, -100, 0, -9, -108],
   [-55, 1.5, -18, -60, -30, 8],
@@ -312,8 +312,11 @@ function anemSort() {
     ANC[j] = o;
     for (let k = 0; k < nAnem; k++) {
       const b = k * 8, kind = AN[b + 4] | 0, d = hypot(AN[b] - F[CX], AN[b + 1] - F[CY], AN[b + 2] - F[CZ]);
-      if (kind * 2 + (d > (5 + 2 * AN[b + 3]) * NEARK) !== j || d > min(75, CLIPD) || k < TANK) continue;
+      // near mesh inside D - X, far mesh beyond D + X, and both in between, cross-fading (see fsAnem)
+      const D = (5 + 2 * AN[b + 3]) * NEARK, X = 1 + 0.15 * D, far = j & 1;
+      if ((j >> 1) !== kind || (far ? d < D - X : d > D + X) || d > min(75, CLIPD) || k < TANK) continue;
       for (let q = 0; q < 8; q++) ANd[o * 8 + q] = AN[b + q];
+      if (d > D - X && d < D + X) ANd[o * 8 + 5] += 2 * ((far ? 129 : 1) + Math.round(100 * sstep(D + X, D - X, d)));
       o++;
     }
   }
