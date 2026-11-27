@@ -755,9 +755,19 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
   var o: VO;
   var sc = i.a.w;
   if (i.c.x < 1.5 && i.c.z > 1.5 && g.res.x > 0.) { sc *= 1. - ss(i.c.z * .7, i.c.z, distance(i.a.xyz, g.cam.xyz) / g.mis.z); }
-  var w = i.a.xyz + qrot(i.b, i.p * sc);
+  // corals and sponges (mat 4-9): every instance its own build: taller or squatter, wider or slimmer, a lean, and for the
+  // barrel sponge a wider or narrower mouth (the texture coordinates op keep the unbent shape, so patterns don't stretch)
+  var p = i.p; var nn = i.n.xyz; let mt = i32(i.c.x + .5);
+  if (mt >= 4 && mt <= 9) {
+    let h1 = fract(i.c.y * 13.7); let h2 = fract(i.c.y * 29.3); let h3 = fract(i.c.y * 51.1);
+    let s3 = vec3f(mix(.82, 1.22, h2), mix(.72, 1.32, h1), mix(.82, 1.22, h2) * mix(.9, 1.1, h3));
+    p *= s3; nn = normalize(nn / s3);
+    if (mt == 4) { let t = sat(i.p.y / 1.3); let k = mix(1., mix(.78, 1.25, h3), t * t); p.x *= k; p.z *= k * mix(1., mix(.78, 1.05, h1), t); p.y += p.x * (h2 - .5) * .35 * t; }
+    p.x += p.y * (h2 - .5) * .22; p.z += p.y * (h3 - .5) * .18;
+  }
+  var w = i.a.xyz + qrot(i.b, p * sc);
   w.y += sin(g.cam.w * .3 + i.c.y * 40.) * i.c.w;
-  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = qrot(i.b, i.n.xyz); o.op = i.p * i.a.w + i.c.y * 37.; o.on = i.n.xyz;
+  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = qrot(i.b, nn); o.op = i.p * i.a.w + i.c.y * 37.; o.on = nn;
   o.m = i.c; o.q = i.b; o.ao = i.n.w;
   return o;
 }
@@ -828,21 +838,26 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     // paler, the grooves between them and the deep cavity (aux low) dark; a dusting of pale silt on up-facing parts
     let hue = fract(sd * 7.31);
     var base = mix(vec3f(.78, .34, .22), vec3f(.66, .30, .20), hue);
-    if (hue > .8) { base = vec3f(.45, .42, .50); }                // the odd mauve-grey one
-    let lam = sat((i.ao - .45) / .55);
+    if (hue > .55) { base = vec3f(.60, .30, .30); }                // rose-brown
+    if (hue > .75) { base = vec3f(.45, .42, .50); }                // mauve-grey
+    if (hue > .9) { base = vec3f(.50, .28, .20); }                 // dark chocolate-brown
+    let pv = fract(sd * 17.3);
+    let lam = sat((i.ao - .45) / .55) * mix(.45, 1., pv);          // some with sharp deep lamellae, some worn smoother
     alb = base * (.55 + .6 * lam) * (.8 + .3 * C.h);
     alb = mix(alb, base * 1.25 + .05, ss(.45, .5, i.ao) * ss(.55, .5, i.ao) * .6);   // the rim, paler
     alb = mix(alb, vec3f(.24, .16, .14), ss(.4, .05, i.ao));      // the cavity
+    if (pv > .7) { alb = mix(alb, base * 1.35 + .06, ss(.62, .78, B.h) * ss(.4, .6, i.ao) * .7); }   // pale encrusting blotches on some
     alb = mix(alb, vec3f(.62, .58, .5), ss(.55, .9, on.y) * ss(.45, .7, B.c) * .35);
     sgro = (lam - .5) * 1.2; vao = .55 + .45 * lam; gloss = .05; bump = 1.6; flu = .2;
   } else if (mat == 6) {
     // brain coral: meandering ridges and valleys over a dome
     let hue = fract(sd * 3.91);
     // two-tone, as in the refs: brown-grey walls over green valleys; some honey-yellow, some salmon, some cream over grey
-    var wall = vec3f(.52, .40, .20); var vall = vec3f(.26, .36, .14);
-    if (hue > .55) { wall = vec3f(.58, .44, .16); vall = vec3f(.36, .30, .10); }
-    if (hue > .75) { wall = vec3f(.60, .32, .18); vall = vec3f(.38, .20, .12); }
-    if (hue > .9) { wall = vec3f(.56, .52, .36); vall = vec3f(.28, .34, .22); }
+    var wall = vec3f(.52, .38, .20); var vall = vec3f(.30, .22, .12);                    // tan-brown
+    if (hue > .25) { wall = vec3f(.40, .48, .22); vall = vec3f(.30, .32, .30); }        // green over grey valleys
+    if (hue > .5) { wall = vec3f(.62, .48, .44); vall = vec3f(.42, .28, .26); }         // cream-pink
+    if (hue > .7) { wall = vec3f(.40, .44, .50); vall = vec3f(.22, .36, .18); }         // blue-grey over green
+    if (hue > .87) { wall = vec3f(.64, .50, .16); vall = vec3f(.40, .32, .10); }        // honey-yellow
     let mq = sin((B.c * 4.5 + C.c * 1.8 + F.c * .3) * TAU * 3.);
     let ridge = ss(-.35, .35, mq);                       // sinuous ridges (sharp crests) between winding valleys
     let crest = ss(.75, 1., ridge);
@@ -855,8 +870,11 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     let hue = fract(sd * 4.37);
     // table coral: brown, pastel green or blue-grey; the top a carpet of short upturned branchlets with pale cup tips
     // (a dense dot field), a cream growing rim, the underside dark and shaded, the stalk grey-brown
-    var base = mix(vec3f(.52, .42, .30), vec3f(.50, .36, .40), step(.45, hue));
-    if (hue > .78) { base = vec3f(.40, .46, .34); }
+    var base = vec3f(.46, .38, .22);                               // brown-olive
+    if (hue > .25) { base = vec3f(.50, .36, .40); }                // lilac-brown
+    if (hue > .5) { base = vec3f(.36, .42, .50); }                 // blue-grey
+    if (hue > .72) { base = vec3f(.40, .46, .30); }                // green
+    if (hue > .88) { base = vec3f(.60, .50, .40); }                // cream
     base *= .85 + .35 * ss(.2, .8, length(i.op.xz - vec2f(sd * 37.)));   // paler toward the growing rim
     let top = ss(.8, .95, i.ao);
     // the branchlet tips: a fine irregular speckle (any regular pattern reads as fabric)
@@ -868,8 +886,8 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     alb = mix(alb, vec3f(.80, .70, .48), tip * .45);
     alb = mix(alb, vec3f(.31, .29, .24), ss(.55, .35, i.ao) * ss(.3, .45, i.ao));   // underside
     alb = mix(alb, vec3f(.42, .39, .31), ss(.3, .2, i.ao));                       // stalk
-    alb *= 1. - .4 * ss(.3, .9, on.y);
-    sgro = tip * 1.5; vao = mix(.55, 1., top); flu = .5; gloss = .15; bump = 1.4;
+    alb *= 1. - .6 * ss(.3, .9, on.y);
+    sgro = tip * .6; vao = mix(.55, 1., top); flu = .5; gloss = .15; bump = 1.4;
   } else if (mat == 8) {
     // giant sea fan: mostly tan-beige, some rust-red; main branches darker; light passes through the fine net
     let hue = fract(sd * 5.73);
@@ -889,14 +907,16 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     // leather coral: a velvety cap (tan, olive, yellow-brown, or blue-lavender grey with a paler rim) over a cream stalk
     let hue = fract(sd * 6.11);
     // (saturated: pale low-chroma colours turn milky white under the cyan ambient)
-    var cap = mix(vec3f(.58, .44, .24), vec3f(.52, .38, .20), fract(hue * 3.));
-    if (hue > .6) { cap = vec3f(.46, .40, .22); }
-    if (hue > .82) { cap = vec3f(.34, .26, .42); }
+    var cap = vec3f(.56, .42, .22);                                  // tan-ochre
+    if (hue > .3) { cap = vec3f(.40, .40, .18); }                    // olive
+    if (hue > .55) { cap = vec3f(.56, .40, .36); }                   // pinkish beige
+    if (hue > .75) { cap = vec3f(.62, .54, .34); }                   // cream-yellow
+    if (hue > .9) { cap = vec3f(.38, .32, .46); }                    // lilac
     let fuzz = .82 + .3 * F.h + .12 * C.h;                             // the extended polyps: a fine soft fuzz
     alb = cap * fuzz;
     alb = mix(alb, vec3f(.55, .48, .32), ss(.3, .12, i.ao));            // the stalk
     alb = mix(alb, cap * .55, ss(.4, .55, i.ao) * ss(.7, .55, i.ao));   // the cap's underside, shaded
-    alb *= 1. - .45 * ss(.3, .9, on.y);   // (sun + caustics wash out faces turned up: keep the cap's colour)
+    alb *= 1. - .62 * ss(.3, .9, on.y);   // (sun + caustics wash out faces turned up: keep the cap's colour)
     flu = .15; gloss = .05; bump = .5; vao = 1.;
   } else {
     // staghorn Acropora: tan to straw-brown branches, pale (cream, or blue-lilac on some) swollen tips, the dead base
@@ -904,7 +924,9 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     let hue = fract(sd * 5.73);
     var body = mix(vec3f(.46, .30, .11), vec3f(.40, .30, .10), fract(hue * 3.));
     if (hue > .7) { body = vec3f(.50, .36, .14); }
-    let tipc = select(vec3f(.91, .89, .81), vec3f(.62, .66, .84), fract(hue * 7.) > .4);
+    if (hue > .85) { body = vec3f(.42, .28, .30); }                // a purple-brown colony
+    var tipc = vec3f(.86, .84, .76); let th = fract(hue * 7.);
+    if (th > .3) { tipc = vec3f(.56, .66, .86); } if (th > .55) { tipc = vec3f(.66, .50, .82); } if (th > .8) { tipc = vec3f(.86, .80, .44); }
     alb = mix(vec3f(.43, .48, .36), body, ss(.3, .55, i.ao)) * (.6 + .5 * B.h) * (.75 + .35 * C.h);
     alb = mix(alb, tipc, ss(.95, 1.05, i.ao));
     flu = .5; gloss = .15; bump = .35; vao = 1.5;
@@ -1895,10 +1917,22 @@ function makeWorld(D, T, flyPts, POSES) {
   const leaf = (L, x, y, z, len, yaw, tilt, wid, hA, type, s1, s2, bend) => { if (type === 1 || !(nth++ % THIN)) L[cellOf(x, z)].push(x, y, z, len, yaw, tilt, type === 1 ? wid : wid * (1 + LV / 2), hA, type, s1, s2, bend); };
   const glint = (...a) => { nth++ % THIN || glints.push(...a); };
   const solids = []; // per mesh id: arrays of 12 floats
-  const props = Array.from({ length: 8 }, () => Array.from({ length: nCells }, () => []));
+  const props = Array.from({ length: 15 }, () => Array.from({ length: nCells }, () => []));
+  // prop groups: 0-5 meshes 4-9, 6 brain 26, 7 table 27, then the growth-form variants (main.js PM): 8, 9 staghorn open /
+  // compact, 10 tiered tables, 11 broken table, 12 lobed brain, 13 encrusting brain, 14 fused barrel pair. The form comes
+  // from the instance seed (not the random stream, so the rest of the world stays where it was)
+  // solid(): corals get a log-normal size (real reefs: many small colonies, few big ones), some half sunk in the sand
+  const propGroup = (mesh, seed) => {
+    const f = fract(seed * 7.77 + 0.13);
+    if (mesh === 7) return f < 0.4 ? 3 : f < 0.7 ? 8 : 9;
+    if (mesh === 27) return f < 0.45 ? 7 : f < 0.75 ? 10 : 11;
+    if (mesh === 26) return f < 0.4 ? 6 : f < 0.7 ? 12 : 13;
+    if (mesh === 4 || mesh === 9) return f < 0.18 ? 14 : mesh - 4;
+    return mesh > 3 && mesh < 10 ? mesh - 4 : -1;
+  };
   const SEAFAN = false; // the sea fan did not pass review (owner 2026-11-27): its spots get a staghorn thicket until it is redone
   const MATOF = { 4: 4, 5: 9, 6: 9, 7: 5, 8: 8, 9: 4 };   // the coral species decide their own material (barrel sponge 4, leather 9, staghorn 5, sea fan 8)
-  const solid = (mesh, x, y, z, sc, q, mat, seed, ts = 1, bob = 0) => { if (mesh === 8 && !SEAFAN) { mesh = 7; sc *= 0.7; } if (MATOF[mesh]) mat = MATOF[mesh]; (mesh > 3 && mesh < 10 ? props[mesh - 4][cellOf(x, z)] : mesh > 25 ? props[mesh - 20][cellOf(x, z)] : (solids[mesh] ||= [])).push(x, y, z, sc, q[0], q[1], q[2], q[3], mat, seed, ts, bob); };
+  const solid = (mesh, x, y, z, sc, q, mat, seed, ts = 1, bob = 0) => { if (mesh === 8 && !SEAFAN) { mesh = 7; sc *= 0.7; } if (mesh === 7) sc = min(sc * 1.3, 2.4); if (MATOF[mesh]) mat = MATOF[mesh]; const g = propGroup(mesh, seed); if (g >= 0) { const gs = sqrt(-2 * Math.log(0.001 + 0.998 * fract(seed * 3.71 + 0.5))) * cos(TAU * fract(seed * 5.13 + 0.2)); sc *= clamp(exp(0.35 * gs - 0.06), 0.45, 1.6); y -= sc * 0.08 * fract(seed * 9.1); } (g >= 0 ? props[g][cellOf(x, z)] : (solids[mesh] ||= [])).push(x, y, z, sc, q[0], q[1], q[2], q[3], mat, seed, ts, bob); };
   const chunks = Array.from({ length: NCHUNK }, () => Array.from({ length: nCells }, () => []));
   const glints = [];
   const rel = (i, f, r) => { const p = POSES[i]; let fx = p[3] - p[0], fz = p[5] - p[2]; const l = hypot(fx, fz); fx /= l; fz /= l; return [p[0] + fx * f - fz * r, p[2] + fz * f + fx * r]; };
@@ -2525,6 +2559,21 @@ function makeWorld(D, T, flyPts, POSES) {
     if (typeof window !== 'undefined') window.__cleared = cut; // (dev: how many objects made way)
   }
   // --- under the kelp: no coral (a kelp bed is rock and sand); everything within 1.6 m of a stem and in the dense beds goes
+  // young colonies of the same species round some big ones (they settle near their parent)
+  { const add = [];
+    props.forEach((P, g) => { for (const c of P) for (let i = 0; i < c.length; i += 12) {
+      const x = c[i], y = c[i + 1], z = c[i + 2], sc = c[i + 3], sd = c[i + 9];
+      if (sc < 1.1 || fract(sd * 13.3) > 0.5) continue;
+      const n = 1 + (fract(sd * 17.7) * 3 | 0);
+      for (let k = 0; k < n; k++) {
+        const a = TAU * fract(sd * 23.1 + k * 0.37), r = sc * (0.7 + 0.9 * fract(sd * 31.7 + k * 0.53)), x2 = x + cos(a) * r, z2 = z + sin(a) * r, y2 = gy(x2, z2);
+        if (abs(y2 - y) > 0.6 || KELPFREE.some((p) => hypot(x2 - p[0], z2 - p[1]) < p[2])) continue;
+        const q = qAxis(0, 1, 0, a * 3), s2 = fract(sd * 41.3 + k * 0.29);
+        add.push(g, x2, y2 - 0.04, z2, sc * (0.25 + 0.2 * s2), q[0], q[1], q[2], q[3], c[i + 8], fract(sd + 0.31 * (k + 1)), c[i + 10], 0);
+      }
+    } });
+    for (let i = 0; i < add.length; i += 13) { const cl = props[add[i]][cellOf(add[i + 1], add[i + 3])]; if (cl) cl.push(...add.slice(i + 1, i + 13)); else if (!makeWorld.warned) { makeWorld.warned = 1; console.error('juvenile off grid ' + JSON.stringify(add.slice(i, i + 13))); } }
+  }
   if (kelpCols.length) {
     const KG = new Map(); for (let i = 0; i < kelpCols.length; i += 2) { const k = ((kelpCols[i] / 4) | 0) + ',' + ((kelpCols[i + 1] / 4) | 0); (KG.get(k) || KG.set(k, []).get(k)).push(kelpCols[i], kelpCols[i + 1]); }
     const underKelp = (x, z) => {
@@ -2533,14 +2582,17 @@ function makeWorld(D, T, flyPts, POSES) {
       return false;
     };
     const keep = (a) => { const o = []; for (let i = 0; i < a.length; i += 12) if (!underKelp(a[i], a[i + 2])) for (let j = 0; j < 12; j++) o.push(a[i + j]); return o; };
-    for (const m of [4, 5, 6, 7, 8, 9, 26, 27]) { if (m > 25) { const P = props[m - 20]; for (let c = 0; c < P.length; c++) P[c] = keep(P[c]); } else if (m < 10 && m > 3) { const P = props[m - 4]; for (let c = 0; c < P.length; c++) P[c] = keep(P[c]); } }
+    for (const P of props) for (let c = 0; c < P.length; c++) P[c] = keep(P[c]);
   }
-  // dev.html?corals: a row of every coral species on open sand at (6..24, 28) for review shots
+  // dev.html?corals: eight of each coral species in rows on open sand around (5..22, 22..34), for reviewing their variety
   if (typeof location !== 'undefined' && /corals/.test(location.search)) {
-    const inBox = (a) => { const o = []; for (let i = 0; i < a.length; i += 12) if (!(a[i] > 3 && a[i] < 27 && a[i + 2] > 23 && a[i + 2] < 33)) for (let j = 0; j < 12; j++) o.push(a[i + j]); return o; };
+    const inBox = (a) => { const o = []; for (let i = 0; i < a.length; i += 12) if (!(a[i] > 2 && a[i] < 25 && a[i + 2] > 19 && a[i + 2] < 37)) for (let j = 0; j < 12; j++) o.push(a[i + j]); return o; };
     for (const P of props) for (let c = 0; c < P.length; c++) P[c] = inBox(P[c]);
-    [[4, 1], [9, 1.1], [5, 1.2], [6, 1.2], [7, 1.1], [8, 2.2], [26, 1.6], [27, 1.6]].forEach(([m, sc], k) => {
-      const x = 5 + k * 2.2, z = 28; solid(m, x, gy(x, z) - 0.05, z, sc, qAxis(0, 1, 0, 0.6), m === 26 ? 6 : m === 27 ? 7 : 4, 0.3 + k * 0.08, 1, 0);
+    [[4, 0.9], [9, 1], [5, 1.1], [7, 1], [26, 1.3], [27, 1.3]].forEach(([m, sc], r) => {
+      for (let k = 0; k < 8; k++) {
+        const x = 5 + k * 2.2, z = 22 + r * 2.4, rot = qAxis(0, 1, 0, k * 0.9);
+        solid(m, x, gy(x, z) - 0.05, z, sc * (0.8 + 0.06 * k), rot, m === 26 ? 6 : m === 27 ? 7 : 4, (k * 0.137 + r * 0.31) % 1, 1, 0);
+      }
     });
   }
   const sol = { data: [], ranges: [] }; let si = 0;
@@ -2556,7 +2608,8 @@ function makeWorld(D, T, flyPts, POSES) {
   };
   // the corals and sponges, for aiming at them (eco.js): x, y, z, scale, mesh
   const corals = [];
-  props.forEach((P, g) => { const m = g < 6 ? g + 4 : g + 20; for (const c of P) for (let i = 0; i < c.length; i += 12) corals.push(c[i], c[i + 1], c[i + 2], c[i + 3], m); });
+  const GM = [4, 5, 6, 7, 8, 9, 26, 27, 7, 7, 27, 27, 26, 26, 4];
+  props.forEach((P, g) => { const m = GM[g]; for (const c of P) for (let i = 0; i < c.length; i += 12) corals.push(c[i], c[i + 1], c[i + 2], c[i + 3], m); });
   return { gy, glints: new Float32Array(glints), chunks: chunks.map(packC), props: props.map(packC), big: pack(big), bigF: pack(big, 2, 1.5), small: pack(small), solids: { data: new Float32Array(sol.data), ranges: sol.ranges }, bubbles: new Float32Array(bubbles), volD, gm, fish: new Float32Array(fish), mantas: new Float32Array(mantas), snow, floorH, heads, anemones, holes, stations, zones: ZONES, corals: new Float32Array(corals) };
 }
 const fract = (x) => x - floor(x);
@@ -2579,13 +2632,35 @@ function meshLathe(prof, seg, lump, ribs = 0) {
   for (let k = 0; k < rings.length - 1; k++) for (let s = 0; s < seg; s++) { const s2 = (s + 1) % seg; m.quad(rings[k][s], rings[k + 1][s], rings[k + 1][s2], rings[k][s2]); }
   return m;
 }
+// append mesh b to a, its points mapped by f([x, y, z]) -> [x, y, z]
+function meshMerge(a, b, f) {
+  const o = a.p.length / 3;
+  for (let i = 0; i < b.p.length; i += 3) { const q = f([b.p[i], b.p[i + 1], b.p[i + 2]]); a.p.push(q[0], q[1], q[2]); }
+  a.aux.push(...b.aux); for (const k of b.i) a.i.push(k + o);
+  return a;
+}
+const mXf = (dx, dy, dz, s, yaw = 0, tilt = 0) => ([x, y, z]) => {
+  const c = cos(yaw), sn = sin(yaw); let X = x * c - z * sn, Z = x * sn + z * c, Y = y; const ct = cos(tilt), st = sin(tilt); const X2 = X * ct - Y * st; Y = X * st + Y * ct;
+  return [X2 * s + dx, Y * s + dy, Z * s + dz];
+};
+// the coral growth-form variants (owner 2026-11-27: the same species must not look copy-pasted). 0 tiered tables: a big
+// plate with a smaller one above and beside it; 1 a table with a broken-off bite; 2 a lobed brain coral (three domes
+// grown together); 3 a flat encrusting brain coral; 4 a fused pair of barrel sponges, the small one leaning out
+function meshVariant(k) {
+  if (k === 0) return meshMerge(meshTable(), meshTable(1), mXf(0.75, 0.28, 0.35, 0.62, 1.3));
+  if (k === 1) return meshTable(2);
+  if (k === 2) { const m = meshBrain(); meshMerge(m, meshBrain(1), mXf(0.62, -0.08, 0.18, 0.72, 2)); return meshMerge(m, meshBrain(2), mXf(-0.1, -0.1, 0.66, 0.6, 4)); }
+  if (k === 3) return meshMerge(new Mesh(), meshBrain(3), ([x, y, z]) => [x * 1.5, y * 0.3, z * 1.3]);
+  return meshMerge(meshBarrel(1.1, 0.5, 213), meshBarrel(0.75, 0.38, 214), mXf(0.62, -0.02, 0.15, 1, 0.8, -0.28));
+}
 // coral and sponge meshes, each a real species (refs: /mnt/project-files/coral-window/refs/corals/LOOKS.md).
 // mesh 7: staghorn Acropora (A. muricata): an open thicket of knobbly, slightly tapering branches that start oblique at
 // the base and curve upward, branching irregularly; swollen pale tips (aux 1 at a tip, low near the base for shading).
 // mesh 8: giant sea fan (Annella mollis): one flat, slightly curved net in the x-y plane, a short trunk, a few main
 // branches and an irregular fused mesh of fine twigs (no grid). lo: the far versions
-function meshCoral(fan, lo = LV > 1) {
-  rseed(200 + fan);
+// form (staghorn only): 0 a dense thicket, 1 an open colony of fewer, longer branches, 2 a low compact clump
+function meshCoral(fan, lo = LV > 1, form = 0) {
+  rseed(200 + fan + form * 17);
   const m = new Mesh();
   const nrm = (v) => { const l = hypot(...v) || 1; return v.map((c) => c / l); };
   if (!fan) {
@@ -2597,8 +2672,8 @@ function meshCoral(fan, lo = LV > 1) {
       m.tube(pts, (k) => r * (1 - 0.25 * k / seg) * (k === seg ? 1.15 : knob[k]), sides, 'round', (k) => clamp(0.3 + 0.7 * (1 - depth / 3) * (k / seg) + (k === seg ? 0.3 : 0), 0, 1));
       if (depth > 0) { const n = lo ? 1 : 1 + (rnd() < 0.6) + (rnd() < 0.3); for (let i = 0; i < n; i++) { const at = pts[1 + ((rnd() * (seg - 1)) | 0)]; branch(at, nrm([d[0] + rr(-0.9, 0.9), d[1] + rr(0, 0.6), d[2] + rr(-0.9, 0.9)]), r * 0.85, len * rr(0.55, 0.8), depth - 1); } }
     };
-    const n0 = lo ? 12 : 30;
-    for (let i = 0; i < n0; i++) { const a = i / n0 * TAU + rr(-0.3, 0.3); branch([cos(a) * rr(0.05, 0.6), 0, sin(a) * rr(0.05, 0.6)], nrm([cos(a) * rr(0.6, 1.2), rr(0.5, 1.1), sin(a) * rr(0.6, 1.2)]), 0.042, rr(0.4, 0.65), 2); }
+    const n0 = [lo ? 12 : 30, lo ? 6 : 13, lo ? 14 : 34][form], L0 = [0.4, 0.75, 0.24][form], L1 = [0.65, 1.05, 0.4][form], up = [[0.5, 1.1], [0.7, 1.3], [0.2, 0.6]][form];
+    for (let i = 0; i < n0; i++) { const a = i / n0 * TAU + rr(-0.3, 0.3); branch([cos(a) * rr(0.05, 0.6), 0, sin(a) * rr(0.05, 0.6)], nrm([cos(a) * rr(0.6, 1.2), rr(up[0], up[1]), sin(a) * rr(0.6, 1.2)]), form === 1 ? 0.036 : 0.042, rr(L0, L1), 2); }
     return m;
   }
   // sea fan: thick trunk and main branches, then an irregular net of fine twigs between scattered points of the fan's outline
@@ -2794,17 +2869,19 @@ function meshFish() {
 // ============================================================================
 
 // brain coral: a low lumpy dome; the meandering grooves are drawn by the shader (material 6)
-function meshBrain() {
-  rseed(230);
+function meshBrain(v = 0) {
+  rseed(230 + v * 5);   // (v: a different lumpy dome for each growth form)
   return meshLathe([[0, 0, 0.3], [0.5, 0, 0.45], [0.72, 0.1, 0.75], [0.8, 0.28, 1], [0.76, 0.46, 1], [0.6, 0.62, 1], [0.36, 0.73, 1], [0.12, 0.78, 1], [0, 0.785, 1]], 34, 0.38); // (lumpier: real domes are never perfect spheres)
 }
 // table coral (Acropora hyacinthus): a thick stalk widening at its foot, under a wide plate only ~4 cm thick (per metre),
 // an irregular (not round) outline, the rim turned up a touch; the underside is a separate shaded surface with a gap
 // under it. The upturned branchlets on top are painted by the shader (material 7). aux: .25 stalk, .4 underside, 1 top
-function meshTable() {
-  rseed(231);
-  const m = new Mesh(), seg = 40, nr = 7, R = 1.05, rings = [], ph = rnd() * 9;
-  const edge = (a) => R * (1 + 0.1 * sin(3 * a + ph) + 0.06 * sin(7 * a + ph * 2) + 0.04 * (fbm(cos(a) * 2, 0, sin(a) * 2, 2) - 0.5) * 4);
+// v: 1 another outline (the second plate of a tiered pair), 2 a plate with a broken-off bite out of its rim
+function meshTable(v = 0) {
+  rseed(231 + v * 3);
+  const m = new Mesh(), seg = 40, nr = 7, R = 1.05, rings = [], ph = rnd() * 9, bite = rnd() * TAU;
+  const edge = (a) => R * (1 + 0.1 * sin(3 * a + ph) + 0.06 * sin(7 * a + ph * 2) + 0.04 * (fbm(cos(a) * 2, 0, sin(a) * 2, 2) - 0.5) * 4) *
+    (v === 2 ? 1 - 0.45 * max(0, cos(a - bite)) ** 3 : 1);
   for (const [r, h] of [[0.24, 0], [0.16, 0.06], [0.12, 0.2], [0.13, 0.34], [0.2, 0.42]]) { const ring = []; for (let s = 0; s < seg; s++) { const a = s / seg * TAU; ring.push(m.v(cos(a) * r, h, sin(a) * r, 0.25)); } rings.push(ring); }
   const H = 0.45, T = 0.045, under = [], top = [];
   for (let k = 1; k <= nr; k++) { const t = k / nr, ru = [], rt = []; for (let s = 0; s < seg; s++) { const a = s / seg * TAU, r = 0.2 + (edge(a) - 0.2) * t, y = H + 0.06 * t * t + 0.03 * sin(5 * a + ph) * t; ru.push(m.v(cos(a) * r, y - T * (1 - 0.5 * t), sin(a) * r, 0.4)); rt.push(m.v(cos(a) * r, y, sin(a) * r, 1)); } under.push(ru); top.push(rt); }
@@ -3395,7 +3472,8 @@ await say('正在放鱼…', 0.94, 1200);
 // mesh ids: 0-3 boulders, 4-6 sponges, 7-8 coral, 9 tube sponge, 10 whale fluke, 11 ship, 12 manta, 13 fish,
 // 14-20 rock chunks + pebbles, 21-22 coral LOD, 23-25 far LOD of the large rock chunks, 26 brain coral, 27 table coral,
 // 28 reef fish, 29 reef shark, 30 moray eel, 31 sea anemone
-const PM = [4, 5, 6, 7, 8, 9, 26, 27]; // mesh of each prop group
+const PM = [4, 5, 6, 7, 8, 9, 26, 27]; // mesh of each prop group (+ the growth-form variants, appended below)
+const PLOD = { 3: 21, 4: 22 }; // far mesh of a prop group (drawn beyond 6 m)
 const meshes = [meshChunk(1, 3), meshChunk(7, 3), meshChunk(13, 3), meshChunk(22, 3),
   meshBarrel(0.85, 0.55, 212), meshLeather(0), meshLeather(1),
   meshCoral(0), meshCoral(1), meshTubes()].map((m) => m.build());
@@ -3403,6 +3481,10 @@ meshes.push(meshFluke(), meshShip().build(), meshManta().build(), meshFish().bui
   meshChunk(3).build(), meshChunk(11).build(), meshChunk(29).build(), meshChunk(5, 3).build(), meshChunk(17, 3).build(), meshChunk(41, 3).build(), meshChunk(9, 1).build(), meshCoral(0, 1).build(), meshCoral(1, 1).build(), meshChunk(5, 2, 1).build(), meshChunk(17, 2, 1).build(), meshChunk(41, 2, 1).build(),
   meshBrain().build(), meshTable().build(), meshReefFish().build(), meshShark().build(), meshEel().build(), meshAnem(0, 0).build());
 for (let j = 1; j < 20; j++) meshes.push(meshAnem(j >> 1, j & 1).build()); // anemone kind k, far f: mesh 31 + k * 2 + f (kinds 8, 9: the anemone shrimp and the porcelain crab)
+// coral growth forms (world.js propGroup): groups 8, 9 staghorn open / compact (with far versions), 10-14 meshVariant
+{ const b = meshes.length;
+  meshes.push(meshCoral(0, LV > 1, 1).build(), meshCoral(0, LV > 1, 2).build(), ...[0, 1, 2, 3, 4].map((k) => meshVariant(k).build()), meshCoral(0, 1, 1).build(), meshCoral(0, 1, 2).build());
+  PM.push(b, b + 1, b + 2, b + 3, b + 4, b + 5, b + 6); PLOD[8] = b + 7; PLOD[9] = b + 8; }
 let nV = 0, nI = 0;
 for (const m of meshes) { m.v0 = nV; m.i0 = nI; nV += m.nv; nI += m.ib.length; }
 const allV = new Uint8Array(nV * 16), allI = new Uint32Array(nI);
@@ -3464,7 +3546,7 @@ Q.writeTexture({ texture: tMap }, Wd.gm, { bytesPerRow: 2048 }, [512, 512]);
   for (let i = 0; i < 12; i++) { const g = Wd.solids.ranges[i]; if (g[1]) r.drawIndexed(meshes[i].ib.length, g[1], meshes[i].i0, meshes[i].v0, g[0]); }
   // small rocks, sponges and corals (~35M triangles) only on High: too much for a phone's driver
   if (!LV) for (let i = 0; i < NCHUNK; i++) { r.setVertexBuffer(1, ibChunk[i]); r.drawIndexed(meshes[14 + i].ib.length, Wd.chunks[i].n, meshes[14 + i].i0, meshes[14 + i].v0, 0); }
-  if (!LV) for (let i = 0; i < 8; i++) if (Wd.props[i].n) { r.setVertexBuffer(1, ibProp[i]); r.drawIndexed(meshes[PM[i]].ib.length, Wd.props[i].n, meshes[PM[i]].i0, meshes[PM[i]].v0, 0); }
+  if (!LV) for (let i = 0; i < PM.length; i++) if (Wd.props[i].n) { r.setVertexBuffer(1, ibProp[i]); r.drawIndexed(meshes[PM[i]].ib.length, Wd.props[i].n, meshes[PM[i]].i0, meshes[PM[i]].v0, 0); }
   r.setPipeline(pLeafSh); r.setVertexBuffer(0, ibBig); r.draw(6, Wd.big.n);
   r.end();
   Q.submit([e.finish()]);
@@ -3626,10 +3708,10 @@ function render() {
     drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, 0, i > 5 ? 30 : big ? 40 : 96);
     if (big) drawCells(r, c.start, c.lo, c.hi, 3, meshes[20 + i], 0, 40, 150);
   }
-  for (let i = 0; i < 8; i++) {
-    const lod = i === 3 || i === 4; r.setVertexBuffer(1, ibProp[i]);
+  for (let i = 0; i < PM.length; i++) {
+    const lod = PLOD[i]; r.setVertexBuffer(1, ibProp[i]);
     drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PM[i]], 0, 0, lod ? 6 : 110);
-    if (lod) drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[18 + i], 0, 6, 110);
+    if (lod) drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[lod], 0, 6, 110);
   }
   r.setPipeline(pManta); r.setVertexBuffer(1, ibManta); r.drawIndexed(MANTA.ib.length, nManta, MANTA.i0, MANTA.v0, 0);
   r.setPipeline(pFish); r.setVertexBuffer(1, ibFish); r.drawIndexed(FISH.ib.length, nFish, FISH.i0, FISH.v0, 0);

@@ -33,3 +33,58 @@ VERIFICATION
 - Performance: GPU timestamp queries plus a frame-time log from the scripted fly-through. Report average, 99th percentile and max.
 
 DONE WHEN: both verification gates pass. Deliver index.html, the bundle size, the perf report and the critic's final review.
+----------------------------------------------------------------------------------------------------
+CORAL WINDOW: HOW WE BUILD AND VERIFY (added by the fork; the original brief above is kept unchanged)
+
+GOAL
+Turn the scene into an observe-only underwater "photo book" of real ecosystems: real species, labelled up close,
+zones with their own mood. Art direction: realistic real-time 3D, physically lit (never self-glowing), colours may be
+a little prettier than nature. Never cartoon, cel, low-poly, neon or plastic. Every zone screenshot must fit in the
+same diving photo book.
+
+ROLES (each a separate subagent that sees only what its job needs; all are full domain experts and may raise
+anything from their field)
+- Judges (score 1-10, name only clear faults): shape (proportion, posture, motion), colour (contrast, vividness,
+  no grey or glow-stick), realism (side by side with real photos of the species), scene beauty (a whole zone from
+  its arrival point; advice only, no veto).
+- Technicians (no score; may veto an infeasible demand but must say why): lighting/shaders, materials,
+  performance (triangle and draw budgets; if two versions look the same, keep the cheaper), terrain, music/sound,
+  game design, camera/director.
+- Engineering: code gate (files split by function, ESLint/Prettier, readable), workflow (time AND tokens, no waste).
+- Advisers: business, legal (licences of every asset).
+- The owner is the final judge of looks.
+
+RESEARCH FIRST
+Before modelling any creature: exact species, several real photos from different angles, real size, how it moves,
+where it lives; a short "what it looks like" sheet. Judges always get those photos.
+
+REVIEW LOOP
+1. Build the item in a review spot (dev.html?tank for anemones, dev.html?corals for a field of every coral species).
+2. Fast drafts first: 480x270 or 640x360, ?clip=30 (only what lies near the camera is drawn). Check framing and that
+   the item is visible before any full-size render.
+3. Contact sheet: real photo next to the render, same angle; old vs new when iterating. One sheet, one judge agent
+   playing all judges in separate sections.
+4. Stop at scores of 6-7. At most 2 rounds, then show the owner. Report only scores given on the final version.
+5. Motion is judged by the owner on a real GPU (preview link); cloud renders are software WebGPU (~1-2 min a frame).
+
+RENDERING IN THE CLOUD (no GPU)
+- One resident browser + world (scratchpad rsrv.js); jobs are JSON files in a queue folder
+  ({"reload": true?, "waitN": 6, "shots": {"name.png": js | "[pose]"}}), results are PNGs + a .done log.
+- Fail fast: the renderer reloads with a cache-busting version, aborts the job on any page error, shader error or
+  load timeout, deletes the job's old PNGs before shooting (a stale image can never pass for a new one), and a
+  watcher wakes the developer the moment an error line appears, not when the job would have finished.
+- Batch every visible fix before re-rendering; run judges in parallel with the next render.
+
+PERFORMANCE
+- Instancing everywhere: one mesh per growth form, per-instance position/scale/rotation/colour seed; variety comes
+  from 2-3 growth forms per species plus a vertex-shader deform (height, width, lean, mouth) and colour morphs,
+  never from a unique mesh per instance.
+- Near/far LOD by distance; grid cells outside the view or beyond ~110 m are not drawn; Low/Medium draw fewer.
+- Budgets: ~30k triangles for a near anemone; count triangles near/far after each round; the owner benchmarks fps
+  on a real GPU (dev mode, key B).
+
+PREVIEW AND MERGE
+Each round is committed to the work branch and previewed via
+https://raw.githack.com/<owner>/<repo>/<commit>/dev.html (dev.html: hidden developer mode, key 0). Only content the
+judges passed is placed in the world; unreviewed items stay in code but hidden. The branch is merged to main (the
+public page) when a zone is accepted by the owner.

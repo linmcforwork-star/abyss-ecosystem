@@ -95,10 +95,22 @@ function makeWorld(D, T, flyPts, POSES) {
   const leaf = (L, x, y, z, len, yaw, tilt, wid, hA, type, s1, s2, bend) => { if (type === 1 || !(nth++ % THIN)) L[cellOf(x, z)].push(x, y, z, len, yaw, tilt, type === 1 ? wid : wid * (1 + LV / 2), hA, type, s1, s2, bend); };
   const glint = (...a) => { nth++ % THIN || glints.push(...a); };
   const solids = []; // per mesh id: arrays of 12 floats
-  const props = Array.from({ length: 8 }, () => Array.from({ length: nCells }, () => []));
+  const props = Array.from({ length: 15 }, () => Array.from({ length: nCells }, () => []));
+  // prop groups: 0-5 meshes 4-9, 6 brain 26, 7 table 27, then the growth-form variants (main.js PM): 8, 9 staghorn open /
+  // compact, 10 tiered tables, 11 broken table, 12 lobed brain, 13 encrusting brain, 14 fused barrel pair. The form comes
+  // from the instance seed (not the random stream, so the rest of the world stays where it was)
+  // solid(): corals get a log-normal size (real reefs: many small colonies, few big ones), some half sunk in the sand
+  const propGroup = (mesh, seed) => {
+    const f = fract(seed * 7.77 + 0.13);
+    if (mesh === 7) return f < 0.4 ? 3 : f < 0.7 ? 8 : 9;
+    if (mesh === 27) return f < 0.45 ? 7 : f < 0.75 ? 10 : 11;
+    if (mesh === 26) return f < 0.4 ? 6 : f < 0.7 ? 12 : 13;
+    if (mesh === 4 || mesh === 9) return f < 0.18 ? 14 : mesh - 4;
+    return mesh > 3 && mesh < 10 ? mesh - 4 : -1;
+  };
   const SEAFAN = false; // the sea fan did not pass review (owner 2026-11-27): its spots get a staghorn thicket until it is redone
   const MATOF = { 4: 4, 5: 9, 6: 9, 7: 5, 8: 8, 9: 4 };   // the coral species decide their own material (barrel sponge 4, leather 9, staghorn 5, sea fan 8)
-  const solid = (mesh, x, y, z, sc, q, mat, seed, ts = 1, bob = 0) => { if (mesh === 8 && !SEAFAN) { mesh = 7; sc *= 0.7; } if (MATOF[mesh]) mat = MATOF[mesh]; (mesh > 3 && mesh < 10 ? props[mesh - 4][cellOf(x, z)] : mesh > 25 ? props[mesh - 20][cellOf(x, z)] : (solids[mesh] ||= [])).push(x, y, z, sc, q[0], q[1], q[2], q[3], mat, seed, ts, bob); };
+  const solid = (mesh, x, y, z, sc, q, mat, seed, ts = 1, bob = 0) => { if (mesh === 8 && !SEAFAN) { mesh = 7; sc *= 0.7; } if (mesh === 7) sc = min(sc * 1.3, 2.4); if (MATOF[mesh]) mat = MATOF[mesh]; const g = propGroup(mesh, seed); if (g >= 0) { const gs = sqrt(-2 * Math.log(0.001 + 0.998 * fract(seed * 3.71 + 0.5))) * cos(TAU * fract(seed * 5.13 + 0.2)); sc *= clamp(exp(0.35 * gs - 0.06), 0.45, 1.6); y -= sc * 0.08 * fract(seed * 9.1); } (g >= 0 ? props[g][cellOf(x, z)] : (solids[mesh] ||= [])).push(x, y, z, sc, q[0], q[1], q[2], q[3], mat, seed, ts, bob); };
   const chunks = Array.from({ length: NCHUNK }, () => Array.from({ length: nCells }, () => []));
   const glints = [];
   const rel = (i, f, r) => { const p = POSES[i]; let fx = p[3] - p[0], fz = p[5] - p[2]; const l = hypot(fx, fz); fx /= l; fz /= l; return [p[0] + fx * f - fz * r, p[2] + fz * f + fx * r]; };
@@ -725,6 +737,21 @@ function makeWorld(D, T, flyPts, POSES) {
     if (typeof window !== 'undefined') window.__cleared = cut; // (dev: how many objects made way)
   }
   // --- under the kelp: no coral (a kelp bed is rock and sand); everything within 1.6 m of a stem and in the dense beds goes
+  // young colonies of the same species round some big ones (they settle near their parent)
+  { const add = [];
+    props.forEach((P, g) => { for (const c of P) for (let i = 0; i < c.length; i += 12) {
+      const x = c[i], y = c[i + 1], z = c[i + 2], sc = c[i + 3], sd = c[i + 9];
+      if (sc < 1.1 || fract(sd * 13.3) > 0.5) continue;
+      const n = 1 + (fract(sd * 17.7) * 3 | 0);
+      for (let k = 0; k < n; k++) {
+        const a = TAU * fract(sd * 23.1 + k * 0.37), r = sc * (0.7 + 0.9 * fract(sd * 31.7 + k * 0.53)), x2 = x + cos(a) * r, z2 = z + sin(a) * r, y2 = gy(x2, z2);
+        if (abs(y2 - y) > 0.6 || KELPFREE.some((p) => hypot(x2 - p[0], z2 - p[1]) < p[2])) continue;
+        const q = qAxis(0, 1, 0, a * 3), s2 = fract(sd * 41.3 + k * 0.29);
+        add.push(g, x2, y2 - 0.04, z2, sc * (0.25 + 0.2 * s2), q[0], q[1], q[2], q[3], c[i + 8], fract(sd + 0.31 * (k + 1)), c[i + 10], 0);
+      }
+    } });
+    for (let i = 0; i < add.length; i += 13) { const cl = props[add[i]][cellOf(add[i + 1], add[i + 3])]; if (cl) cl.push(...add.slice(i + 1, i + 13)); else if (!makeWorld.warned) { makeWorld.warned = 1; console.error('juvenile off grid ' + JSON.stringify(add.slice(i, i + 13))); } }
+  }
   if (kelpCols.length) {
     const KG = new Map(); for (let i = 0; i < kelpCols.length; i += 2) { const k = ((kelpCols[i] / 4) | 0) + ',' + ((kelpCols[i + 1] / 4) | 0); (KG.get(k) || KG.set(k, []).get(k)).push(kelpCols[i], kelpCols[i + 1]); }
     const underKelp = (x, z) => {
@@ -733,14 +760,17 @@ function makeWorld(D, T, flyPts, POSES) {
       return false;
     };
     const keep = (a) => { const o = []; for (let i = 0; i < a.length; i += 12) if (!underKelp(a[i], a[i + 2])) for (let j = 0; j < 12; j++) o.push(a[i + j]); return o; };
-    for (const m of [4, 5, 6, 7, 8, 9, 26, 27]) { if (m > 25) { const P = props[m - 20]; for (let c = 0; c < P.length; c++) P[c] = keep(P[c]); } else if (m < 10 && m > 3) { const P = props[m - 4]; for (let c = 0; c < P.length; c++) P[c] = keep(P[c]); } }
+    for (const P of props) for (let c = 0; c < P.length; c++) P[c] = keep(P[c]);
   }
-  // dev.html?corals: a row of every coral species on open sand at (6..24, 28) for review shots
+  // dev.html?corals: eight of each coral species in rows on open sand around (5..22, 22..34), for reviewing their variety
   if (typeof location !== 'undefined' && /corals/.test(location.search)) {
-    const inBox = (a) => { const o = []; for (let i = 0; i < a.length; i += 12) if (!(a[i] > 3 && a[i] < 27 && a[i + 2] > 23 && a[i + 2] < 33)) for (let j = 0; j < 12; j++) o.push(a[i + j]); return o; };
+    const inBox = (a) => { const o = []; for (let i = 0; i < a.length; i += 12) if (!(a[i] > 2 && a[i] < 25 && a[i + 2] > 19 && a[i + 2] < 37)) for (let j = 0; j < 12; j++) o.push(a[i + j]); return o; };
     for (const P of props) for (let c = 0; c < P.length; c++) P[c] = inBox(P[c]);
-    [[4, 1], [9, 1.1], [5, 1.2], [6, 1.2], [7, 1.1], [8, 2.2], [26, 1.6], [27, 1.6]].forEach(([m, sc], k) => {
-      const x = 5 + k * 2.2, z = 28; solid(m, x, gy(x, z) - 0.05, z, sc, qAxis(0, 1, 0, 0.6), m === 26 ? 6 : m === 27 ? 7 : 4, 0.3 + k * 0.08, 1, 0);
+    [[4, 0.9], [9, 1], [5, 1.1], [7, 1], [26, 1.3], [27, 1.3]].forEach(([m, sc], r) => {
+      for (let k = 0; k < 8; k++) {
+        const x = 5 + k * 2.2, z = 22 + r * 2.4, rot = qAxis(0, 1, 0, k * 0.9);
+        solid(m, x, gy(x, z) - 0.05, z, sc * (0.8 + 0.06 * k), rot, m === 26 ? 6 : m === 27 ? 7 : 4, (k * 0.137 + r * 0.31) % 1, 1, 0);
+      }
     });
   }
   const sol = { data: [], ranges: [] }; let si = 0;
@@ -756,7 +786,8 @@ function makeWorld(D, T, flyPts, POSES) {
   };
   // the corals and sponges, for aiming at them (eco.js): x, y, z, scale, mesh
   const corals = [];
-  props.forEach((P, g) => { const m = g < 6 ? g + 4 : g + 20; for (const c of P) for (let i = 0; i < c.length; i += 12) corals.push(c[i], c[i + 1], c[i + 2], c[i + 3], m); });
+  const GM = [4, 5, 6, 7, 8, 9, 26, 27, 7, 7, 27, 27, 26, 26, 4];
+  props.forEach((P, g) => { const m = GM[g]; for (const c of P) for (let i = 0; i < c.length; i += 12) corals.push(c[i], c[i + 1], c[i + 2], c[i + 3], m); });
   return { gy, glints: new Float32Array(glints), chunks: chunks.map(packC), props: props.map(packC), big: pack(big), bigF: pack(big, 2, 1.5), small: pack(small), solids: { data: new Float32Array(sol.data), ranges: sol.ranges }, bubbles: new Float32Array(bubbles), volD, gm, fish: new Float32Array(fish), mantas: new Float32Array(mantas), snow, floorH, heads, anemones, holes, stations, zones: ZONES, corals: new Float32Array(corals) };
 }
 const fract = (x) => x - floor(x);
@@ -779,13 +810,35 @@ function meshLathe(prof, seg, lump, ribs = 0) {
   for (let k = 0; k < rings.length - 1; k++) for (let s = 0; s < seg; s++) { const s2 = (s + 1) % seg; m.quad(rings[k][s], rings[k + 1][s], rings[k + 1][s2], rings[k][s2]); }
   return m;
 }
+// append mesh b to a, its points mapped by f([x, y, z]) -> [x, y, z]
+function meshMerge(a, b, f) {
+  const o = a.p.length / 3;
+  for (let i = 0; i < b.p.length; i += 3) { const q = f([b.p[i], b.p[i + 1], b.p[i + 2]]); a.p.push(q[0], q[1], q[2]); }
+  a.aux.push(...b.aux); for (const k of b.i) a.i.push(k + o);
+  return a;
+}
+const mXf = (dx, dy, dz, s, yaw = 0, tilt = 0) => ([x, y, z]) => {
+  const c = cos(yaw), sn = sin(yaw); let X = x * c - z * sn, Z = x * sn + z * c, Y = y; const ct = cos(tilt), st = sin(tilt); const X2 = X * ct - Y * st; Y = X * st + Y * ct;
+  return [X2 * s + dx, Y * s + dy, Z * s + dz];
+};
+// the coral growth-form variants (owner 2026-11-27: the same species must not look copy-pasted). 0 tiered tables: a big
+// plate with a smaller one above and beside it; 1 a table with a broken-off bite; 2 a lobed brain coral (three domes
+// grown together); 3 a flat encrusting brain coral; 4 a fused pair of barrel sponges, the small one leaning out
+function meshVariant(k) {
+  if (k === 0) return meshMerge(meshTable(), meshTable(1), mXf(0.75, 0.28, 0.35, 0.62, 1.3));
+  if (k === 1) return meshTable(2);
+  if (k === 2) { const m = meshBrain(); meshMerge(m, meshBrain(1), mXf(0.62, -0.08, 0.18, 0.72, 2)); return meshMerge(m, meshBrain(2), mXf(-0.1, -0.1, 0.66, 0.6, 4)); }
+  if (k === 3) return meshMerge(new Mesh(), meshBrain(3), ([x, y, z]) => [x * 1.5, y * 0.3, z * 1.3]);
+  return meshMerge(meshBarrel(1.1, 0.5, 213), meshBarrel(0.75, 0.38, 214), mXf(0.62, -0.02, 0.15, 1, 0.8, -0.28));
+}
 // coral and sponge meshes, each a real species (refs: /mnt/project-files/coral-window/refs/corals/LOOKS.md).
 // mesh 7: staghorn Acropora (A. muricata): an open thicket of knobbly, slightly tapering branches that start oblique at
 // the base and curve upward, branching irregularly; swollen pale tips (aux 1 at a tip, low near the base for shading).
 // mesh 8: giant sea fan (Annella mollis): one flat, slightly curved net in the x-y plane, a short trunk, a few main
 // branches and an irregular fused mesh of fine twigs (no grid). lo: the far versions
-function meshCoral(fan, lo = LV > 1) {
-  rseed(200 + fan);
+// form (staghorn only): 0 a dense thicket, 1 an open colony of fewer, longer branches, 2 a low compact clump
+function meshCoral(fan, lo = LV > 1, form = 0) {
+  rseed(200 + fan + form * 17);
   const m = new Mesh();
   const nrm = (v) => { const l = hypot(...v) || 1; return v.map((c) => c / l); };
   if (!fan) {
@@ -797,8 +850,8 @@ function meshCoral(fan, lo = LV > 1) {
       m.tube(pts, (k) => r * (1 - 0.25 * k / seg) * (k === seg ? 1.15 : knob[k]), sides, 'round', (k) => clamp(0.3 + 0.7 * (1 - depth / 3) * (k / seg) + (k === seg ? 0.3 : 0), 0, 1));
       if (depth > 0) { const n = lo ? 1 : 1 + (rnd() < 0.6) + (rnd() < 0.3); for (let i = 0; i < n; i++) { const at = pts[1 + ((rnd() * (seg - 1)) | 0)]; branch(at, nrm([d[0] + rr(-0.9, 0.9), d[1] + rr(0, 0.6), d[2] + rr(-0.9, 0.9)]), r * 0.85, len * rr(0.55, 0.8), depth - 1); } }
     };
-    const n0 = lo ? 12 : 30;
-    for (let i = 0; i < n0; i++) { const a = i / n0 * TAU + rr(-0.3, 0.3); branch([cos(a) * rr(0.05, 0.6), 0, sin(a) * rr(0.05, 0.6)], nrm([cos(a) * rr(0.6, 1.2), rr(0.5, 1.1), sin(a) * rr(0.6, 1.2)]), 0.042, rr(0.4, 0.65), 2); }
+    const n0 = [lo ? 12 : 30, lo ? 6 : 13, lo ? 14 : 34][form], L0 = [0.4, 0.75, 0.24][form], L1 = [0.65, 1.05, 0.4][form], up = [[0.5, 1.1], [0.7, 1.3], [0.2, 0.6]][form];
+    for (let i = 0; i < n0; i++) { const a = i / n0 * TAU + rr(-0.3, 0.3); branch([cos(a) * rr(0.05, 0.6), 0, sin(a) * rr(0.05, 0.6)], nrm([cos(a) * rr(0.6, 1.2), rr(up[0], up[1]), sin(a) * rr(0.6, 1.2)]), form === 1 ? 0.036 : 0.042, rr(L0, L1), 2); }
     return m;
   }
   // sea fan: thick trunk and main branches, then an irregular net of fine twigs between scattered points of the fan's outline

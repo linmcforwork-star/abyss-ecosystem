@@ -307,9 +307,19 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
   var o: VO;
   var sc = i.a.w;
   if (i.c.x < 1.5 && i.c.z > 1.5 && g.res.x > 0.) { sc *= 1. - ss(i.c.z * .7, i.c.z, distance(i.a.xyz, g.cam.xyz) / g.mis.z); }
-  var w = i.a.xyz + qrot(i.b, i.p * sc);
+  // corals and sponges (mat 4-9): every instance its own build: taller or squatter, wider or slimmer, a lean, and for the
+  // barrel sponge a wider or narrower mouth (the texture coordinates op keep the unbent shape, so patterns don't stretch)
+  var p = i.p; var nn = i.n.xyz; let mt = i32(i.c.x + .5);
+  if (mt >= 4 && mt <= 9) {
+    let h1 = fract(i.c.y * 13.7); let h2 = fract(i.c.y * 29.3); let h3 = fract(i.c.y * 51.1);
+    let s3 = vec3f(mix(.82, 1.22, h2), mix(.72, 1.32, h1), mix(.82, 1.22, h2) * mix(.9, 1.1, h3));
+    p *= s3; nn = normalize(nn / s3);
+    if (mt == 4) { let t = sat(i.p.y / 1.3); let k = mix(1., mix(.78, 1.25, h3), t * t); p.x *= k; p.z *= k * mix(1., mix(.78, 1.05, h1), t); p.y += p.x * (h2 - .5) * .35 * t; }
+    p.x += p.y * (h2 - .5) * .22; p.z += p.y * (h3 - .5) * .18;
+  }
+  var w = i.a.xyz + qrot(i.b, p * sc);
   w.y += sin(g.cam.w * .3 + i.c.y * 40.) * i.c.w;
-  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = qrot(i.b, i.n.xyz); o.op = i.p * i.a.w + i.c.y * 37.; o.on = i.n.xyz;
+  o.cp = g.vp * vec4f(w, 1.); o.wp = w; o.n = qrot(i.b, nn); o.op = i.p * i.a.w + i.c.y * 37.; o.on = nn;
   o.m = i.c; o.q = i.b; o.ao = i.n.w;
   return o;
 }
@@ -380,21 +390,26 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     // paler, the grooves between them and the deep cavity (aux low) dark; a dusting of pale silt on up-facing parts
     let hue = fract(sd * 7.31);
     var base = mix(vec3f(.78, .34, .22), vec3f(.66, .30, .20), hue);
-    if (hue > .8) { base = vec3f(.45, .42, .50); }                // the odd mauve-grey one
-    let lam = sat((i.ao - .45) / .55);
+    if (hue > .55) { base = vec3f(.60, .30, .30); }                // rose-brown
+    if (hue > .75) { base = vec3f(.45, .42, .50); }                // mauve-grey
+    if (hue > .9) { base = vec3f(.50, .28, .20); }                 // dark chocolate-brown
+    let pv = fract(sd * 17.3);
+    let lam = sat((i.ao - .45) / .55) * mix(.45, 1., pv);          // some with sharp deep lamellae, some worn smoother
     alb = base * (.55 + .6 * lam) * (.8 + .3 * C.h);
     alb = mix(alb, base * 1.25 + .05, ss(.45, .5, i.ao) * ss(.55, .5, i.ao) * .6);   // the rim, paler
     alb = mix(alb, vec3f(.24, .16, .14), ss(.4, .05, i.ao));      // the cavity
+    if (pv > .7) { alb = mix(alb, base * 1.35 + .06, ss(.62, .78, B.h) * ss(.4, .6, i.ao) * .7); }   // pale encrusting blotches on some
     alb = mix(alb, vec3f(.62, .58, .5), ss(.55, .9, on.y) * ss(.45, .7, B.c) * .35);
     sgro = (lam - .5) * 1.2; vao = .55 + .45 * lam; gloss = .05; bump = 1.6; flu = .2;
   } else if (mat == 6) {
     // brain coral: meandering ridges and valleys over a dome
     let hue = fract(sd * 3.91);
     // two-tone, as in the refs: brown-grey walls over green valleys; some honey-yellow, some salmon, some cream over grey
-    var wall = vec3f(.52, .40, .20); var vall = vec3f(.26, .36, .14);
-    if (hue > .55) { wall = vec3f(.58, .44, .16); vall = vec3f(.36, .30, .10); }
-    if (hue > .75) { wall = vec3f(.60, .32, .18); vall = vec3f(.38, .20, .12); }
-    if (hue > .9) { wall = vec3f(.56, .52, .36); vall = vec3f(.28, .34, .22); }
+    var wall = vec3f(.52, .38, .20); var vall = vec3f(.30, .22, .12);                    // tan-brown
+    if (hue > .25) { wall = vec3f(.40, .48, .22); vall = vec3f(.30, .32, .30); }        // green over grey valleys
+    if (hue > .5) { wall = vec3f(.62, .48, .44); vall = vec3f(.42, .28, .26); }         // cream-pink
+    if (hue > .7) { wall = vec3f(.40, .44, .50); vall = vec3f(.22, .36, .18); }         // blue-grey over green
+    if (hue > .87) { wall = vec3f(.64, .50, .16); vall = vec3f(.40, .32, .10); }        // honey-yellow
     let mq = sin((B.c * 4.5 + C.c * 1.8 + F.c * .3) * TAU * 3.);
     let ridge = ss(-.35, .35, mq);                       // sinuous ridges (sharp crests) between winding valleys
     let crest = ss(.75, 1., ridge);
@@ -407,8 +422,11 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     let hue = fract(sd * 4.37);
     // table coral: brown, pastel green or blue-grey; the top a carpet of short upturned branchlets with pale cup tips
     // (a dense dot field), a cream growing rim, the underside dark and shaded, the stalk grey-brown
-    var base = mix(vec3f(.52, .42, .30), vec3f(.50, .36, .40), step(.45, hue));
-    if (hue > .78) { base = vec3f(.40, .46, .34); }
+    var base = vec3f(.46, .38, .22);                               // brown-olive
+    if (hue > .25) { base = vec3f(.50, .36, .40); }                // lilac-brown
+    if (hue > .5) { base = vec3f(.36, .42, .50); }                 // blue-grey
+    if (hue > .72) { base = vec3f(.40, .46, .30); }                // green
+    if (hue > .88) { base = vec3f(.60, .50, .40); }                // cream
     base *= .85 + .35 * ss(.2, .8, length(i.op.xz - vec2f(sd * 37.)));   // paler toward the growing rim
     let top = ss(.8, .95, i.ao);
     // the branchlet tips: a fine irregular speckle (any regular pattern reads as fabric)
@@ -420,8 +438,8 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     alb = mix(alb, vec3f(.80, .70, .48), tip * .45);
     alb = mix(alb, vec3f(.31, .29, .24), ss(.55, .35, i.ao) * ss(.3, .45, i.ao));   // underside
     alb = mix(alb, vec3f(.42, .39, .31), ss(.3, .2, i.ao));                       // stalk
-    alb *= 1. - .4 * ss(.3, .9, on.y);
-    sgro = tip * 1.5; vao = mix(.55, 1., top); flu = .5; gloss = .15; bump = 1.4;
+    alb *= 1. - .6 * ss(.3, .9, on.y);
+    sgro = tip * .6; vao = mix(.55, 1., top); flu = .5; gloss = .15; bump = 1.4;
   } else if (mat == 8) {
     // giant sea fan: mostly tan-beige, some rust-red; main branches darker; light passes through the fine net
     let hue = fract(sd * 5.73);
@@ -441,14 +459,16 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     // leather coral: a velvety cap (tan, olive, yellow-brown, or blue-lavender grey with a paler rim) over a cream stalk
     let hue = fract(sd * 6.11);
     // (saturated: pale low-chroma colours turn milky white under the cyan ambient)
-    var cap = mix(vec3f(.58, .44, .24), vec3f(.52, .38, .20), fract(hue * 3.));
-    if (hue > .6) { cap = vec3f(.46, .40, .22); }
-    if (hue > .82) { cap = vec3f(.34, .26, .42); }
+    var cap = vec3f(.56, .42, .22);                                  // tan-ochre
+    if (hue > .3) { cap = vec3f(.40, .40, .18); }                    // olive
+    if (hue > .55) { cap = vec3f(.56, .40, .36); }                   // pinkish beige
+    if (hue > .75) { cap = vec3f(.62, .54, .34); }                   // cream-yellow
+    if (hue > .9) { cap = vec3f(.38, .32, .46); }                    // lilac
     let fuzz = .82 + .3 * F.h + .12 * C.h;                             // the extended polyps: a fine soft fuzz
     alb = cap * fuzz;
     alb = mix(alb, vec3f(.55, .48, .32), ss(.3, .12, i.ao));            // the stalk
     alb = mix(alb, cap * .55, ss(.4, .55, i.ao) * ss(.7, .55, i.ao));   // the cap's underside, shaded
-    alb *= 1. - .45 * ss(.3, .9, on.y);   // (sun + caustics wash out faces turned up: keep the cap's colour)
+    alb *= 1. - .62 * ss(.3, .9, on.y);   // (sun + caustics wash out faces turned up: keep the cap's colour)
     flu = .15; gloss = .05; bump = .5; vao = 1.;
   } else {
     // staghorn Acropora: tan to straw-brown branches, pale (cream, or blue-lilac on some) swollen tips, the dead base
@@ -456,7 +476,9 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     let hue = fract(sd * 5.73);
     var body = mix(vec3f(.46, .30, .11), vec3f(.40, .30, .10), fract(hue * 3.));
     if (hue > .7) { body = vec3f(.50, .36, .14); }
-    let tipc = select(vec3f(.91, .89, .81), vec3f(.62, .66, .84), fract(hue * 7.) > .4);
+    if (hue > .85) { body = vec3f(.42, .28, .30); }                // a purple-brown colony
+    var tipc = vec3f(.86, .84, .76); let th = fract(hue * 7.);
+    if (th > .3) { tipc = vec3f(.56, .66, .86); } if (th > .55) { tipc = vec3f(.66, .50, .82); } if (th > .8) { tipc = vec3f(.86, .80, .44); }
     alb = mix(vec3f(.43, .48, .36), body, ss(.3, .55, i.ao)) * (.6 + .5 * B.h) * (.75 + .35 * C.h);
     alb = mix(alb, tipc, ss(.95, 1.05, i.ao));
     flu = .5; gloss = .15; bump = .35; vao = 1.5;

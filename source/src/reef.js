@@ -3,17 +3,19 @@
 // ============================================================================
 
 // brain coral: a low lumpy dome; the meandering grooves are drawn by the shader (material 6)
-function meshBrain() {
-  rseed(230);
+function meshBrain(v = 0) {
+  rseed(230 + v * 5);   // (v: a different lumpy dome for each growth form)
   return meshLathe([[0, 0, 0.3], [0.5, 0, 0.45], [0.72, 0.1, 0.75], [0.8, 0.28, 1], [0.76, 0.46, 1], [0.6, 0.62, 1], [0.36, 0.73, 1], [0.12, 0.78, 1], [0, 0.785, 1]], 34, 0.38); // (lumpier: real domes are never perfect spheres)
 }
 // table coral (Acropora hyacinthus): a thick stalk widening at its foot, under a wide plate only ~4 cm thick (per metre),
 // an irregular (not round) outline, the rim turned up a touch; the underside is a separate shaded surface with a gap
 // under it. The upturned branchlets on top are painted by the shader (material 7). aux: .25 stalk, .4 underside, 1 top
-function meshTable() {
-  rseed(231);
-  const m = new Mesh(), seg = 40, nr = 7, R = 1.05, rings = [], ph = rnd() * 9;
-  const edge = (a) => R * (1 + 0.1 * sin(3 * a + ph) + 0.06 * sin(7 * a + ph * 2) + 0.04 * (fbm(cos(a) * 2, 0, sin(a) * 2, 2) - 0.5) * 4);
+// v: 1 another outline (the second plate of a tiered pair), 2 a plate with a broken-off bite out of its rim
+function meshTable(v = 0) {
+  rseed(231 + v * 3);
+  const m = new Mesh(), seg = 40, nr = 7, R = 1.05, rings = [], ph = rnd() * 9, bite = rnd() * TAU;
+  const edge = (a) => R * (1 + 0.1 * sin(3 * a + ph) + 0.06 * sin(7 * a + ph * 2) + 0.04 * (fbm(cos(a) * 2, 0, sin(a) * 2, 2) - 0.5) * 4) *
+    (v === 2 ? 1 - 0.45 * max(0, cos(a - bite)) ** 3 : 1);
   for (const [r, h] of [[0.24, 0], [0.16, 0.06], [0.12, 0.2], [0.13, 0.34], [0.2, 0.42]]) { const ring = []; for (let s = 0; s < seg; s++) { const a = s / seg * TAU; ring.push(m.v(cos(a) * r, h, sin(a) * r, 0.25)); } rings.push(ring); }
   const H = 0.45, T = 0.045, under = [], top = [];
   for (let k = 1; k <= nr; k++) { const t = k / nr, ru = [], rt = []; for (let s = 0; s < seg; s++) { const a = s / seg * TAU, r = 0.2 + (edge(a) - 0.2) * t, y = H + 0.06 * t * t + 0.03 * sin(5 * a + ph) * t; ru.push(m.v(cos(a) * r, y - T * (1 - 0.5 * t), sin(a) * r, 0.4)); rt.push(m.v(cos(a) * r, y, sin(a) * r, 1)); } under.push(ru); top.push(rt); }

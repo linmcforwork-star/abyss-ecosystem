@@ -277,7 +277,8 @@ await say('正在放鱼…', 0.94, 1200);
 // mesh ids: 0-3 boulders, 4-6 sponges, 7-8 coral, 9 tube sponge, 10 whale fluke, 11 ship, 12 manta, 13 fish,
 // 14-20 rock chunks + pebbles, 21-22 coral LOD, 23-25 far LOD of the large rock chunks, 26 brain coral, 27 table coral,
 // 28 reef fish, 29 reef shark, 30 moray eel, 31 sea anemone
-const PM = [4, 5, 6, 7, 8, 9, 26, 27]; // mesh of each prop group
+const PM = [4, 5, 6, 7, 8, 9, 26, 27]; // mesh of each prop group (+ the growth-form variants, appended below)
+const PLOD = { 3: 21, 4: 22 }; // far mesh of a prop group (drawn beyond 6 m)
 const meshes = [meshChunk(1, 3), meshChunk(7, 3), meshChunk(13, 3), meshChunk(22, 3),
   meshBarrel(0.85, 0.55, 212), meshLeather(0), meshLeather(1),
   meshCoral(0), meshCoral(1), meshTubes()].map((m) => m.build());
@@ -285,6 +286,10 @@ meshes.push(meshFluke(), meshShip().build(), meshManta().build(), meshFish().bui
   meshChunk(3).build(), meshChunk(11).build(), meshChunk(29).build(), meshChunk(5, 3).build(), meshChunk(17, 3).build(), meshChunk(41, 3).build(), meshChunk(9, 1).build(), meshCoral(0, 1).build(), meshCoral(1, 1).build(), meshChunk(5, 2, 1).build(), meshChunk(17, 2, 1).build(), meshChunk(41, 2, 1).build(),
   meshBrain().build(), meshTable().build(), meshReefFish().build(), meshShark().build(), meshEel().build(), meshAnem(0, 0).build());
 for (let j = 1; j < 20; j++) meshes.push(meshAnem(j >> 1, j & 1).build()); // anemone kind k, far f: mesh 31 + k * 2 + f (kinds 8, 9: the anemone shrimp and the porcelain crab)
+// coral growth forms (world.js propGroup): groups 8, 9 staghorn open / compact (with far versions), 10-14 meshVariant
+{ const b = meshes.length;
+  meshes.push(meshCoral(0, LV > 1, 1).build(), meshCoral(0, LV > 1, 2).build(), ...[0, 1, 2, 3, 4].map((k) => meshVariant(k).build()), meshCoral(0, 1, 1).build(), meshCoral(0, 1, 2).build());
+  PM.push(b, b + 1, b + 2, b + 3, b + 4, b + 5, b + 6); PLOD[8] = b + 7; PLOD[9] = b + 8; }
 let nV = 0, nI = 0;
 for (const m of meshes) { m.v0 = nV; m.i0 = nI; nV += m.nv; nI += m.ib.length; }
 const allV = new Uint8Array(nV * 16), allI = new Uint32Array(nI);
@@ -346,7 +351,7 @@ Q.writeTexture({ texture: tMap }, Wd.gm, { bytesPerRow: 2048 }, [512, 512]);
   for (let i = 0; i < 12; i++) { const g = Wd.solids.ranges[i]; if (g[1]) r.drawIndexed(meshes[i].ib.length, g[1], meshes[i].i0, meshes[i].v0, g[0]); }
   // small rocks, sponges and corals (~35M triangles) only on High: too much for a phone's driver
   if (!LV) for (let i = 0; i < NCHUNK; i++) { r.setVertexBuffer(1, ibChunk[i]); r.drawIndexed(meshes[14 + i].ib.length, Wd.chunks[i].n, meshes[14 + i].i0, meshes[14 + i].v0, 0); }
-  if (!LV) for (let i = 0; i < 8; i++) if (Wd.props[i].n) { r.setVertexBuffer(1, ibProp[i]); r.drawIndexed(meshes[PM[i]].ib.length, Wd.props[i].n, meshes[PM[i]].i0, meshes[PM[i]].v0, 0); }
+  if (!LV) for (let i = 0; i < PM.length; i++) if (Wd.props[i].n) { r.setVertexBuffer(1, ibProp[i]); r.drawIndexed(meshes[PM[i]].ib.length, Wd.props[i].n, meshes[PM[i]].i0, meshes[PM[i]].v0, 0); }
   r.setPipeline(pLeafSh); r.setVertexBuffer(0, ibBig); r.draw(6, Wd.big.n);
   r.end();
   Q.submit([e.finish()]);
@@ -508,10 +513,10 @@ function render() {
     drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, 0, i > 5 ? 30 : big ? 40 : 96);
     if (big) drawCells(r, c.start, c.lo, c.hi, 3, meshes[20 + i], 0, 40, 150);
   }
-  for (let i = 0; i < 8; i++) {
-    const lod = i === 3 || i === 4; r.setVertexBuffer(1, ibProp[i]);
+  for (let i = 0; i < PM.length; i++) {
+    const lod = PLOD[i]; r.setVertexBuffer(1, ibProp[i]);
     drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PM[i]], 0, 0, lod ? 6 : 110);
-    if (lod) drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[18 + i], 0, 6, 110);
+    if (lod) drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[lod], 0, 6, 110);
   }
   r.setPipeline(pManta); r.setVertexBuffer(1, ibManta); r.drawIndexed(MANTA.ib.length, nManta, MANTA.i0, MANTA.v0, 0);
   r.setPipeline(pFish); r.setVertexBuffer(1, ibFish); r.drawIndexed(FISH.ib.length, nFish, FISH.i0, FISH.v0, 0);
