@@ -376,41 +376,81 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     alb = mix(alb, vec3f(.08, .22, .16), ss(.5, .7, A.c) * .6);
     gloss = .2; bump = .7;
   } else if (mat == 4) {
+    // barrel sponge (Xestospongia): brick-red to rose-brown, matte and rough; the lamella crests (aux high) a little
+    // paler, the grooves between them and the deep cavity (aux low) dark; a dusting of pale silt on up-facing parts
     let hue = fract(sd * 7.31);
-    alb = mix(vec3f(.60, .17, .08), vec3f(.64, .35, .10), fract(hue * 3.));
-    if (hue > .75) { alb = vec3f(.44, .18, .42); }
-    alb *= (.45 + .75 * B.h) * (.7 + .3 * C.h);
-    vao = i.ao * i.ao; gloss = .2; bump = 1.4; flu = .55;
+    var base = mix(vec3f(.69, .33, .31), vec3f(.56, .31, .24), hue);
+    if (hue > .8) { base = vec3f(.45, .42, .50); }                // the odd mauve-grey one
+    let lam = sat((i.ao - .45) / .55);
+    alb = base * (.35 + .75 * lam) * (.75 + .35 * C.h);
+    alb = mix(alb, vec3f(.24, .16, .14), ss(.4, .05, i.ao));      // the cavity
+    alb = mix(alb, vec3f(.62, .58, .5), ss(.55, .9, on.y) * ss(.45, .7, B.c) * .35);
+    sgro = (lam - .5) * 1.2; vao = .35 + .65 * lam; gloss = .05; bump = 1.6; flu = .2;
   } else if (mat == 6) {
     // brain coral: meandering ridges and valleys over a dome
     let hue = fract(sd * 3.91);
-    var base = mix(vec3f(.30, .26, .10), vec3f(.20, .26, .09), fract(hue * 3.));
-    if (hue > .65) { base = vec3f(.36, .28, .16); }
-    if (hue > .88) { base = vec3f(.14, .24, .18); }
-    let mq = sin((B.c * 2.5 + C.c * 1.1) * TAU * 3.);
-    let ridge = 1. - ss(.4, .0, abs(mq));                        // dark winding valleys between rounded ridges
-    alb = mix(base * .3, base * (.9 + .25 * F.h), ridge) * (.7 + .3 * B.h) * (.5 + .5 * i.ao);
+    // two-tone, as in the refs: brown-grey walls over green valleys; some honey-yellow, some salmon, some cream over grey
+    var wall = vec3f(.48, .42, .32); var vall = vec3f(.42, .55, .36);
+    if (hue > .55) { wall = vec3f(.72, .58, .30); vall = vec3f(.50, .40, .20); }
+    if (hue > .75) { wall = vec3f(.72, .40, .28); vall = vec3f(.50, .26, .18); }
+    if (hue > .9) { wall = vec3f(.80, .76, .64); vall = vec3f(.36, .36, .34); }
+    let mq = sin((B.c * 2.5 + C.c * 1.1 + F.c * .25) * TAU * 3.);
+    let ridge = 1. - ss(.45, .0, abs(mq));                       // sinuous ridges (sharp crests) between winding valleys
+    let crest = ss(.75, 1., ridge);
+    alb = mix(vall * .55, wall * (.9 + .25 * F.h), ridge) * (.75 + .3 * B.h) * (.55 + .45 * i.ao);
+    alb *= .9 + .2 * crest;
     sgro = (ridge - .5) * 1.6; vao = .55 + .45 * ridge; flu = .25; gloss = .3; bump = 1.1;
   } else if (mat == 7) {
     // table coral: pastel plate, a paler growing rim, fine corallite texture on top
     let hue = fract(sd * 4.37);
-    var base = mix(vec3f(.40, .44, .30), vec3f(.46, .38, .24), fract(hue * 2.));
-    if (hue > .7) { base = vec3f(.34, .44, .46); }
-    alb = base * (.7 + .5 * F.h) * (.8 + .3 * C.h);
-    alb = mix(alb, vec3f(.75, .72, .62), ss(.97, 1., i.ao) * .5);
-    alb *= mix(.45, 1., ss(-.2, .4, on.y));
-    flu = .6; gloss = .2; bump = 1.6;
-  } else {
-    // branching coral and sea fans
+    // table coral: brown, pastel green or blue-grey; the top a carpet of short upturned branchlets with pale cup tips
+    // (a dense dot field), a cream growing rim, the underside dark and shaded, the stalk grey-brown
+    var base = mix(vec3f(.54, .48, .35), vec3f(.50, .63, .48), step(.45, hue));
+    if (hue > .78) { base = vec3f(.50, .58, .66); }
+    let top = ss(.8, .95, i.ao);
+    let q = i.op.xz * 34.; let cell = fract(q + vec2f(hs(floor(q.x) * 3.1 + floor(q.y)), hs(floor(q.y) * 5.7 + floor(q.x))) * .3) - .5;
+    let tip = ss(.32, .14, length(cell)) * top;                    // the branchlet tips, seen from above
+    alb = base * (.55 + .35 * F.h) * (1. - .35 * top * (1. - tip));
+    alb = mix(alb, vec3f(.90, .87, .78), tip * .55);
+    alb = mix(alb, vec3f(.31, .29, .24), ss(.55, .35, i.ao) * ss(.3, .45, i.ao));   // underside
+    alb = mix(alb, vec3f(.42, .39, .31), ss(.3, .2, i.ao));                       // stalk
+    sgro = tip * 1.5; vao = mix(.55, 1., top); flu = .5; gloss = .15; bump = 1.4;
+  } else if (mat == 8) {
+    // giant sea fan: mostly tan-beige, some rust-red; main branches darker; light passes through the fine net
     let hue = fract(sd * 5.73);
-    alb = mix(vec3f(.52, .34, .16), vec3f(.36, .40, .16), fract(hue * 3.));
-    if (hue > .5) { alb = vec3f(.78, .30, .46); }
-    if (hue > .66) { alb = vec3f(.80, .62, .26); }
-    if (hue > .8) { alb = vec3f(.62, .14, .10); }
-    if (hue > .92) { alb = vec3f(.40, .32, .78); }
-    alb *= (.45 + .75 * B.h) * (.5 + .9 * i.ao * i.ao);
-    alb = mix(alb, mix(vec3f(.9, .85, .7), vec3f(.5, .7, 1.), step(.5, fract(hue * 7.))), ss(.9, 1., i.ao) * .3);
-    emi = alb * .01; flu = .75; gloss = .25; bump = 1.5;
+    var base = mix(vec3f(.72, .61, .49), vec3f(.79, .69, .56), fract(hue * 3.));
+    if (hue > .7) { base = vec3f(.66, .32, .18); }
+    if (i.ao > .93) {
+      // the membrane: keep only a fine irregular net (cell edges of a jittered grid, ~3 cm cells)
+      let g = i.op.xy * 30.; let ip = floor(g); var d1 = 9.; var d2 = 9.;
+      for (var a = -1; a <= 1; a++) { for (var b = -1; b <= 1; b++) {
+        let c = ip + vec2f(f32(a), f32(b)); let pn = c + vec2f(hs(c.x * 7.1 + c.y * 3.3), hs(c.x * 1.7 + c.y * 9.2));
+        let dd = length(g - pn); if (dd < d1) { d2 = d1; d1 = dd; } else if (dd < d2) { d2 = dd; } } }
+      if (d2 - d1 > .13) { discard; }
+    }
+    alb = mix(base * .62, base, ss(.5, .75, i.ao)) * (.8 + .3 * C.h);
+    flu = .35; gloss = .1; bump = .6; vao = 1.;
+  } else if (mat == 9) {
+    // leather coral: a velvety cap (tan, olive, yellow-brown, or blue-lavender grey with a paler rim) over a cream stalk
+    let hue = fract(sd * 6.11);
+    var cap = mix(vec3f(.56, .49, .31), vec3f(.47, .44, .27), fract(hue * 3.));
+    if (hue > .6) { cap = vec3f(.50, .52, .40); }
+    if (hue > .82) { cap = vec3f(.48, .50, .56); }
+    let fuzz = .82 + .3 * F.h + .12 * C.h;                             // the extended polyps: a fine soft fuzz
+    alb = cap * fuzz;
+    alb = mix(alb, vec3f(.85, .82, .72), ss(.3, .12, i.ao));            // the stalk
+    alb = mix(alb, cap * .55, ss(.4, .55, i.ao) * ss(.7, .55, i.ao));   // the cap's underside, shaded
+    flu = .15; gloss = .05; bump = .5; vao = 1.;
+  } else {
+    // staghorn Acropora: tan to straw-brown branches, pale (cream, or blue-lilac on some) swollen tips, the dead base
+    // grey-green with turf algae
+    let hue = fract(sd * 5.73);
+    var body = mix(vec3f(.72, .60, .42), vec3f(.55, .45, .31), fract(hue * 3.));
+    if (hue > .7) { body = vec3f(.78, .72, .52); }
+    let tipc = select(vec3f(.91, .89, .81), vec3f(.62, .66, .84), fract(hue * 7.) > .55);
+    alb = mix(vec3f(.43, .48, .36), body, ss(.3, .55, i.ao)) * (.6 + .5 * B.h) * (.75 + .35 * C.h);
+    alb = mix(alb, tipc, ss(.88, 1., i.ao));
+    flu = .5; gloss = .15; bump = 1.2;
   }
   let rip = select(0., flt * gm.a * cos((i.wp.x * .8 + i.wp.z * .35) * 5. + A.c * 9.) * .65, mat == 0);
   let N = normalize(qrot(i.q, normalize(on + (A.n * .85 + B.n * .65 + C.n * .45 * ss(60., 12., dist) + F.n * .5 * fk) * bump + vec3f(.8, sgro, .35) * vec3f(rip, 1., rip))));

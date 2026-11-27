@@ -5,12 +5,24 @@
 // brain coral: a low lumpy dome; the meandering grooves are drawn by the shader (material 6)
 function meshBrain() {
   rseed(230);
-  return meshLathe([[0, 0, 0.3], [0.5, 0, 0.45], [0.72, 0.1, 0.75], [0.8, 0.28, 1], [0.74, 0.46, 1], [0.58, 0.62, 1], [0.34, 0.73, 1], [0.12, 0.77, 1], [0, 0.775, 1]], 26, 0.22);
+  return meshLathe([[0, 0, 0.3], [0.5, 0, 0.45], [0.72, 0.1, 0.75], [0.8, 0.28, 1], [0.76, 0.46, 1], [0.6, 0.62, 1], [0.36, 0.73, 1], [0.12, 0.78, 1], [0, 0.785, 1]], 34, 0.38); // (lumpier: real domes are never perfect spheres)
 }
-// table coral (Acropora): a short stalk under a wide, thin, slightly dished plate (material 7)
+// table coral (Acropora hyacinthus): a thick stalk widening at its foot, under a wide plate only ~4 cm thick (per metre),
+// an irregular (not round) outline, the rim turned up a touch; the underside is a separate shaded surface with a gap
+// under it. The upturned branchlets on top are painted by the shader (material 7). aux: .25 stalk, .4 underside, 1 top
 function meshTable() {
   rseed(231);
-  return meshLathe([[0, 0, 0.25], [0.11, 0, 0.35], [0.09, 0.22, 0.5], [0.13, 0.36, 0.7], [0.45, 0.43, 0.85], [0.85, 0.5, 1], [1.05, 0.56, 1], [1.08, 0.6, 1], [1.02, 0.63, 1], [0.7, 0.58, 1], [0.3, 0.55, 0.9], [0, 0.56, 0.9]], 32, 0.3);
+  const m = new Mesh(), seg = 40, nr = 7, R = 1.05, rings = [], ph = rnd() * 9;
+  const edge = (a) => R * (1 + 0.1 * sin(3 * a + ph) + 0.06 * sin(7 * a + ph * 2) + 0.04 * (fbm(cos(a) * 2, 0, sin(a) * 2, 2) - 0.5) * 4);
+  for (const [r, h] of [[0.24, 0], [0.16, 0.06], [0.12, 0.2], [0.13, 0.34], [0.2, 0.42]]) { const ring = []; for (let s = 0; s < seg; s++) { const a = s / seg * TAU; ring.push(m.v(cos(a) * r, h, sin(a) * r, 0.25)); } rings.push(ring); }
+  const H = 0.45, T = 0.045, under = [], top = [];
+  for (let k = 1; k <= nr; k++) { const t = k / nr, ru = [], rt = []; for (let s = 0; s < seg; s++) { const a = s / seg * TAU, r = 0.2 + (edge(a) - 0.2) * t, y = H + 0.06 * t * t + 0.03 * sin(5 * a + ph) * t; ru.push(m.v(cos(a) * r, y - T * (1 - 0.5 * t), sin(a) * r, 0.4)); rt.push(m.v(cos(a) * r, y, sin(a) * r, 1)); } under.push(ru); top.push(rt); }
+  const all = [...rings, ...under];
+  for (let k = 0; k < all.length - 1; k++) for (let s = 0; s < seg; s++) { const s2 = (s + 1) % seg; m.quad(all[k][s], all[k + 1][s], all[k + 1][s2], all[k][s2]); }
+  const lu = under[nr - 1], lt = top[nr - 1]; for (let s = 0; s < seg; s++) { const s2 = (s + 1) % seg; m.quad(lu[s], lt[s], lt[s2], lu[s2]); }
+  for (let k = nr - 1; k > 0; k--) for (let s = 0; s < seg; s++) { const s2 = (s + 1) % seg; m.quad(top[k][s], top[k - 1][s], top[k - 1][s2], top[k][s2]); }
+  const c = m.v(0, H + 0.01, 0, 1); for (let s = 0; s < seg; s++) m.tri(top[0][(s + 1) % seg], top[0][s], c);
+  return m;
 }
 // sea anemone (Heteractis magnifica): a low mound packed with ~420 short, fat tentacles with rounded tips, like a thick carpet;
 // aux = (tentacle seed * 5 + ring along it) / 127, -0.5 the oral disc

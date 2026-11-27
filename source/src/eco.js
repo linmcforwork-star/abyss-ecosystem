@@ -530,7 +530,8 @@ function pkTest(id, x, y, z, rad) {
   if (al < 0.3 || al > 18) return;
   const px = dx - pkX * al, py = dy - pkY * al, pz = dz - pkZ * al, off = sqrt(px * px + py * py + pz * pz);
   const tol = rad * 1.3 + al * 0.05; if (off > tol) return; // (generous: what wears the yellow ring should be easy to aim at)
-  const s = (off / tol + al * 0.02) * (id === cardI ? 0.7 : 1) + (id >= ANEB ? 0.8 : 0); // (a fish in front of an anemone wins) if (s < pkS) { pkS = s; pkB = id; } // the open card wins near-ties, so it does not flicker between neighbours
+  const s = (off / tol + al * 0.02) * (id === cardI ? 0.7 : 1) + (id >= ANEB ? 0.8 : 0); // (a fish in front of an anemone wins)
+  if (s < pkS) { pkS = s; pkB = id; } // the open card wins near-ties, so it does not flicker between neighbours
 }
 function lookPick() {
   // the ray: the screen centre, or where a finger tapped
