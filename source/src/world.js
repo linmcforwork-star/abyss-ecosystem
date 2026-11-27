@@ -796,15 +796,15 @@ function meshCoral(fan, lo = LV > 1) {
       m.tube(pts, (k) => r * (1 - 0.25 * k / seg) * (k === seg ? 1.15 : knob[k]), sides, 'round', (k) => clamp(0.3 + 0.7 * (1 - depth / 3) * (k / seg) + (k === seg ? 0.3 : 0), 0, 1));
       if (depth > 0) { const n = lo ? 1 : 1 + (rnd() < 0.6) + (rnd() < 0.3); for (let i = 0; i < n; i++) { const at = pts[1 + ((rnd() * (seg - 1)) | 0)]; branch(at, nrm([d[0] + rr(-0.9, 0.9), d[1] + rr(0, 0.6), d[2] + rr(-0.9, 0.9)]), r * 0.85, len * rr(0.55, 0.8), depth - 1); } }
     };
-    const n0 = lo ? 10 : 22;
-    for (let i = 0; i < n0; i++) { const a = i / n0 * TAU + rr(-0.3, 0.3); branch([cos(a) * rr(0, 0.35), 0, sin(a) * rr(0, 0.35)], nrm([cos(a) * rr(0.6, 1.2), rr(0.5, 1.1), sin(a) * rr(0.6, 1.2)]), 0.042, rr(0.4, 0.65), 2); }
+    const n0 = lo ? 12 : 30;
+    for (let i = 0; i < n0; i++) { const a = i / n0 * TAU + rr(-0.3, 0.3); branch([cos(a) * rr(0.05, 0.6), 0, sin(a) * rr(0.05, 0.6)], nrm([cos(a) * rr(0.6, 1.2), rr(0.5, 1.1), sin(a) * rr(0.6, 1.2)]), 0.042, rr(0.4, 0.65), 2); }
     return m;
   }
   // sea fan: thick trunk and main branches, then an irregular net of fine twigs between scattered points of the fan's outline
   const W = 1.25, H = 0.9, curve = (x) => 0.06 * x * x; // (a gentle bow across the current)
   const P3 = (x, y) => [x, y, curve(x)];
   const main = [[0, 0]], mains = [];
-  for (let i = 0; i < 4; i++) { const a = PI / 2 + (i - 1.5) * 0.45 + rr(-0.1, 0.1), pts = [[0, 0.08]]; for (let k = 1; k <= 4; k++) pts.push([cos(a) * k * 0.2 * rr(0.9, 1.1), 0.08 + sin(a) * k * 0.2]); mains.push(pts); }
+  for (let i = 0; i < 4; i++) { const a = PI / 2 + (i - 1.5) * 0.62 + rr(-0.1, 0.1), pts = [[0, 0.08]]; for (let k = 1; k <= 4; k++) pts.push([cos(a) * k * 0.2 * rr(0.9, 1.1), 0.08 + sin(a) * k * 0.2]); mains.push(pts); }
   m.tube([P3(0, -0.02), P3(0, 0.1)], 0.035, lo ? 4 : 6, false, () => 0.3);
   for (const ps of mains) m.tube(ps.map((q) => P3(q[0], q[1])), (k) => 0.022 * (1 - 0.15 * k), lo ? 3 : 5, false, (k) => 0.35 + 0.1 * k);
   // side branches off the mains (the visible skeleton), then a thin bowed membrane whose fine net of twigs is cut out

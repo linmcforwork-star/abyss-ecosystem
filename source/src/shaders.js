@@ -401,7 +401,7 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     alb = mix(vall * .7, wall * (.85 + .2 * F.h), ridge) * (.7 + .3 * B.h) * (.55 + .45 * i.ao);
     alb *= .9 + .2 * crest;
     alb *= 1. - .4 * ss(.3, .9, on.y);
-    sgro = (ridge - .5) * 1.6; vao = .55 + .45 * ridge; flu = .25; gloss = .3; bump = 1.1;
+    sgro = (ridge - .5) * .35; vao = .7 + .3 * ridge; flu = .25; gloss = .3; bump = 1.1;
   } else if (mat == 7) {
     // table coral: pastel plate, a paler growing rim, fine corallite texture on top
     let hue = fract(sd * 4.37);
@@ -412,7 +412,10 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     base *= .85 + .35 * ss(.2, .8, length(i.op.xz - vec2f(sd * 37.)));   // paler toward the growing rim
     let top = ss(.8, .95, i.ao);
     // the branchlet tips: a fine irregular speckle (any regular pattern reads as fabric)
-    let tip = ss(.6, .8, F.h * .6 + C.h * .4) * top * .6;
+    // radial rows of branchlets growing out from the stalk, broken up by noise so they never read as a regular weave
+    let pr = i.op.xz - vec2f(sd * 37.); let an = atan2(pr.y, pr.x);
+    let streak = ss(.35, .8, sin(an * 70. + F.h * 7. + C.h * 4.) * .5 + .5);
+    let tip = (ss(.62, .8, F.h * .6 + C.h * .4) * .5 + streak * .35) * top;
     alb = base * (.55 + .35 * F.h) * (1. - .35 * top * (1. - tip));
     alb = mix(alb, vec3f(.80, .70, .48), tip * .45);
     alb = mix(alb, vec3f(.31, .29, .24), ss(.55, .35, i.ao) * ss(.3, .45, i.ao));   // underside
@@ -430,7 +433,7 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
       for (var a = -1; a <= 1; a++) { for (var b = -1; b <= 1; b++) {
         let c = ip + vec2f(f32(a), f32(b)); let pn = c + vec2f(hs(c.x * 7.1 + c.y * 3.3), hs(c.x * 1.7 + c.y * 9.2));
         let dd = length(g - pn); if (dd < d1) { d2 = d1; d1 = dd; } else if (dd < d2) { d2 = dd; } } }
-      if (d2 - d1 > .2) { discard; }
+      if (d2 - d1 > .3) { discard; }
     }
     alb = mix(base * .62, base, ss(.5, .75, i.ao)) * (.8 + .3 * C.h);
     flu = .35; gloss = .1; bump = .6; vao = 1.;
@@ -451,11 +454,11 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
     // staghorn Acropora: tan to straw-brown branches, pale (cream, or blue-lilac on some) swollen tips, the dead base
     // grey-green with turf algae
     let hue = fract(sd * 5.73);
-    var body = mix(vec3f(.52, .38, .16), vec3f(.44, .36, .14), fract(hue * 3.));
-    if (hue > .7) { body = vec3f(.58, .44, .20); }
+    var body = mix(vec3f(.46, .30, .11), vec3f(.40, .30, .10), fract(hue * 3.));
+    if (hue > .7) { body = vec3f(.50, .36, .14); }
     let tipc = select(vec3f(.91, .89, .81), vec3f(.62, .66, .84), fract(hue * 7.) > .4);
     alb = mix(vec3f(.43, .48, .36), body, ss(.3, .55, i.ao)) * (.6 + .5 * B.h) * (.75 + .35 * C.h);
-    alb = mix(alb, tipc, ss(.88, 1., i.ao));
+    alb = mix(alb, tipc, ss(.95, 1.05, i.ao));
     flu = .5; gloss = .15; bump = .35; vao = 1.5;
   }
   let rip = select(0., flt * gm.a * cos((i.wp.x * .8 + i.wp.z * .35) * 5. + A.c * 9.) * .65, mat == 0);
