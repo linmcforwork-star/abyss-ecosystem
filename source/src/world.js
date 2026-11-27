@@ -335,7 +335,7 @@ function makeWorld(D, T, flyPts, POSES) {
           if (u < 0.25) solid(26, px, py, pz, rr(0.9, 1.6), q(0.4), 6, rnd(), 1, 0);
           else if (u < 0.45) solid(7, px, py, pz, rr(0.8, 1.4), up, 5, rnd(), 1, 0);
           else if (u < 0.6) { if (!PINH || ly < floorY + 4) solid(27, px, py, pz, rr(0.9, 1.5), q(0.15), 7, rnd(), 1, 0); } // (home: no table corals roofing the anemones on the upper tiers)
-          else if (u < 0.85) solid(4 + (rnd() * 3 | 0), px, py, pz, rr(0.6, 1.2), up, 4, rnd(), 1, 0);
+          else if (u < 0.85) solid(rnd() < 0.2 ? 4 : 5 + (rnd() * 2 | 0), px, py, pz, rr(0.6, 1.2), up, 4, rnd(), 1, 0);   // (sponges kept rare: they read big and dark)
           else solid(8, px, py, pz, rr(1.2, 2), up, 5, rnd(), 1, 0);
         }
       });
@@ -753,7 +753,10 @@ function makeWorld(D, T, flyPts, POSES) {
     for (let c = 0; c < nCells; c++) { const a = L[c]; for (let i = 0; i < a.length; i += 12) { for (let j = 0; j < 12; j++) data[k++] = a[i + j]; lo[c] = min(lo[c], a[i + 1] - 3); hi[c] = max(hi[c], a[i + 1] + 3); } }
     return { data, n, start, lo, hi };
   };
-  return { gy, glints: new Float32Array(glints), chunks: chunks.map(packC), props: props.map(packC), big: pack(big), bigF: pack(big, 2, 1.5), small: pack(small), solids: { data: new Float32Array(sol.data), ranges: sol.ranges }, bubbles: new Float32Array(bubbles), volD, gm, fish: new Float32Array(fish), mantas: new Float32Array(mantas), snow, floorH, heads, anemones, holes, stations, zones: ZONES };
+  // the corals and sponges, for aiming at them (eco.js): x, y, z, scale, mesh
+  const corals = [];
+  props.forEach((P, g) => { const m = g < 6 ? g + 4 : g + 20; for (const c of P) for (let i = 0; i < c.length; i += 12) corals.push(c[i], c[i + 1], c[i + 2], c[i + 3], m); });
+  return { gy, glints: new Float32Array(glints), chunks: chunks.map(packC), props: props.map(packC), big: pack(big), bigF: pack(big, 2, 1.5), small: pack(small), solids: { data: new Float32Array(sol.data), ranges: sol.ranges }, bubbles: new Float32Array(bubbles), volD, gm, fish: new Float32Array(fish), mantas: new Float32Array(mantas), snow, floorH, heads, anemones, holes, stations, zones: ZONES, corals: new Float32Array(corals) };
 }
 const fract = (x) => x - floor(x);
 
@@ -785,7 +788,7 @@ function meshCoral(fan, lo = LV > 1) {
   const m = new Mesh();
   const nrm = (v) => { const l = hypot(...v) || 1; return v.map((c) => c / l); };
   if (!fan) {
-    const sides = lo ? 4 : 6, seg = lo ? 3 : 6;
+    const sides = lo ? 4 : 5, seg = lo ? 3 : 5;
     const branch = (p, d, r, len, depth) => {
       const pts = [p]; let q = p;
       for (let i = 0; i < seg; i++) { d = nrm([d[0] + rr(-0.18, 0.18), d[1] + rr(0.02, 0.22), d[2] + rr(-0.18, 0.18)]); q = [q[0] + d[0] * len / seg, q[1] + d[1] * len / seg, q[2] + d[2] * len / seg]; pts.push(q); }
@@ -793,12 +796,12 @@ function meshCoral(fan, lo = LV > 1) {
       m.tube(pts, (k) => r * (1 - 0.25 * k / seg) * (k === seg ? 1.15 : knob[k]), sides, 'round', (k) => clamp(0.3 + 0.7 * (1 - depth / 3) * (k / seg) + (k === seg ? 0.3 : 0), 0, 1));
       if (depth > 0) { const n = lo ? 1 : 1 + (rnd() < 0.6) + (rnd() < 0.3); for (let i = 0; i < n; i++) { const at = pts[1 + ((rnd() * (seg - 1)) | 0)]; branch(at, nrm([d[0] + rr(-0.9, 0.9), d[1] + rr(0, 0.6), d[2] + rr(-0.9, 0.9)]), r * 0.85, len * rr(0.55, 0.8), depth - 1); } }
     };
-    const n0 = lo ? 5 : 8;
-    for (let i = 0; i < n0; i++) { const a = i / n0 * TAU + rr(-0.3, 0.3); branch([cos(a) * rr(0, 0.1), 0, sin(a) * rr(0, 0.1)], nrm([cos(a) * rr(0.6, 1.2), rr(0.4, 0.9), sin(a) * rr(0.6, 1.2)]), 0.028, rr(0.45, 0.7), 2); }
+    const n0 = lo ? 10 : 22;
+    for (let i = 0; i < n0; i++) { const a = i / n0 * TAU + rr(-0.3, 0.3); branch([cos(a) * rr(0, 0.35), 0, sin(a) * rr(0, 0.35)], nrm([cos(a) * rr(0.6, 1.2), rr(0.5, 1.1), sin(a) * rr(0.6, 1.2)]), 0.042, rr(0.4, 0.65), 2); }
     return m;
   }
   // sea fan: thick trunk and main branches, then an irregular net of fine twigs between scattered points of the fan's outline
-  const W = 1, H = 1, curve = (x) => 0.06 * x * x; // (a gentle bow across the current)
+  const W = 1.25, H = 0.9, curve = (x) => 0.06 * x * x; // (a gentle bow across the current)
   const P3 = (x, y) => [x, y, curve(x)];
   const main = [[0, 0]], mains = [];
   for (let i = 0; i < 4; i++) { const a = PI / 2 + (i - 1.5) * 0.45 + rr(-0.1, 0.1), pts = [[0, 0.08]]; for (let k = 1; k <= 4; k++) pts.push([cos(a) * k * 0.2 * rr(0.9, 1.1), 0.08 + sin(a) * k * 0.2]); mains.push(pts); }
@@ -807,9 +810,9 @@ function meshCoral(fan, lo = LV > 1) {
   // side branches off the mains (the visible skeleton), then a thin bowed membrane whose fine net of twigs is cut out
   // in the shader (mat 8, aux > 0.93): real Annella meshes are ~1-3 cm, far too fine for geometry
   for (const ps of mains) for (let k = 1; k < ps.length; k++) {
-    const n = lo ? 1 : 2;
+    const n = lo ? 1 : 3;
     for (let j = 0; j < n; j++) {
-      const [x0, y0] = ps[k], sgn = j ? 1 : -1, a = atan2(y0, x0) + sgn * rr(0.5, 0.9), L = rr(0.12, 0.22) * (1.2 - k * 0.12);
+      const [x0, y0] = ps[k], sgn = j ? 1 : -1, a = atan2(y0, x0) + sgn * rr(0.5, 0.9), L = rr(0.16, 0.3) * (1.2 - k * 0.12);
       const q = [[x0, y0], [x0 + cos(a) * L * 0.5, y0 + sin(a) * L * 0.5], [x0 + cos(a + sgn * 0.2) * L, y0 + sin(a + sgn * 0.2) * L]];
       m.tube(q.map((t) => P3(t[0], t[1])), (i) => 0.011 * (1 - 0.3 * i), 3, false, () => 0.6);
     }
@@ -830,41 +833,41 @@ function meshCoral(fan, lo = LV > 1) {
 // knife-edged, wavy vertical lamellae that fork and merge, a thick irregular rim and a deep dark cavity (aux low inside)
 function meshBarrel(h = 1.3, w = 0.55, seed = 210, lo = LV > 1) {
   rseed(seed);
-  const m = new Mesh(), seg = lo ? 20 : 44, rows = lo ? 7 : 14, rings = [];
-  const prof = (t) => w * (0.75 + 0.35 * sin(PI * min(1, t * 1.15)) - 0.12 * sstep(0.85, 1, t));   // bulging body, the rim drawn in a little
+  const m = new Mesh(), seg = lo ? 40 : 102, rows = lo ? 7 : 16, rings = [];   // (~6 vertices per lamella: fewer alias them away)
+  const prof = (t) => w * (0.62 + 0.45 * sin(PI * (0.08 + 0.78 * t)) - 0.06 * sstep(0.9, 1, t));   // bulging, widest a little below the middle, the mouth drawn in
   const ph = [rr(0, 9), rr(0, 9)];
   for (let r = 0; r <= rows; r++) {
     const t = r / rows, ring = [];
-    for (let s = 0; s < seg; s++) { const a = s / seg * TAU, wav = a * 11 + sin(t * 5 + ph[0] + a * 3) * 0.9 + sin(a * 5 + ph[1]) * 0.6, lam = pow(1 - abs(sin(wav)), 3); // knife-edged ridges that wander, fork and merge
-      const rr0 = prof(t) * (1 + 0.1 * lam * sstep(0.03, 0.15, t)) * (1 + 0.06 * (fbm(cos(a) * 2, t * 3, sin(a) * 2, 2) - 0.5)); ring.push(m.v(cos(a) * rr0, t * h, sin(a) * rr0, 0.45 + 0.55 * lam)); }
+    for (let s = 0; s < seg; s++) { const a = s / seg * TAU, wav = a * 17 + sin(t * 5 + ph[0] + a * 3) * 0.9 + sin(a * 5 + ph[1]) * 0.6, lam = pow(1 - abs(sin(wav)), 3); // knife-edged ridges that wander, fork and merge
+      const rr0 = prof(t) * (1 + 0.13 * lam * sstep(0.03, 0.15, t)) * (1 + 0.06 * (fbm(cos(a) * 2, t * 3, sin(a) * 2, 2) - 0.5)); ring.push(m.v(cos(a) * rr0, t * h, sin(a) * rr0, 0.45 + 0.55 * lam)); }
     rings.push(ring);
   }
   // the rim, then down the inside wall into the dark cavity
-  const inner = []; for (const [t, k, ao] of [[1, 0.78, 0.5], [0.85, 0.7, 0.15], [0.45, 0.6, 0.03]]) { const ring = []; for (let s = 0; s < seg; s++) { const a = s / seg * TAU, r0 = prof(1) * k; ring.push(m.v(cos(a) * r0, t * h, sin(a) * r0, ao)); } inner.push(ring); }
+  const inner = []; for (const [t, k, ao] of [[1.01, 0.8, 0.5], [0.85, 0.7, 0.15], [0.4, 0.6, 0.03]]) { const ring = []; for (let s = 0; s < seg; s++) { const a = s / seg * TAU, r0 = prof(1) * k; ring.push(m.v(cos(a) * r0, t * h, sin(a) * r0, ao)); } inner.push(ring); }
   const all = [...rings, ...inner];
   for (let k = 0; k < all.length - 1; k++) for (let s = 0; s < seg; s++) { const s2 = (s + 1) % seg; m.quad(all[k][s], all[k + 1][s], all[k + 1][s2], all[k][s2]); }
   return m;
 }
-function meshTubes() { return meshBarrel(1.5, 0.42, 211); }
+function meshTubes() { return meshBarrel(1.15, 0.5, 211); }
 // meshes 5, 6: leather coral (Sarcophyton), a "toadstool": a smooth pale stalk under a broad soft cap. v 0: S. glaucum, a
 // wide wavy cap whose margin folds into flaring ruffles; v 1: S. trocheliophorum, flatter with radial lobes ("elephant
 // ear"). aux .15 stalk, .5 underside, 1 the cap's top (the shader paints the polyp fuzz there)
 function meshLeather(v, lo = LV > 1) {
   rseed(240 + v);
-  const m = new Mesh(), seg = lo ? 18 : 40, nr = lo ? 4 : 9, R = v ? 0.62 : 0.55, nf = v ? 6 : 9, fd = v ? 0.05 : 0.09, ph = rnd() * 9;
-  const stalk = [[0.16, 0], [0.13, 0.1], [0.12, 0.26], [0.14, 0.36]];
+  const m = new Mesh(), seg = lo ? 18 : 40, nr = lo ? 4 : 9, R = v ? 0.6 : 0.52, nf = v ? 4 : 5, fd = v ? 0.1 : 0.15, ph = rnd() * 9;
+  const stalk = [[0.28, 0], [0.24, 0.12], [0.22, 0.32], [0.27, 0.48]];
   const fold = (a, t) => fd * t * t * (sin(nf * a + ph + sin(a * 3) * 0.8) + 0.4 * sin(nf * 2.3 * a + ph * 2)) * (v ? 1 : 1.2);
-  const cap = (t, a) => { const r = 0.13 + (R - 0.13) * t * (1 + (v ? 0.12 * sin(5 * a + ph) : 0)); return [cos(a) * r, 0.36 + 0.1 * sin(PI * t * 0.75) + fold(a, t) - (v ? 0.02 : 0.05) * t * t, sin(a) * r]; };
+  const cap = (t, a) => { const r = 0.25 + (R - 0.25) * t * (1 + (v ? 0.12 * sin(5 * a + ph) : 0)); return [cos(a) * r, 0.48 + 0.1 * sin(PI * t * 0.75) + fold(a, t) - (v ? 0.02 : 0.05) * t * t, sin(a) * r]; };
   const rings = [];
   for (const [r, h] of stalk) { const ring = []; for (let s = 0; s < seg; s++) { const a = s / seg * TAU; ring.push(m.v(cos(a) * r, h, sin(a) * r, 0.15)); } rings.push(ring); }
   const under = [], top = [];
-  for (let k = 1; k <= nr; k++) { const t = k / nr, ru = [], rt = []; for (let s = 0; s < seg; s++) { const a = s / seg * TAU, q = cap(t, a); ru.push(m.v(q[0], q[1] - 0.035 * (1 - t * 0.6), q[2], 0.5)); rt.push(m.v(q[0], q[1], q[2], 1)); } under.push(ru); top.push(rt); }
+  for (let k = 1; k <= nr; k++) { const t = k / nr, ru = [], rt = []; for (let s = 0; s < seg; s++) { const a = s / seg * TAU, q = cap(t, a); ru.push(m.v(q[0], q[1] - 0.06 * (1 - t * 0.4), q[2], 0.5)); rt.push(m.v(q[0], q[1], q[2], 1)); } under.push(ru); top.push(rt); }
   const all = [...rings, ...under];
   for (let k = 0; k < all.length - 1; k++) for (let s = 0; s < seg; s++) { const s2 = (s + 1) % seg; m.quad(all[k][s], all[k + 1][s], all[k + 1][s2], all[k][s2]); }
   const lastU = under[under.length - 1], lastT = top[top.length - 1];
   for (let s = 0; s < seg; s++) { const s2 = (s + 1) % seg; m.quad(lastU[s], lastT[s], lastT[s2], lastU[s2]); } // the rim
   for (let k = top.length - 1; k > 0; k--) for (let s = 0; s < seg; s++) { const s2 = (s + 1) % seg; m.quad(top[k][s], top[k - 1][s], top[k - 1][s2], top[k][s2]); }
-  const c = m.v(0, 0.44, 0, 1); for (let s = 0; s < seg; s++) m.tri(top[0][(s + 1) % seg], top[0][s], c);
+  const c = m.v(0, 0.56, 0, 1); for (let s = 0; s < seg; s++) m.tri(top[0][(s + 1) % seg], top[0][s], c);
   return m;
 }
 // stone whale fluke: SDF of tapered capsules -> surface nets

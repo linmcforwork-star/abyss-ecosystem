@@ -49,6 +49,20 @@ ANSP[8] = { zh: '短腕岩虾（海葵虾）', la: 'Ancylocaris brevicarpalis', 
   facts: ['身体几乎透明，背上和尾扇上有镶橙边的白斑，腿上是一圈圈紫蓝色的环纹。', '住在地毯海葵、奶嘴海葵这些大海葵的触手之间，不会被蜇。', '真身只有 2–3 厘米，这里放大了几倍，好让你看得见。'] };
 ANSP[9] = { zh: '斑点瓷蟹', la: 'Neopetrolisthes maculatus', short: '瓷蟹',
   facts: ['白色扁平的身子和一对大螯上，布满红褐色的小斑点，像一只瓷器。', '它不用螯捉吃的，而是挥动嘴边两把羽毛似的小扇子，从水里滤食浮游生物。', '常常一对住在一只地毯海葵上，靠海葵的刺保护自己。甲壳只有 2 厘米左右，这里放大了。'] };
+// the corals and sponges (by mesh, see world.js): no animal state, shown on the card when aimed at
+const CORSP = {};
+CORSP[4] = CORSP[9] = { zh: '桶状海绵', la: 'Xestospongia testudinaria', size: '真实高度：常见 0.5–1.5 米，最大可近 2 米',
+  facts: ['它不是珊瑚，是海绵：最古老、最简单的动物之一，没有嘴、没有内脏。', '海水从体壁上无数小孔被吸进去，过滤掉里面的食物颗粒，再从顶上的大口排出去。', '长得很慢，大的个体可能已经活了上百年。'] };
+CORSP[5] = CORSP[6] = { zh: '肉质软珊瑚（皮革珊瑚）', la: 'Sarcophyton', size: '真实宽度：通常 20–80 厘米',
+  facts: ['没有坚硬的石灰骨骼，摸起来软而有韧性，像皮革。', '张开时顶上布满细小的珊瑚虫，像一层绒毛；受惊时全部缩回去，表面一下子变得光滑。', '身体里有难吃的化学物质，所以很少有动物吃它。'] };
+CORSP[7] = { zh: '鹿角珊瑚', la: 'Acropora muricata', size: '真实大小：一丛可宽达数米，枝条粗约 1–2 厘米',
+  facts: ['枝条像鹿角，是长得最快的珊瑚之一，一年能长 10 厘米以上。', '枝尖上颜色较浅的部分，就是正在生长的地方。', '它是造礁的主力，也最怕海水变暖：水温太高时会白化死去。'] };
+CORSP[8] = { zh: '大海扇', la: 'Annella mollis', size: '真实大小：可宽达 2–3 米，却只有几厘米厚',
+  facts: ['一种柳珊瑚，长成一张巨大的网。', '总是横着对着水流生长，这样漂过的浮游生物更容易被网上的珊瑚虫抓住。'] };
+CORSP[26] = { zh: '脑珊瑚（扁脑珊瑚）', la: 'Platygyra', size: '真实大小：一个珊瑚头常见 0.5–1 米，大的可达数米',
+  facts: ['表面弯弯曲曲的沟回像大脑，每条沟里住着连成一串的珊瑚虫。', '长得很慢，一年大约 1 厘米，大的珊瑚头可能已经有几百岁。'] };
+CORSP[27] = { zh: '桌面珊瑚', la: 'Acropora hyacinthus', size: '真实大小：桌面宽可达 2–3 米',
+  facts: ['无数细小的枝条横着长，连成一张平台，像一张桌子。', '桌面下面的阴影，是小鱼躲避捕食者的好地方。'] };
 // states
 const S_HOVER = 0, S_HIDE = 1, S_TRAVEL = 2, S_GRAZE = 3, S_POSE = 4, S_CLEAN = 5, S_STALK = 6, S_BURST = 7, S_SLEEP = 8, S_PATROL = 9,
   S_GUARD = 10, S_FORAGE = 11, S_HOLE = 12, S_GONE = 13, S_ATE = 14, S_VISIT = 15, S_LOOK = 16, S_DIP = 17, S_SCAT = 18, S_CIRC = 19;
@@ -133,6 +147,7 @@ const add = (sp, x, y, z, home, grp = -1) => {
 const near = (list, x, z, r) => list.filter((p) => hypot(p[0] - x, p[2] - z) < r);
 const pick = (list) => list[(rnd() * list.length) | 0];
 const ANE = Wd.anemones, STA = Wd.stations, HOL = Wd.holes;
+const CORL = Wd.corals, nCor = CORL.length / 5, CORB = 100000; // card index for coral k: CORB + k
 const HEADS = [];                 // chromis homes: coral heads spread over the reef, nearest to the viewpoints first
 // groups (parrotfish, tangs, idols): a shared target, state and timer
 const NG = 24, GT = new Float64Array(NG * 3), GH = new Float64Array(NG * 3), GS = new Int8Array(NG), GTM = new Float32Array(NG), GST = new Int16Array(NG), GSP = new Int8Array(NG), GN = new Int8Array(NG);
@@ -530,7 +545,7 @@ function pkTest(id, x, y, z, rad) {
   if (al < 0.3 || al > 18) return;
   const px = dx - pkX * al, py = dy - pkY * al, pz = dz - pkZ * al, off = sqrt(px * px + py * py + pz * pz);
   const tol = rad * 1.3 + al * 0.05; if (off > tol) return; // (generous: what wears the yellow ring should be easy to aim at)
-  const s = (off / tol + al * 0.02) * (id === cardI ? 0.7 : 1) + (id >= ANEB ? 0.8 : 0); // (a fish in front of an anemone wins)
+  const s = (off / tol + al * 0.02) * (id === cardI ? 0.7 : 1) + (id >= CORB ? 1.1 : id >= ANEB ? 0.8 : 0); // (a fish in front of an anemone wins, an anemone in front of a coral)
   if (s < pkS) { pkS = s; pkB = id; } // the open card wins near-ties, so it does not flicker between neighbours
 }
 function lookPick() {
@@ -549,12 +564,16 @@ function lookPick() {
     else pkTest(i, P[o], P[o + 1], P[o + 2], SP[i] === 9 ? L * 0.5 : max(L * 0.45, 0.14)); // (small fish: a floor, so they are not fiddly to aim at)
   }
   for (let k = 0; k < nAnem; k++) pkTest(ANEB + k, AN[k * 8], AN[k * 8 + 1] + 0.15, AN[k * 8 + 2], 0.35 * AN[k * 8 + 3]);
+  for (let k = 0; k < nCor; k++) {
+    const o = k * 5, x = CORL[o], z = CORL[o + 2]; if (abs(x - F[CX]) > 18 || abs(z - F[CZ]) > 18) continue;
+    const sc = CORL[o + 3], m = CORL[o + 4]; pkTest(CORB + k, x, CORL[o + 1] + sc * (m === 27 ? 0.35 : 0.4), z, sc * (m === 8 ? 0.45 : 0.4));
+  }
   return pkB;
 }
-const spOf = (id) => id >= ANEB ? 10 : SP[id];
+const spOf = (id) => id >= CORB ? 11 : id >= ANEB ? 10 : SP[id];
 const stOf = (id) => id >= ANEB ? S_HOVER : ST[id];
 function showCard(id) {
-  const sp = spOf(id), s = id >= ANEB ? ANSP[AN[(id - ANEB) * 8 + 4] | 0] : sp === 0 ? CLOWNS[VR[id]] : SPC[sp];
+  const sp = spOf(id), s = id >= CORB ? CORSP[CORL[(id - CORB) * 5 + 4]] : id >= ANEB ? ANSP[AN[(id - ANEB) * 8 + 4] | 0] : sp === 0 ? CLOWNS[VR[id]] : SPC[sp];
   cN.textContent = s.zh; cL.textContent = s.la; cvShow(sp, id); cF.textContent = (s.size ? s.size + '。' : '') + s.facts.join(' ');
   card.className = 'on'; cardI = id; lastDo = '';
 }
@@ -583,7 +602,7 @@ function cardStep(dt) {
     const sp = spOf(cardI), d = (DOING[sp] || {})[stOf(cardI)] || '';
     let txt = d;
     if (d.includes('{c}')) { const c = XI[cardI]; txt = d.replace('{c}', c >= 0 ? SPC[SP[c]].zh.replace(/（.*）/, '') : '鱼'); }
-    txt = '正在：' + txt + (fol >= 0 ? '' : '　·　G 跟随');
+    txt = cardI >= CORB ? '' : '正在：' + txt + (fol >= 0 ? '' : '　·　G 跟随');
     if (txt !== lastDo) { cD.textContent = txt; lastDo = txt; }
   }
 }
@@ -595,7 +614,7 @@ canvas.addEventListener('pointerup', (e) => {
   pickOn = true; const b = lookPick(); pickOn = false;
   if (b >= 0) { showCard(b); candI = b; lostT = 0; }
 });
-card.addEventListener('click', () => { if (cardI >= 0) follow(cardI); });
+card.addEventListener('click', () => { if (cardI >= 0 && cardI < CORB) follow(cardI); });
 
 // ---------------------------------------------------------------- following an animal, the guided tour
 function follow(id) { fol = id; tour = false; F[VX] = F[VY] = F[VZ] = 0; showCard(id); }
@@ -660,7 +679,7 @@ function camTo(id, dt, snap) {
 const TGc = new Float64Array(3);
 addEventListener('keydown', (e) => {
   if (menu || e.repeat) return;
-  if (e.code === 'KeyG') { if (fol >= 0) unfollow(); else if (cardI >= 0) follow(cardI); }
+  if (e.code === 'KeyG') { if (fol >= 0) unfollow(); else if (cardI >= 0 && cardI < CORB) follow(cardI); }
   else if (e.code === 'KeyT') { if (tour) unfollow(); else { tour = true; tourT = 0; } }
   else if (e.code === 'KeyN') ffwd = 1;
 });
