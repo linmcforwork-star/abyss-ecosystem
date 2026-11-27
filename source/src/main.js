@@ -622,7 +622,7 @@ function frame(now) {
       lkx += jx * 1.5 * dt; lky += jy * dt;
     }
     // mouse look through two cascaded low-pass stages
-    const kq = 1 - exp(-dt * 30); lkx += mdx * 0.0022; lky += mdy * 0.0022; mdx = 0; mdy = 0;
+    const kq = 1 - exp(-dt * 60); lkx += mdx * 0.0022; lky += mdy * 0.0022; mdx = 0; mdy = 0;
     const ax = lkx * kq, ay = lky * kq; lkx -= ax; lky -= ay; l2x += ax; l2y += ay;
     const dyw = l2x * kq, dpt = l2y * kq; l2x -= dyw; l2y -= dpt;
     const yaw = F[YAW] + dyw; let pitch = F[PIT] - dpt; pitch = pitch < -1.55 ? -1.55 : pitch > 1.55 ? 1.55 : pitch;
@@ -657,7 +657,10 @@ const key = (e, v) => {
   }
 };
 // behind the menu only the stats and mute keys work
-addEventListener('keydown', (e) => { if (menu && e.code !== 'KeyH' && e.code !== 'KeyV') return; sound(); key(e, 1); });
+addEventListener('keydown', (e) => {
+  // Esc again behind the menu resumes; browsers may refuse the mouse grab from Esc, then any click on the scene takes it
+  if (menu && e.code === 'Escape' && !e.repeat && bDive.textContent === '继续') { ui(false); if (!mob) capture(); return; }
+  if (menu && e.code !== 'KeyH' && e.code !== 'KeyV') return; sound(); key(e, 1); });
 addEventListener('keyup', (e) => key(e, 0));
 const release = () => { kf = kb = kl = kr = ku = kd = ks = 0; tId = -1; tN = 0; };
 const capture = () => { sound(); const p = canvas.requestPointerLock({ unadjustedMovement: true }); if (p && p.catch) p.catch(() => canvas.requestPointerLock()).catch(() => 0); };
