@@ -676,6 +676,7 @@ struct VO { @builtin(position) cp: vec4f, @location(0) wp: vec3f, @location(1) n
   // swimming: a wave down the body, stronger toward the tail (eels: the whole body)
   let ex = select(.25 - l.x, .55 - l.x, k == 8);
   let wv = sin(t * fq * (.5 + .5 * min(bl, 2.)) + ph - l.x * select(4., 13., k == 8)) * amp * ex * ex * select(1., 1.6, k == 8) * min(bl, 2.);
+  if (k == 8) { l.z += sin(l.x * 8.5 + ph * 6. + t * .4) * .035 * sat(.55 - l.x); } // a moray is never ruler-straight: a slow lazy S-bend, even at rest
   l.z += select(wv, wv * .1, asleep);
   // pectoral fins flutter
   if (aux > .75 && aux < .85) { l.y += sin(t * 7. + ph) * .02 * abs(l.z) * 10.; }
@@ -784,8 +785,8 @@ fn spots(p: vec2f, sc: f32, r: f32) -> f32 { let q = p * sc; let c = floor(q); l
       spec = .35;
     }
     default { // giant moray: brown with dense dark leopard spots, a black gill patch
-      alb = vec3f(.42, .34, .16) * (.8 + .4 * ss(-.02, .03, y));
-      alb = mix(alb, vec3f(.05, .04, .02), spots(vec2f(x, y * 1.1 + i.op.z * .6), 42., .4) * .85);   // round leopard spots, about 3-4 rows down each flank
+      alb = vec3f(.37, .31, .17) * (.72 + .5 * ss(-.03, .04, -y));   // olive-brown, the back darker, the belly lighter
+      alb = mix(alb, vec3f(.05, .04, .02), spots(vec2f(x, y * 1.1 + i.op.z * .6), mix(42., 85., ss(.25, .45, x)), .4) * .85); // fine dense spots on the head, larger leopard spots behind   // round leopard spots, about 3-4 rows down each flank
       alb = mix(alb, vec3f(.02), ss(.006, .0, length(vec2f((x - .385) * .8, y + .008)) - .012));    // the black gill patch
       let mouth = ss(.004, .0, abs(y + .004 + .0 * x)) * ss(.43, .46, x);
       alb = mix(alb, vec3f(.01), mouth);

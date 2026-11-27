@@ -298,12 +298,12 @@ function meshShark() {
 // tapering tail; a low continuous fin along the back and belly. aux = 1 body, .6/.55 fins; x from +0.5 (snout) back
 function meshEel() {
   const m = new Mesh(), N = 40, S = 12, rings = [];
-  const ht = (t) => t < 0.035 ? 0.014 + 0.6 * t : t < 0.13 ? 0.035 + 0.012 * sstep(0.035, 0.13, t) : t < 0.6 ? 0.047 - 0.004 * (t - 0.13) / 0.47 : 0.043 * pow(1 - (t - 0.6) / 0.4, 1.3) + 0.004;
+  const ht = (t) => t < 0.035 ? 0.016 + 0.75 * t : t < 0.13 ? 0.042 + 0.014 * sin(PI * sstep(0.035, 0.13, t) * 0.5) : t < 0.2 ? 0.056 - 0.01 * sstep(0.13, 0.2, t) : t < 0.6 ? 0.046 + 0.004 * sin(PI * (t - 0.2) / 0.4) : 0.046 * pow(1 - (t - 0.6) / 0.4, 1.3) + 0.004; // a deep head (jaw muscles), the body thickest at 35-45%
   const wt = (t) => t < 0.13 ? 0.78 : t < 0.6 ? 0.72 : 0.72 - 0.34 * (t - 0.6) / 0.4;
   const T = []; for (let i = 0; i <= N; i++) { const u = i / N; T.push(u < 0.25 ? u * u / 0.25 * 0.5 : u - 0.125); } // denser rings at the head
   const tm = T[N]; for (let i = 0; i <= N; i++) T[i] /= tm;
   for (const t of T) {
-    const x = 0.5 - t, h = ht(t), w = h * wt(t), jaw = t < 0.13 ? 0.006 * sin(PI * t / 0.13) : 0, r = [];
+    const x = 0.5 - t, h = ht(t), w = h * wt(t), jaw = t < 0.13 ? 0.014 * sin(PI * t / 0.13) * (1 - t / 0.13 * 0.4) : 0, r = [];
     for (let k = 0; k < S; k++) { const a = k / S * TAU, sy = sin(a), cz = cos(a); r.push(m.v(x, sy * h - (sy < 0 ? jaw : 0), cz * w * (1 + 0.12 * (1 - sy * sy)), 1)); }
     rings.push(r);
   }
