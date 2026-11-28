@@ -1028,9 +1028,9 @@ struct GO { @builtin(position) cp: vec4f, @location(0) uv: vec2f, @location(1) @
   p += .1 * vec3f(sin(t * .7 + b.x * 50.), sin(t * .9 + b.x * 70.), cos(t * .8 + b.x * 90.));
   let d = length(p - g.cam.xyz);
   let sz = min(max(b.z, d * .0026), d * .0045);
-  // a glint smaller than its pixel footprint fades as (b.z / sz)^2: past ~25 m it is under 4% bright, so skip it before
+  // a glint smaller than its pixel footprint fades as (b.z / sz)^2: past ~45 m it is under 1% bright, so skip it before
   // any lighting (they are many thousands; this was 2.5 ms on an M2)
-  if (b.z < .2 * sz || d > 60. || dot(p - g.cam.xyz, g.fwd.xyz) < -1.) { o.cp = vec4f(0., 0., 2., 1.); return o; }
+  if (b.z < .08 * sz || d > 60. || dot(p - g.cam.xyz, g.fwd.xyz) < -1.) { o.cp = vec4f(0., 0., 2., 1.); return o; }
   let tw = pow(.5 + .5 * sin(t * (.35 + .9 * hs(b.x)) + b.x * 100.), 4.);
   let w = p + (g.right.xyz * q.x + g.up.xyz * q.y) * sz;
   o.cp = g.vp * vec4f(w, 1.); o.uv = q;
@@ -3784,7 +3784,7 @@ function render() {
   r.setPipeline(pSurf); r.draw(4);
   r.setPipeline(pBack); r.draw(4);
   if (!(OFF & 512)) { r.setPipeline(pBub); r.setVertexBuffer(0, ibBubbles); r.draw(4, nBub); }
-  if (!(OFF & 1024)) { r.setPipeline(pGl); r.setVertexBuffer(0, ibGl); drawCells(r, Wd.glints.start, Wd.glints.lo, Wd.glints.hi, 1, false, 4, 0, 30); } // only the cells within 30 m
+  if (!(OFF & 1024)) { r.setPipeline(pGl); r.setVertexBuffer(0, ibGl); drawCells(r, Wd.glints.start, Wd.glints.lo, Wd.glints.hi, 1, false, 4, 0, 45); } // only the cells within 45 m (kelp sparkles still read at 30-40 m)
   if (!(OFF & 2048)) { r.setPipeline(pSnow); r.setVertexBuffer(0, ibSnowB); r.draw(4, nSnow); }
   r.end();
   // light shafts
