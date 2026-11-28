@@ -1223,6 +1223,8 @@ fn quad(i: u32) -> vec2f { return vec2f(f32(i & 1u), f32(i >> 1u)) * 2. - 1.; }
   p.x += sin(t * 1.7 + b.x * 50. + h * .6) * wob + sin(h * .13 + b.x * 9.) * b.w * 2.;
   p.z += cos(t * 1.3 + b.x * 33. + h * .5) * wob + cos(h * .11 + b.x * 7.) * b.w * 2.;
   let sz = a.w * (.55 + .7 * life) * ss(0., .03, life) * ss(0., -1.2, p.y);
+  // far (sub-pixel) or behind the camera: skip before the shadow lookup
+  if (distance(p, g.cam.xyz) > 60. || dot(p - g.cam.xyz, g.fwd.xyz) < -1.) { o.cp = vec4f(0., 0., 2., 1.); return o; }
   let w = p + (g.right.xyz * q.x + g.up.xyz * q.y) * sz;
   o.cp = g.vp * vec4f(w, 1.); o.uv = q; o.wp = p;
   o.pr = vec4f(b.x, sz, shadow1(p), 0.);
