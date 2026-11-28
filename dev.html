@@ -3602,9 +3602,9 @@ Wd.volD = Wd.gm = T.vb = T.ib = 0; if (!/keepT/.test(location.search)) T.wp = T.
 // ---------------------------------------------------------------- render targets (rebuilt on resize)
 // The scene is drawn at `pix` pixels and scaled up to the window. frame() tunes it and the draw distance scale `det`
 // for 60 fps; both start where the last visit left them.
-const PIXMAX = 2560 * 1440, PIXMIN = mob ? 25e4 : 5e5, DETMIN = 0.4;
+const PIXMAX = 2560 * 1440, PIXMIN = mob ? 25e4 : 5e5, DETMIN = 0.65; // (below ~0.65 the shrunken draw distances pop up close)
 let lamp = true; // the diver's lamp (L)
-let W = 0, H = 0, DW = 0, DH = 0, pix = +SV[1] || (LV > 1 ? 41e4 : mob ? 1280 * 720 : PIXMAX), det = +SV[2] || 1, dynN = 0, dynT = 0, dynG = 0, dynGN = 0, dynBad = 0, dynOk = 0, dynWait = 3;
+let W = 0, H = 0, DW = 0, DH = 0, pix = +SV[1] || (LV > 1 ? 41e4 : mob ? 1280 * 720 : PIXMAX), det = max(+SV[2] || 1, DETMIN), dynN = 0, dynT = 0, dynG = 0, dynGN = 0, dynBad = 0, dynOk = 0, dynWait = 3;
 let passScene, passRays, passBlur, bgBlur, passPost, bgRays, bgPost, bloomPass = [], bloomBG = [], targets = [];
 const NB = 6;
 function resize() {
@@ -3753,7 +3753,9 @@ function render() {
   r.setPipeline(pSolid);
   if (!(OFF & 2)) for (let i = 0; i < 12; i++) { const c = Wd.solids.cells[i]; if (Wd.solids.ranges[i][1]) drawCells(r, c.start, c.lo, c.hi, c.mar, meshes[i], 0, 0, 240); } // cell-culled
   // near (full shader) first, then the far parts with the cheap shader (FARP): Subnautica-style shader LOD
-  const RF = 12, PF = [10, 8, 6][LV], PM2 = [30, 24, 18][LV], T2D = 40, PFAR = [110, 85, 65][LV]; // Medium/Low: shorter coral distances
+  // LOD and shader-tier switch distances stay fixed (divided by det, which drawCells multiplies in): only the outer
+  // draw distance shrinks when the GPU is slow, so a model never swaps right in front of the viewer
+  const ID = 1 / det, RF = 12 * ID, PF = [16, 12, 8][LV] * ID, PM2 = [40, 30, 22][LV] * ID, T2D = 40 * ID, PFAR = [110, 85, 65][LV]; // Medium/Low: shorter coral distances
   for (let i = 0; i < NCHUNK && !(OFF & 2); i++) {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
     drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, 0, min(RF, i > 5 ? 30 : big ? 40 : 96));
@@ -3765,7 +3767,7 @@ function render() {
   r.setPipeline(pSolidFar);
   for (let i = 0; i < NCHUNK && !(OFF & 2); i++) {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
-    drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, RF, min(T2D, i > 5 ? 30 : big ? 40 : 96));
+    drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, RF, min(T2D, i > 5 ? 30 : big ? 40 * ID : 96));
   }
   if (OFF & 4096) r.setPipeline(pSolidFar2);
   for (let i = 0; i < PM.length && !(OFF & 4); i++) {
@@ -3777,8 +3779,8 @@ function render() {
   r.setPipeline(pSolidFar2);
   for (let i = 0; i < NCHUNK && !(OFF & 2); i++) {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
-    drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, T2D, i > 5 ? 30 : big ? 40 : 96);
-    if (big) drawCells(r, c.start, c.lo, c.hi, 3, meshes[20 + i], 0, 40, 150);
+    drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, T2D, i > 5 ? 30 : big ? 40 * ID : 96);
+    if (big) drawCells(r, c.start, c.lo, c.hi, 3, meshes[20 + i], 0, 40 * ID, 150);
   }
   for (let i = 0; i < PM.length && !(OFF & 4); i++) { const P = Wd.props[i]; r.setVertexBuffer(1, ibProp[i]); drawCells(r, P.start, P.lo, P.hi, 3, meshes[PLOD2[i] || PLOD[i] || PM[i]], 0, T2D, PFAR); }
   if (!(OFF & 8)) { r.setPipeline(pManta); r.setVertexBuffer(1, ibManta); r.drawIndexed(MANTA.ib.length, nManta, MANTA.i0, MANTA.v0, 0);
@@ -3804,9 +3806,9 @@ function render() {
   // kelp and plants: 9-row blades up close, 5 rows mid-range, a decimated set far away
   if (!TANK) {
   if (!(OFF & 32)) {
-  r.setPipeline(pLeaf); r.setVertexBuffer(0, ibBig); drawCells(r, Wd.big.start, Wd.big.lo, Wd.big.hi, 5, false, 18, 0, 24);
-  r.setPipeline(pLeaf5); drawCells(r, Wd.big.start, Wd.big.lo, Wd.big.hi, 5, false, 10, 24, 58);
-  r.setPipeline(pLeafF); r.setVertexBuffer(0, ibBigF); drawCells(r, Wd.bigF.start, Wd.bigF.lo, Wd.bigF.hi, 5, false, 6, 58, 150);
+  r.setPipeline(pLeaf); r.setVertexBuffer(0, ibBig); drawCells(r, Wd.big.start, Wd.big.lo, Wd.big.hi, 5, false, 18, 0, 24 / det);
+  r.setPipeline(pLeaf5); drawCells(r, Wd.big.start, Wd.big.lo, Wd.big.hi, 5, false, 10, 24 / det, 58 / det);
+  r.setPipeline(pLeafF); r.setVertexBuffer(0, ibBigF); drawCells(r, Wd.bigF.start, Wd.bigF.lo, Wd.bigF.hi, 5, false, 6, 58 / det, 150);
   }
   if (!(OFF & 64)) { r.setPipeline(pLeafS); r.setVertexBuffer(0, ibSmall); drawCells(r, Wd.small.start, Wd.small.lo, Wd.small.hi, 1.5, false, 6, 0, 70); }
   }
