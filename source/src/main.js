@@ -99,6 +99,7 @@ const mSolid = mod(W_SOLID), mLeaf = mod(W_LEAF), mAnim = mod(W_ANIM), mSurf = m
 const pTerrain = scenePipe(mSolid, 'vs', 'fs', [vbSolid, ibSolid], { cull: 'back' });
 const pSolid = scenePipe(mSolid, 'vs', 'fs', [vbSolid, ibSolid]);
 const pSolidFar = scenePipe(mSolid, 'vs', 'fs', [vbSolid, ibSolid], { fconst: { FARP: 1 } }); // far LOD of corals and rocks
+const pSolidFar2 = scenePipe(mSolid, 'vs', 'fs', [vbSolid, ibSolid], { fconst: { FAR2: 1 } }); // past 40 m
 const pLeaf = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, constants: { ROWS: 9 } });
 const pLeaf5 = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, constants: { ROWS: 5 } });
 const pLeafS = scenePipe(mLeaf, 'vs', 'fs', [ibLeaf], { strip: true, constants: { ROWS: 3, FAR: 70 } });
@@ -433,7 +434,7 @@ if (hasTS) {
 }
 
 // ---------------------------------------------------------------- frame
-let hud = false, OFF = 0; // OFF: dev profiler, bit mask of skipped parts
+let waterN = 0, hud = false, OFF = 0; // OFF: dev profiler, bit mask of skipped parts
 let kf = 0, kb = 0, kl = 0, kr = 0, ku = 0, kd = 0, ks = 0, mdx = 0, mdy = 0, lkx = 0, lky = 0, l2x = 0, l2y = 0, hN = 0, hMax = 0, hMin = 1e9, hPer = 1e9, hLate = 0, hTot = 0, tId = -1, tN = 0, tx0 = 0, ty0 = 0, tx = 0, ty = 0;
 const TANH = 0.6, NEAR = 0.1, EXPO = 0.62, RAYS = 0.54;
 const submitList = [null];
@@ -505,11 +506,16 @@ function render() {
   const e = device.createCommandEncoder();
   let slot = null;
   if (hasTS) { for (let i = 0; i < qRead.length; i++) if (!qRead[i].busy) { slot = qRead[i]; break; } }
-  waterPass[0].timestampWrites = slot ? tsBegin : undefined;
+  // animated water texture + mips: every second frame (the caustics drift slowly; 30 updates a second read the same)
+  const wat = (waterN = (waterN + 1) & 1) === 0;
+  waterPass[0].timestampWrites = slot && wat ? tsBegin : undefined;
+  passScene.timestampWrites = slot && !wat ? tsBegin : undefined;
   passPost.timestampWrites = slot ? tsEnd : undefined;
-  // animated water texture + mips
-  let r = e.beginRenderPass(waterPass[0]); r.setPipeline(pWater); r.setBindGroup(0, bgWater); r.draw(3); r.end();
-  for (let i = 1; i < 5; i++) { r = e.beginRenderPass(waterPass[i]); r.setPipeline(pMip16); r.setBindGroup(0, waterBG[i - 1]); r.draw(3); r.end(); }
+  let r;
+  if (wat) {
+    r = e.beginRenderPass(waterPass[0]); r.setPipeline(pWater); r.setBindGroup(0, bgWater); r.draw(3); r.end();
+    for (let i = 1; i < 5; i++) { r = e.beginRenderPass(waterPass[i]); r.setPipeline(pMip16); r.setBindGroup(0, waterBG[i - 1]); r.draw(3); r.end(); }
+  }
   // scene
   r = e.beginRenderPass(passScene);
   r.setBindGroup(0, bg0);
@@ -520,7 +526,7 @@ function render() {
   r.setPipeline(pSolid);
   if (!(OFF & 2)) for (let i = 0; i < 12; i++) { const c = Wd.solids.cells[i]; if (Wd.solids.ranges[i][1]) drawCells(r, c.start, c.lo, c.hi, c.mar, meshes[i], 0, 0, 240); } // cell-culled
   // near (full shader) first, then the far parts with the cheap shader (FARP): Subnautica-style shader LOD
-  const RF = 12, PF = [10, 8, 6][LV], PM2 = [30, 24, 18][LV], PFAR = [110, 85, 65][LV]; // Medium/Low: shorter coral distances
+  const RF = 12, PF = [10, 8, 6][LV], PM2 = [30, 24, 18][LV], T2D = 40, PFAR = [110, 85, 65][LV]; // Medium/Low: shorter coral distances
   for (let i = 0; i < NCHUNK && !(OFF & 2); i++) {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
     drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, 0, min(RF, i > 5 ? 30 : big ? 40 : 96));
@@ -529,14 +535,21 @@ function render() {
   r.setPipeline(pSolidFar);
   for (let i = 0; i < NCHUNK && !(OFF & 2); i++) {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
-    drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, RF, i > 5 ? 30 : big ? 40 : 96);
-    if (big) drawCells(r, c.start, c.lo, c.hi, 3, meshes[20 + i], 0, 40, 150);
+    drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, RF, min(T2D, i > 5 ? 30 : big ? 40 : 96));
   }
   for (let i = 0; i < PM.length && !(OFF & 4); i++) {
     const P = Wd.props[i], mid = meshes[PLOD[i] || PM[i]]; r.setVertexBuffer(1, ibProp[i]);
-    if (PLOD2[i]) { drawCells(r, P.start, P.lo, P.hi, 3, mid, 0, PF, PM2); drawCells(r, P.start, P.lo, P.hi, 3, meshes[PLOD2[i]], 0, PM2, PFAR); }
-    else drawCells(r, P.start, P.lo, P.hi, 3, mid, 0, PF, PFAR);
+    if (PLOD2[i]) { drawCells(r, P.start, P.lo, P.hi, 3, mid, 0, PF, PM2); drawCells(r, P.start, P.lo, P.hi, 3, meshes[PLOD2[i]], 0, PM2, T2D); }
+    else drawCells(r, P.start, P.lo, P.hi, 3, mid, 0, PF, T2D);
   }
+  // shader tier T2 (rules doc): past 40 m one detail layer
+  r.setPipeline(pSolidFar2);
+  for (let i = 0; i < NCHUNK && !(OFF & 2); i++) {
+    const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
+    drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, T2D, i > 5 ? 30 : big ? 40 : 96);
+    if (big) drawCells(r, c.start, c.lo, c.hi, 3, meshes[20 + i], 0, 40, 150);
+  }
+  for (let i = 0; i < PM.length && !(OFF & 4); i++) { const P = Wd.props[i]; r.setVertexBuffer(1, ibProp[i]); drawCells(r, P.start, P.lo, P.hi, 3, meshes[PLOD2[i] || PLOD[i] || PM[i]], 0, T2D, PFAR); }
   if (!(OFF & 8)) { r.setPipeline(pManta); r.setVertexBuffer(1, ibManta); r.drawIndexed(MANTA.ib.length, nManta, MANTA.i0, MANTA.v0, 0);
   r.setPipeline(pFish); r.setVertexBuffer(1, ibFish);
   // per school: skip a school whose whole sphere is past the fog or behind the camera (it was ~4300 fish always drawn)
