@@ -774,7 +774,17 @@ function makeWorld(D, T, flyPts, POSES) {
     });
   }
   const sol = { data: [], ranges: [] }; let si = 0;
-  for (let m = 0; m < 12; m++) { const a = solids[m] || []; sol.ranges.push([si, a.length / 12]); si += a.length / 12; for (let i = 0; i < a.length; i++) sol.data.push(a[i]); }
+  // each mesh's instances sorted by culling cell (start/lo/hi per mesh, like packC) so main.js can cull them by cell;
+  // mar: how far an instance may reach past its cell
+  sol.cells = [];
+  for (let m = 0; m < 12; m++) {
+    const a = solids[m] || [], L = Array.from({ length: nCells }, () => []); let ms = 0;
+    for (let i = 0; i < a.length; i += 12) { L[cellOf(a[i], a[i + 2])].push(i); ms = max(ms, a[i + 3]); }
+    const start = new Uint32Array(nCells + 1), lo = new Float32Array(nCells).fill(1e9), hi = new Float32Array(nCells).fill(-1e9);
+    sol.ranges.push([si, a.length / 12]);
+    for (let c = 0; c < nCells; c++) { start[c] = si; for (const i of L[c]) { for (let j = 0; j < 12; j++) sol.data.push(a[i + j]); lo[c] = min(lo[c], a[i + 1] - a[i + 3] * 2); hi[c] = max(hi[c], a[i + 1] + a[i + 3] * 2); si++; } }
+    start[nCells] = si; sol.cells.push({ start, lo, hi, mar: m >= 10 ? 40 : ms * 2 + 1 }); // (10, 11: the whale fluke and the ship hull are big)
+  }
   const packC = (L) => {
     let n = 0; const start = new Uint32Array(nCells + 1);
     for (let c = 0; c < nCells; c++) { start[c] = n; n += L[c].length / 12; }
@@ -798,7 +808,7 @@ function makeWorld(D, T, flyPts, POSES) {
   const corals = [];
   const GM = [4, 5, 6, 7, 8, 9, 26, 27, 7, 7, 27, 27, 26, 26, 4];
   props.forEach((P, g) => { const m = GM[g]; for (const c of P) for (let i = 0; i < c.length; i += 12) corals.push(c[i], c[i + 1], c[i + 2], c[i + 3], m); });
-  return { gy, glints: packG(glints), chunks: chunks.map(packC), props: props.map(packC), big: pack(big), bigF: pack(big, 2, 1.5), small: pack(small), solids: { data: new Float32Array(sol.data), ranges: sol.ranges }, bubbles: new Float32Array(bubbles), volD, gm, fish: new Float32Array(fish), mantas: new Float32Array(mantas), snow, floorH, heads, anemones, holes, stations, zones: ZONES, corals: new Float32Array(corals) };
+  return { gy, glints: packG(glints), chunks: chunks.map(packC), props: props.map(packC), big: pack(big), bigF: pack(big, 2, 1.5), small: pack(small), solids: { data: new Float32Array(sol.data), ranges: sol.ranges, cells: sol.cells }, bubbles: new Float32Array(bubbles), volD, gm, fish: new Float32Array(fish), mantas: new Float32Array(mantas), snow, floorH, heads, anemones, holes, stations, zones: ZONES, corals: new Float32Array(corals) };
 }
 const fract = (x) => x - floor(x);
 

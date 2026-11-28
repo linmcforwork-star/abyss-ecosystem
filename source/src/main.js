@@ -515,7 +515,7 @@ function render() {
   r.setVertexBuffer(0, vbMesh); r.setIndexBuffer(ibMesh, 'uint32');
   if (!TANK) {
   r.setPipeline(pSolid);
-  if (!(OFF & 2)) for (let i = 0; i < 12; i++) { const g = Wd.solids.ranges[i]; if (g[1]) r.drawIndexed(meshes[i].ib.length, g[1], meshes[i].i0, meshes[i].v0, g[0]); }
+  if (!(OFF & 2)) for (let i = 0; i < 12; i++) { const c = Wd.solids.cells[i]; if (Wd.solids.ranges[i][1]) drawCells(r, c.start, c.lo, c.hi, c.mar, meshes[i], 0, 0, 240); } // cell-culled
   // near (full shader) first, then the far parts with the cheap shader (FARP): Subnautica-style shader LOD
   const RF = 12, PF = [10, 8, 6][LV], PM2 = [30, 24, 18][LV], PFAR = [110, 85, 65][LV]; // Medium/Low: shorter coral distances
   for (let i = 0; i < NCHUNK && !(OFF & 2); i++) {
