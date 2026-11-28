@@ -310,7 +310,7 @@ const ibSolids = buf(solidData, BU.VERTEX);
 const ibChunk = Wd.chunks.map((c) => buf(c.data, BU.VERTEX)), ibProp = Wd.props.map((c) => buf(c.data, BU.VERTEX));
 const ibBig = buf(new Uint8Array(Wd.big.buf), BU.VERTEX), ibBigF = buf(new Uint8Array(Wd.bigF.buf), BU.VERTEX), ibSmall = buf(new Uint8Array(Wd.small.buf), BU.VERTEX);
 const ibFish = buf(Wd.fish, BU.VERTEX), ibManta = buf(Wd.mantas, BU.VERTEX), ibBubbles = buf(Wd.bubbles, BU.VERTEX), ibSnowB = buf(Wd.snow, BU.VERTEX);
-const ibGl = buf(Wd.glints, BU.VERTEX), nGl = Wd.glints.length / 8;
+const ibGl = buf(Wd.glints.data, BU.VERTEX), nGl = Wd.glints.n;
 const nFish = Wd.fish.length / 8, nManta = Wd.mantas.length / 8, nBub = Wd.bubbles.length / 8, nSnow = Wd.snow.length / 4;
 const MANTA = meshes[12], FISH = meshes[13];
 // the reef animals (eco.js) write their instances here every frame: fish, then sharks, then eels; 8 floats each
@@ -365,8 +365,8 @@ Q.writeTexture({ texture: tMap }, Wd.gm, { bytesPerRow: 2048 }, [512, 512]);
   Q.submit([e.finish()]);
 }
 // the GPU has its own copies now: let go of the generator's (about 300 MB)
-for (const o of [Wd.big, Wd.bigF, Wd.small, ...Wd.chunks, ...Wd.props]) o.buf = o.data = 0;
-Wd.glints = Wd.volD = Wd.gm = T.vb = T.ib = 0; if (!/keepT/.test(location.search)) T.wp = T.wn = 0; // (dev: ?keepT keeps the terrain points for probing)
+for (const o of [Wd.big, Wd.bigF, Wd.small, Wd.glints, ...Wd.chunks, ...Wd.props]) o.buf = o.data = 0;
+Wd.volD = Wd.gm = T.vb = T.ib = 0; if (!/keepT/.test(location.search)) T.wp = T.wn = 0; // (dev: ?keepT keeps the terrain points for probing)
 
 // ---------------------------------------------------------------- render targets (rebuilt on resize)
 // The scene is drawn at `pix` pixels and scaled up to the window. frame() tunes it and the draw distance scale `det`
@@ -517,7 +517,7 @@ function render() {
   r.setPipeline(pSolid);
   if (!(OFF & 2)) for (let i = 0; i < 12; i++) { const g = Wd.solids.ranges[i]; if (g[1]) r.drawIndexed(meshes[i].ib.length, g[1], meshes[i].i0, meshes[i].v0, g[0]); }
   // near (full shader) first, then the far parts with the cheap shader (FARP): Subnautica-style shader LOD
-  const RF = 25, PF = [10, 8, 6][LV], PM2 = [30, 24, 18][LV], PFAR = [110, 85, 65][LV]; // Medium/Low: shorter coral distances
+  const RF = 12, PF = [10, 8, 6][LV], PM2 = [30, 24, 18][LV], PFAR = [110, 85, 65][LV]; // Medium/Low: shorter coral distances
   for (let i = 0; i < NCHUNK && !(OFF & 2); i++) {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
     drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, 0, min(RF, i > 5 ? 30 : big ? 40 : 96));
@@ -560,7 +560,7 @@ function render() {
   r.setPipeline(pSurf); r.draw(4);
   r.setPipeline(pBack); r.draw(4);
   if (!(OFF & 512)) { r.setPipeline(pBub); r.setVertexBuffer(0, ibBubbles); r.draw(4, nBub); }
-  if (!(OFF & 1024)) { r.setPipeline(pGl); r.setVertexBuffer(0, ibGl); r.draw(4, nGl); }
+  if (!(OFF & 1024)) { r.setPipeline(pGl); r.setVertexBuffer(0, ibGl); drawCells(r, Wd.glints.start, Wd.glints.lo, Wd.glints.hi, 1, false, 4, 0, 30); } // only the cells within 30 m
   if (!(OFF & 2048)) { r.setPipeline(pSnow); r.setVertexBuffer(0, ibSnowB); r.draw(4, nSnow); }
   r.end();
   // light shafts
