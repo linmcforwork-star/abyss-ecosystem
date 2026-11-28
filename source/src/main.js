@@ -531,12 +531,16 @@ function render() {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
     drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, 0, min(RF, i > 5 ? 30 : big ? 40 : 96));
   }
+  // dev experiment (profiler row "corals: texture work free"): near and mid corals with the one-layer T2 shader, i.e.
+  // about what baked textures would cost; tells whether baking is worth building
+  if (OFF & 4096) r.setPipeline(pSolidFar2);
   for (let i = 0; i < PM.length && !(OFF & 4); i++) { r.setVertexBuffer(1, ibProp[i]); drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PM[i]], 0, 0, PF); }
   r.setPipeline(pSolidFar);
   for (let i = 0; i < NCHUNK && !(OFF & 2); i++) {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
     drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, RF, min(T2D, i > 5 ? 30 : big ? 40 : 96));
   }
+  if (OFF & 4096) r.setPipeline(pSolidFar2);
   for (let i = 0; i < PM.length && !(OFF & 4); i++) {
     const P = Wd.props[i], mid = meshes[PLOD[i] || PM[i]]; r.setVertexBuffer(1, ibProp[i]);
     if (PLOD2[i]) { drawCells(r, P.start, P.lo, P.hi, 3, mid, 0, PF, PM2); drawCells(r, P.start, P.lo, P.hi, 3, meshes[PLOD2[i]], 0, PM2, T2D); }
