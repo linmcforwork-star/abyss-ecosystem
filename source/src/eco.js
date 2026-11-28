@@ -603,7 +603,7 @@ function cardStep(dt) {
     let txt = d;
     if (d.includes('{c}')) { const c = XI[cardI]; txt = d.replace('{c}', c >= 0 ? SPC[SP[c]].zh.replace(/（.*）/, '') : '鱼'); }
     txt = cardI >= CORB ? '' : '正在：' + txt + (fol >= 0 ? '' : '　·　G 跟随');
-    if (txt !== lastDo) { cD.textContent = txt; lastDo = txt; }
+    if (txt !== lastDo || cD.textContent !== txt) { cD.textContent = txt; lastDo = txt; } // (a coral card must clear the last animal's line)
   }
 }
 // tap (touch) or click (no pointer lock) on an animal shows its card; a tap on the card follows it

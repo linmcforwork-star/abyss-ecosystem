@@ -824,12 +824,12 @@ const mXf = (dx, dy, dz, s, yaw = 0, tilt = 0) => ([x, y, z]) => {
 // the coral growth-form variants (owner 2026-11-27: the same species must not look copy-pasted). 0 tiered tables: a big
 // plate with a smaller one above and beside it; 1 a table with a broken-off bite; 2 a lobed brain coral (three domes
 // grown together); 3 a flat encrusting brain coral; 4 a fused pair of barrel sponges, the small one leaning out
-function meshVariant(k) {
+function meshVariant(k, lo = LV > 1) {
   if (k === 0) return meshMerge(meshTable(), meshTable(1), mXf(0.75, 0.28, 0.35, 0.62, 1.3));
   if (k === 1) return meshTable(2);
   if (k === 2) { const m = meshBrain(); meshMerge(m, meshBrain(1), mXf(0.62, -0.08, 0.18, 0.72, 2)); return meshMerge(m, meshBrain(2), mXf(-0.1, -0.1, 0.66, 0.6, 4)); }
   if (k === 3) return meshMerge(new Mesh(), meshBrain(3), ([x, y, z]) => [x * 1.5, y * 0.3, z * 1.3]);
-  return meshMerge(meshBarrel(1.1, 0.5, 213), meshBarrel(0.75, 0.38, 214), mXf(0.62, -0.02, 0.15, 1, 0.8, -0.28));
+  return meshMerge(meshBarrel(1.1, 0.5, 213, lo), meshBarrel(0.75, 0.38, 214, lo), mXf(0.62, -0.02, 0.15, 1, 0.8, -0.28));
 }
 // coral and sponge meshes, each a real species (refs: /mnt/project-files/coral-window/refs/corals/LOOKS.md).
 // mesh 7: staghorn Acropora (A. muricata): an open thicket of knobbly, slightly tapering branches that start oblique at
@@ -844,12 +844,12 @@ function meshCoral(fan, lo = LV > 1, form = 0) {
   if (!fan) {
     // the far version (lo) is the same colony, branch for branch (same random stream), only with every other point of
     // each branch and three-sided tubes: no visible pop when it swaps at the LOD distance
-    const sides = lo ? 3 : 4, seg = 4;
+    const sides = lo ? 3 : 4, seg = 4, far = lo === 2; // far (lo 2): one straight piece per branch, no twigs
     const branch = (p, d, r, len, depth) => {
       const pts = [p]; let q = p;
       for (let i = 0; i < seg; i++) { d = nrm([d[0] + rr(-0.18, 0.18), d[1] + rr(0.02, 0.22), d[2] + rr(-0.18, 0.18)]); q = [q[0] + d[0] * len / seg, q[1] + d[1] * len / seg, q[2] + d[2] * len / seg]; pts.push(q); }
-      const knob = pts.map(() => rr(0.85, 1.15)), st = lo ? 2 : 1, tp = pts.filter((_, k) => k % st === 0), ns = tp.length - 1;
-      m.tube(tp, (k) => r * (1 - 0.25 * k / ns) * (k === ns ? 1.15 : knob[k * st]), sides, 'round', (k) => clamp(0.3 + 0.7 * (1 - depth / 3) * (k / ns) + (k === ns ? 0.3 : 0), 0, 1));
+      const knob = pts.map(() => rr(0.85, 1.15)), st = far ? 4 : lo ? 2 : 1, tp = pts.filter((_, k) => k % st === 0), ns = tp.length - 1;
+      if (!far || depth > 0) m.tube(tp, (k) => r * (1 - 0.25 * k / ns) * (k === ns ? 1.15 : knob[k * st]), sides, 'round', (k) => clamp(0.3 + 0.7 * (1 - depth / 3) * (k / ns) + (k === ns ? 0.3 : 0), 0, 1));
       if (depth > 0) { const n = 1 + (rnd() < 0.6) + (rnd() < 0.3); for (let i = 0; i < n; i++) { const at = pts[1 + ((rnd() * (seg - 1)) | 0)]; branch(at, nrm([d[0] + rr(-0.9, 0.9), d[1] + rr(0, 0.6), d[2] + rr(-0.9, 0.9)]), r * 0.85, len * rr(0.55, 0.8), depth - 1); } }
     };
     const n0 = [22, 11, 24][form], L0 = [0.4, 0.75, 0.24][form], L1 = [0.65, 1.05, 0.4][form], up = [[0.5, 1.1], [0.7, 1.3], [0.2, 0.6]][form];
@@ -889,7 +889,7 @@ function meshCoral(fan, lo = LV > 1, form = 0) {
 // knife-edged, wavy vertical lamellae that fork and merge, a thick irregular rim and a deep dark cavity (aux low inside)
 function meshBarrel(h = 1.3, w = 0.55, seed = 210, lo = LV > 1) {
   rseed(seed);
-  const m = new Mesh(), seg = lo ? 40 : 102, rows = lo ? 7 : 16, rings = [];   // (~6 vertices per lamella: fewer alias them away)
+  const m = new Mesh(), seg = [102, 40, 16][+lo], rows = [16, 7, 4][+lo], rings = []; // lo: 0 near, 1 mid, 2 far LOD   // (~6 vertices per lamella: fewer alias them away)
   const prof = (t) => w * (0.62 + 0.45 * sin(PI * (0.08 + 0.78 * t)) - 0.06 * sstep(0.9, 1, t));   // bulging, widest a little below the middle, the mouth drawn in
   const ph = [rr(0, 9), rr(0, 9)];
   for (let r = 0; r <= rows; r++) {
@@ -899,18 +899,18 @@ function meshBarrel(h = 1.3, w = 0.55, seed = 210, lo = LV > 1) {
     rings.push(ring);
   }
   // the rim, then down the inside wall into the dark cavity
-  const inner = []; for (const [t, k, ao] of [[1.01, 0.8, 0.5], [0.85, 0.7, 0.15], [0.4, 0.6, 0.03]]) { const ring = []; for (let s = 0; s < seg; s++) { const a = s / seg * TAU, r0 = prof(1) * k; ring.push(m.v(cos(a) * r0, t * h, sin(a) * r0, ao)); } inner.push(ring); }
+  const inner = []; for (const [t, k, ao] of [[1.01, 0.8, 0.5], [0.85, 0.7, 0.15], [0.4, 0.6, 0.03]].slice(0, lo === 2 ? 2 : 3)) { const ring = []; for (let s = 0; s < seg; s++) { const a = s / seg * TAU, r0 = prof(1) * k; ring.push(m.v(cos(a) * r0, t * h, sin(a) * r0, ao)); } inner.push(ring); }
   const all = [...rings, ...inner];
   for (let k = 0; k < all.length - 1; k++) for (let s = 0; s < seg; s++) { const s2 = (s + 1) % seg; m.quad(all[k][s], all[k + 1][s], all[k + 1][s2], all[k][s2]); }
   return m;
 }
-function meshTubes() { return meshBarrel(1.15, 0.5, 211); }
+function meshTubes(lo = LV > 1) { return meshBarrel(1.15, 0.5, 211, lo); }
 // meshes 5, 6: leather coral (Sarcophyton), a "toadstool": a smooth pale stalk under a broad soft cap. v 0: S. glaucum, a
 // wide wavy cap whose margin folds into flaring ruffles; v 1: S. trocheliophorum, flatter with radial lobes ("elephant
 // ear"). aux .15 stalk, .5 underside, 1 the cap's top (the shader paints the polyp fuzz there)
 function meshLeather(v, lo = LV > 1) {
   rseed(240 + v);
-  const m = new Mesh(), seg = lo ? 18 : 40, nr = lo ? 4 : 9, R = v ? 0.6 : 0.52, nf = v ? 4 : 5, fd = v ? 0.1 : 0.15, ph = rnd() * 9;
+  const m = new Mesh(), seg = [40, 18, 10][+lo], nr = [9, 4, 2][+lo], R = v ? 0.6 : 0.52, nf = v ? 4 : 5, fd = v ? 0.1 : 0.15, ph = rnd() * 9;
   const stalk = [[0.28, 0], [0.24, 0.12], [0.22, 0.32], [0.27, 0.48]];
   const fold = (a, t) => fd * t * t * (sin(nf * a + ph + sin(a * 3) * 0.8) + 0.4 * sin(nf * 2.3 * a + ph * 2)) * (v ? 1 : 1.2);
   const cap = (t, a) => { const r = 0.25 + (R - 0.25) * t * (1 + (v ? 0.12 * sin(5 * a + ph) : 0)); return [cos(a) * r, 0.48 + 0.1 * sin(PI * t * 0.75) + fold(a, t) - (v ? 0.02 : 0.05) * t * t, sin(a) * r]; };

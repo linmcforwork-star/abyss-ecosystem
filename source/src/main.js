@@ -291,6 +291,13 @@ for (let j = 1; j < 20; j++) meshes.push(meshAnem(j >> 1, j & 1).build()); // an
 { const b = meshes.length;
   meshes.push(meshCoral(0, LV > 1, 1).build(), meshCoral(0, LV > 1, 2).build(), ...[0, 1, 2, 3, 4].map((k) => meshVariant(k).build()), meshCoral(0, 1, 1).build(), meshCoral(0, 1, 2).build());
   PM.push(b, b + 1, b + 2, b + 3, b + 4, b + 5, b + 6); PLOD[8] = b + 7; PLOD[9] = b + 8; }
+// a third, far LOD (beyond PM2 m) for the numerous corals: barrels, leathers, staghorns, fused barrels; and mid versions
+// where there were none (Subnautica-style: thousands of colonies, so far away each is a few hundred triangles)
+const PLOD2 = {};
+{ const b = meshes.length, mid = [[0, meshBarrel(0.85, 0.55, 212, 1)], [1, meshLeather(0, 1)], [2, meshLeather(1, 1)], [5, meshTubes(1)], [14, meshVariant(4, 1)]];
+  const far = [[0, meshBarrel(0.85, 0.55, 212, 2)], [1, meshLeather(0, 2)], [2, meshLeather(1, 2)], [3, meshCoral(0, 2)], [5, meshTubes(2)], [8, meshCoral(0, 2, 1)], [9, meshCoral(0, 2, 2)], [14, meshVariant(4, 2)]];
+  mid.forEach(([g, m], i) => { meshes.push(m.build()); PLOD[g] = b + i; });
+  far.forEach(([g, m], i) => { meshes.push(m.build()); PLOD2[g] = b + mid.length + i; }); }
 let nV = 0, nI = 0;
 for (const m of meshes) { m.v0 = nV; m.i0 = nI; nV += m.nv; nI += m.ib.length; }
 const allV = new Uint8Array(nV * 16), allI = new Uint32Array(nI);
@@ -510,7 +517,7 @@ function render() {
   r.setPipeline(pSolid);
   if (!(OFF & 2)) for (let i = 0; i < 12; i++) { const g = Wd.solids.ranges[i]; if (g[1]) r.drawIndexed(meshes[i].ib.length, g[1], meshes[i].i0, meshes[i].v0, g[0]); }
   // near (full shader) first, then the far parts with the cheap shader (FARP): Subnautica-style shader LOD
-  const RF = 25, PF = [10, 8, 6][LV], PFAR = [110, 85, 65][LV]; // Medium/Low: shorter coral distances
+  const RF = 25, PF = [10, 8, 6][LV], PM2 = [30, 24, 18][LV], PFAR = [110, 85, 65][LV]; // Medium/Low: shorter coral distances
   for (let i = 0; i < NCHUNK && !(OFF & 2); i++) {
     const c = Wd.chunks[i], big = i > 2 && i < 6; r.setVertexBuffer(1, ibChunk[i]);
     drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, 0, min(RF, i > 5 ? 30 : big ? 40 : 96));
@@ -522,7 +529,11 @@ function render() {
     drawCells(r, c.start, c.lo, c.hi, 3, meshes[14 + i], 0, RF, i > 5 ? 30 : big ? 40 : 96);
     if (big) drawCells(r, c.start, c.lo, c.hi, 3, meshes[20 + i], 0, 40, 150);
   }
-  for (let i = 0; i < PM.length && !(OFF & 4); i++) { r.setVertexBuffer(1, ibProp[i]); drawCells(r, Wd.props[i].start, Wd.props[i].lo, Wd.props[i].hi, 3, meshes[PLOD[i] || PM[i]], 0, PF, PFAR); }
+  for (let i = 0; i < PM.length && !(OFF & 4); i++) {
+    const P = Wd.props[i], mid = meshes[PLOD[i] || PM[i]]; r.setVertexBuffer(1, ibProp[i]);
+    if (PLOD2[i]) { drawCells(r, P.start, P.lo, P.hi, 3, mid, 0, PF, PM2); drawCells(r, P.start, P.lo, P.hi, 3, meshes[PLOD2[i]], 0, PM2, PFAR); }
+    else drawCells(r, P.start, P.lo, P.hi, 3, mid, 0, PF, PFAR);
+  }
   if (!(OFF & 8)) { r.setPipeline(pManta); r.setVertexBuffer(1, ibManta); r.drawIndexed(MANTA.ib.length, nManta, MANTA.i0, MANTA.v0, 0);
   r.setPipeline(pFish); r.setVertexBuffer(1, ibFish); r.drawIndexed(FISH.ib.length, nFish, FISH.i0, FISH.v0, 0); }
   }
