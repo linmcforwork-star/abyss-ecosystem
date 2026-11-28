@@ -40,7 +40,7 @@
 // P  profile: holds the resolution, measures the GPU time with each part of the scene switched off in turn (~1.5 s each)
 //    and shows what each part costs; stand still at the slow spot while it runs (about 20 s)
 {
-  const PARTS = [['all', 0], ['terrain', 1], ['rocks', 2], ['corals', 4], ['fish', 8], ['anemones+critters', 16], ['kelp+plants', 32], ['ground cover', 64], ['light rays', 128], ['bloom', 256], ['particles', 512]];
+  const PARTS = [['all', 0], ['terrain', 1], ['rocks', 2], ['corals', 4], ['fish', 8], ['anemones+critters', 16], ['kelp+plants', 32], ['ground cover', 64], ['light rays', 128], ['bloom', 256], ['bubbles', 512], ['glints', 1024], ['marine snow', 2048]];
   let k = -1, n = 0, sum = 0, cnt = 0, base = 0; const res = [];
   const draw2 = render;
   render = () => {

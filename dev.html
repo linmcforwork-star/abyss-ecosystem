@@ -901,7 +901,9 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
       for (var a = -1; a <= 1; a++) { for (var b = -1; b <= 1; b++) {
         let c = ip + vec2f(f32(a), f32(b)); let pn = c + vec2f(hs(c.x * 7.1 + c.y * 3.3), hs(c.x * 1.7 + c.y * 9.2));
         let dd = length(g - pn); if (dd < d1) { d2 = d1; d1 = dd; } else if (dd < d2) { d2 = dd; } } }
-      if (d2 - d1 > .16) { discard; }
+      // (no discard while the sea fan is shelved: one discard anywhere in this shader turns off Apple GPUs' hidden-surface
+      // removal for terrain, rocks and corals, so every hidden pixel gets shaded; give the fan its own pipeline when it returns)
+      if (d2 - d1 > .16) { alb *= .0; }
     }
     alb = mix(base * .62, base, ss(.5, .75, i.ao)) * (.8 + .3 * C.h);
     flu = .1; gloss = .1; bump = .6; vao = 1.;
@@ -3759,11 +3761,9 @@ function render() {
   }
   r.setPipeline(pSurf); r.draw(4);
   r.setPipeline(pBack); r.draw(4);
-  if (!(OFF & 512)) {
-  r.setPipeline(pBub); r.setVertexBuffer(0, ibBubbles); r.draw(4, nBub);
-  r.setPipeline(pGl); r.setVertexBuffer(0, ibGl); r.draw(4, nGl);
-  r.setPipeline(pSnow); r.setVertexBuffer(0, ibSnowB); r.draw(4, nSnow);
-  }
+  if (!(OFF & 512)) { r.setPipeline(pBub); r.setVertexBuffer(0, ibBubbles); r.draw(4, nBub); }
+  if (!(OFF & 1024)) { r.setPipeline(pGl); r.setVertexBuffer(0, ibGl); r.draw(4, nGl); }
+  if (!(OFF & 2048)) { r.setPipeline(pSnow); r.setVertexBuffer(0, ibSnowB); r.draw(4, nSnow); }
   r.end();
   // light shafts
   if (!(OFF & 128)) {
@@ -4881,7 +4881,7 @@ document.addEventListener('visibilitychange', () => { if (AC) document.hidden ? 
 // P  profile: holds the resolution, measures the GPU time with each part of the scene switched off in turn (~1.5 s each)
 //    and shows what each part costs; stand still at the slow spot while it runs (about 20 s)
 {
-  const PARTS = [['all', 0], ['terrain', 1], ['rocks', 2], ['corals', 4], ['fish', 8], ['anemones+critters', 16], ['kelp+plants', 32], ['ground cover', 64], ['light rays', 128], ['bloom', 256], ['particles', 512]];
+  const PARTS = [['all', 0], ['terrain', 1], ['rocks', 2], ['corals', 4], ['fish', 8], ['anemones+critters', 16], ['kelp+plants', 32], ['ground cover', 64], ['light rays', 128], ['bloom', 256], ['bubbles', 512], ['glints', 1024], ['marine snow', 2048]];
   let k = -1, n = 0, sum = 0, cnt = 0, base = 0; const res = [];
   const draw2 = render;
   render = () => {

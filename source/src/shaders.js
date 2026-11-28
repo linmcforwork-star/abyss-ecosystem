@@ -453,7 +453,9 @@ fn tri(p: vec3f, n: vec3f, s: f32) -> TP {
       for (var a = -1; a <= 1; a++) { for (var b = -1; b <= 1; b++) {
         let c = ip + vec2f(f32(a), f32(b)); let pn = c + vec2f(hs(c.x * 7.1 + c.y * 3.3), hs(c.x * 1.7 + c.y * 9.2));
         let dd = length(g - pn); if (dd < d1) { d2 = d1; d1 = dd; } else if (dd < d2) { d2 = dd; } } }
-      if (d2 - d1 > .16) { discard; }
+      // (no discard while the sea fan is shelved: one discard anywhere in this shader turns off Apple GPUs' hidden-surface
+      // removal for terrain, rocks and corals, so every hidden pixel gets shaded; give the fan its own pipeline when it returns)
+      if (d2 - d1 > .16) { alb *= .0; }
     }
     alb = mix(base * .62, base, ss(.5, .75, i.ao)) * (.8 + .3 * C.h);
     flu = .1; gloss = .1; bump = .6; vao = 1.;

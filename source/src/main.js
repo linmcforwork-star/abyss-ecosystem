@@ -559,11 +559,9 @@ function render() {
   }
   r.setPipeline(pSurf); r.draw(4);
   r.setPipeline(pBack); r.draw(4);
-  if (!(OFF & 512)) {
-  r.setPipeline(pBub); r.setVertexBuffer(0, ibBubbles); r.draw(4, nBub);
-  r.setPipeline(pGl); r.setVertexBuffer(0, ibGl); r.draw(4, nGl);
-  r.setPipeline(pSnow); r.setVertexBuffer(0, ibSnowB); r.draw(4, nSnow);
-  }
+  if (!(OFF & 512)) { r.setPipeline(pBub); r.setVertexBuffer(0, ibBubbles); r.draw(4, nBub); }
+  if (!(OFF & 1024)) { r.setPipeline(pGl); r.setVertexBuffer(0, ibGl); r.draw(4, nGl); }
+  if (!(OFF & 2048)) { r.setPipeline(pSnow); r.setVertexBuffer(0, ibSnowB); r.draw(4, nSnow); }
   r.end();
   // light shafts
   if (!(OFF & 128)) {
